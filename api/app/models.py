@@ -1,0 +1,136 @@
+from datetime import datetime, timezone
+from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey, UniqueConstraint, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column
+from .db import Base
+
+
+def now_utc():
+    return datetime.now(timezone.utc)
+
+class User(Base):
+    __tablename__='users'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    email: Mapped[str]=mapped_column(String(255), unique=True, index=True)
+    name: Mapped[str]=mapped_column(String(255), default='Reviewer')
+    role: Mapped[str]=mapped_column(String(40), default='QC_REVIEWER')
+    password_hash: Mapped[str]=mapped_column(Text)
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+
+class Project(Base):
+    __tablename__='projects'
+    id: Mapped[str]=mapped_column(String(80), primary_key=True)
+    name: Mapped[str]=mapped_column(String(255))
+    customer: Mapped[str]=mapped_column(String(255), default='PLA')
+    crs: Mapped[str]=mapped_column(String(80), default='EPSG:6424')
+    units: Mapped[str]=mapped_column(String(80), default='US survey foot')
+    status: Mapped[str]=mapped_column(String(40), default='UPLOADING')
+    source_workbook_key: Mapped[str|None]=mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+    updated_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
+
+class DatasetFile(Base):
+    __tablename__='dataset_files'
+    id: Mapped[str]=mapped_column(String(120), primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    filename: Mapped[str]=mapped_column(String(500))
+    role: Mapped[str]=mapped_column(String(40))  # WORKBOOK, LIDAR_SOURCE, COPC
+    object_key: Mapped[str]=mapped_column(Text)
+    content_type: Mapped[str|None]=mapped_column(String(255), nullable=True)
+    size_bytes: Mapped[int|None]=mapped_column(BigInteger, nullable=True)
+    status: Mapped[str]=mapped_column(String(40), default='PENDING')
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+
+class ProcessingJob(Base):
+    __tablename__='processing_jobs'
+    id: Mapped[str]=mapped_column(String(120), primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    job_type: Mapped[str]=mapped_column(String(40), default='INGEST', index=True)
+    payload_json: Mapped[str]=mapped_column(Text, default='{}')
+    result_key: Mapped[str|None]=mapped_column(Text, nullable=True)
+    status: Mapped[str]=mapped_column(String(40), default='QUEUED', index=True)
+    progress: Mapped[int]=mapped_column(Integer, default=0)
+    stage: Mapped[str]=mapped_column(String(120), default='Queued')
+    message: Mapped[str|None]=mapped_column(Text, nullable=True)
+    error: Mapped[str|None]=mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+    started_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
+
+class LidarBlock(Base):
+    __tablename__='lidar_blocks'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    name: Mapped[str]=mapped_column(String(160), index=True)
+    source_object_key: Mapped[str|None]=mapped_column(Text, nullable=True)
+    object_key: Mapped[str]=mapped_column(Text)
+    point_count: Mapped[int|None]=mapped_column(BigInteger, nullable=True)
+    xmin: Mapped[float]=mapped_column(Float)
+    ymin: Mapped[float]=mapped_column(Float)
+    xmax: Mapped[float]=mapped_column(Float)
+    ymax: Mapped[float]=mapped_column(Float)
+    zmin: Mapped[float|None]=mapped_column(Float, nullable=True)
+    zmax: Mapped[float|None]=mapped_column(Float, nullable=True)
+    poles_json: Mapped[str]=mapped_column(Text, default='[]')
+    __table_args__=(UniqueConstraint('project_id','name',name='uq_project_block'),)
+
+class Pole(Base):
+    __tablename__='poles'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    internal_id: Mapped[int]=mapped_column(Integer, index=True)
+    pole_number: Mapped[str|None]=mapped_column(String(120), nullable=True)
+    block_name: Mapped[str|None]=mapped_column(String(160), nullable=True)
+    corrected_lat: Mapped[float|None]=mapped_column(Float, nullable=True)
+    corrected_lon: Mapped[float|None]=mapped_column(Float, nullable=True)
+    bottom_elev_ft: Mapped[float|None]=mapped_column(Float, nullable=True)
+    top_elev_ft: Mapped[float|None]=mapped_column(Float, nullable=True)
+    qc_status: Mapped[str]=mapped_column(String(40), default='PASS')
+    qc_fail: Mapped[int]=mapped_column(Integer, default=0)
+    qc_review: Mapped[int]=mapped_column(Integer, default=0)
+    qc_unverifiable: Mapped[int]=mapped_column(Integer, default=0)
+    remarks: Mapped[str|None]=mapped_column(Text, nullable=True)
+    manifest_json: Mapped[str]=mapped_column(Text, default='{}')
+    __table_args__=(UniqueConstraint('project_id','internal_id',name='uq_project_internal'),)
+
+class Finding(Base):
+    __tablename__='findings'
+    id: Mapped[str]=mapped_column(String(120), primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    rule_id: Mapped[str]=mapped_column(String(80), index=True)
+    severity: Mapped[str]=mapped_column(String(40), index=True)
+    internal_id: Mapped[int]=mapped_column(Integer, index=True)
+    pole_number: Mapped[str|None]=mapped_column(String(120), nullable=True)
+    sheet: Mapped[str]=mapped_column(String(120))
+    field: Mapped[str]=mapped_column(String(160))
+    message: Mapped[str]=mapped_column(Text)
+    actual: Mapped[str|None]=mapped_column(Text, nullable=True)
+    expected: Mapped[str|None]=mapped_column(Text, nullable=True)
+    related_poles_json: Mapped[str]=mapped_column(Text, default='[]')
+    status: Mapped[str]=mapped_column(String(40), default='OPEN')
+
+class SceneFeature(Base):
+    __tablename__='scene_features'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    internal_id: Mapped[int]=mapped_column(Integer, index=True)
+    feature_type: Mapped[str]=mapped_column(String(60), index=True)
+    payload_json: Mapped[str]=mapped_column(Text)
+
+class ReviewDecision(Base):
+    __tablename__='review_decisions'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    finding_id: Mapped[str]=mapped_column(ForeignKey('findings.id'), index=True)
+    reviewer_email: Mapped[str]=mapped_column(String(255))
+    decision: Mapped[str]=mapped_column(String(60))
+    comment: Mapped[str|None]=mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+
+class AuditLog(Base):
+    __tablename__='audit_logs'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    actor: Mapped[str]=mapped_column(String(255))
+    action: Mapped[str]=mapped_column(String(120))
+    entity_type: Mapped[str]=mapped_column(String(80))
+    entity_id: Mapped[str]=mapped_column(String(160))
+    detail_json: Mapped[str]=mapped_column(Text, default='{}')
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)

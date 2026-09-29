@@ -1,0 +1,7204 @@
+{
+  "project": {
+    "id": "sample1",
+    "name": "PLA Sample1",
+    "customer": "PLA",
+    "crs": "EPSG:6424",
+    "units": "US survey foot",
+    "status": "READY_FOR_REVIEW"
+  },
+  "poles": [
+    {
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "source_lat": 34.372702,
+      "source_lon": -118.915724,
+      "corrected_lat": 34.372706,
+      "corrected_lon": -118.915723,
+      "bottom_elev_ft": 464.82,
+      "top_elev_ft": 535.89,
+      "source_to_corrected_shift_ft": 1.487,
+      "fbi_block": "pt000013",
+      "crossarms": 6,
+      "comm_attachments": 3,
+      "util_attachments": 11,
+      "equipment": 2,
+      "anchors": 2,
+      "guys": 2,
+      "sidewalk_braces": 0,
+      "span_guys": 5,
+      "qc_fail": 6,
+      "qc_review": 2,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F009",
+        "F010",
+        "F011",
+        "F012",
+        "F013",
+        "F014",
+        "F028",
+        "F029"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 2,
+      "pole_number": "88872E",
+      "source_lat": 34.372413,
+      "source_lon": -118.915939,
+      "corrected_lat": 34.372417,
+      "corrected_lon": -118.915948,
+      "bottom_elev_ft": 469.86,
+      "top_elev_ft": 515.27,
+      "source_to_corrected_shift_ft": 3.081,
+      "fbi_block": "pt000013",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 4,
+      "equipment": 3,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 2,
+      "qc_fail": 2,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": "No Liader data SW span",
+      "finding_ids": [
+        "F015",
+        "F030",
+        "F038"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 3,
+      "pole_number": "504137H",
+      "source_lat": 34.372522,
+      "source_lon": -118.915511,
+      "corrected_lat": 34.372481,
+      "corrected_lon": -118.915555,
+      "bottom_elev_ft": 469.18,
+      "top_elev_ft": 513.27,
+      "source_to_corrected_shift_ft": 19.973,
+      "fbi_block": "pt000013",
+      "crossarms": 0,
+      "comm_attachments": 4,
+      "util_attachments": 0,
+      "equipment": 1,
+      "anchors": 2,
+      "guys": 3,
+      "sidewalk_braces": 0,
+      "span_guys": 1,
+      "qc_fail": 5,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F016",
+        "F017",
+        "F018",
+        "F019",
+        "F020"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 4,
+      "pole_number": "No Tag 2",
+      "source_lat": 34.372739,
+      "source_lon": -118.915444,
+      "corrected_lat": 34.372746,
+      "corrected_lon": -118.915448,
+      "bottom_elev_ft": 464.27,
+      "top_elev_ft": 494.19,
+      "source_to_corrected_shift_ft": 2.819,
+      "fbi_block": "pt000013",
+      "crossarms": 0,
+      "comm_attachments": 2,
+      "util_attachments": 0,
+      "equipment": 0,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 2,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": "No Liader data NE span",
+      "finding_ids": [
+        "F021",
+        "F022"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 5,
+      "pole_number": "960517E",
+      "source_lat": 34.368693,
+      "source_lon": -118.920286,
+      "corrected_lat": 34.368696,
+      "corrected_lon": -118.920302,
+      "bottom_elev_ft": 517.56,
+      "top_elev_ft": 565.79,
+      "source_to_corrected_shift_ft": 4.95,
+      "fbi_block": "pt000010",
+      "crossarms": 3,
+      "comm_attachments": 3,
+      "util_attachments": 3,
+      "equipment": 6,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 2,
+      "qc_unverifiable": 0,
+      "qc_status": "REVIEW",
+      "remarks": null,
+      "finding_ids": [
+        "F031",
+        "F032"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 6,
+      "pole_number": "960518E",
+      "source_lat": 34.367984,
+      "source_lon": -118.920304,
+      "corrected_lat": 34.367989,
+      "corrected_lon": -118.920316,
+      "bottom_elev_ft": 530.05,
+      "top_elev_ft": 573.08,
+      "source_to_corrected_shift_ft": 4.053,
+      "fbi_block": "pt000010",
+      "crossarms": 1,
+      "comm_attachments": 3,
+      "util_attachments": 3,
+      "equipment": 0,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "PASS",
+      "remarks": null,
+      "finding_ids": [],
+      "related_poles": []
+    },
+    {
+      "internal_id": 7,
+      "pole_number": "960519E",
+      "source_lat": 34.36735247,
+      "source_lon": -118.920307109999,
+      "corrected_lat": 34.367187,
+      "corrected_lon": -118.920317,
+      "bottom_elev_ft": 538.7,
+      "top_elev_ft": 581.67,
+      "source_to_corrected_shift_ft": 60.292,
+      "fbi_block": "pt000010",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 5,
+      "equipment": 0,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 1,
+      "qc_fail": 1,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": "No Liader data other W and E span",
+      "finding_ids": [
+        "F046"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 8,
+      "pole_number": "4638756E",
+      "source_lat": 34.36681669,
+      "source_lon": -118.920307109999,
+      "corrected_lat": 34.366658,
+      "corrected_lon": -118.920319,
+      "bottom_elev_ft": 540.27,
+      "top_elev_ft": 582.83,
+      "source_to_corrected_shift_ft": 57.862,
+      "fbi_block": "pt000010",
+      "crossarms": 1,
+      "comm_attachments": 3,
+      "util_attachments": 3,
+      "equipment": 0,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "REVIEW",
+      "remarks": null,
+      "finding_ids": [
+        "F001"
+      ],
+      "related_poles": [
+        9
+      ]
+    },
+    {
+      "internal_id": 9,
+      "pole_number": "4638756E",
+      "source_lat": 34.366286,
+      "source_lon": -118.920301,
+      "corrected_lat": 34.366143,
+      "corrected_lon": -118.920316,
+      "bottom_elev_ft": 544.74,
+      "top_elev_ft": 586.45,
+      "source_to_corrected_shift_ft": 52.237,
+      "fbi_block": "pt000007",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 6,
+      "equipment": 0,
+      "anchors": 1,
+      "guys": 1,
+      "sidewalk_braces": 1,
+      "span_guys": 0,
+      "qc_fail": 2,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": "No LIDAR Data SE and SW Spans",
+      "finding_ids": [
+        "F002",
+        "F043",
+        "F053"
+      ],
+      "related_poles": [
+        8
+      ]
+    },
+    {
+      "internal_id": 10,
+      "pole_number": "4327970E",
+      "source_lat": 34.36558618,
+      "source_lon": -118.920285359999,
+      "corrected_lat": 34.365436,
+      "corrected_lon": -118.920314,
+      "bottom_elev_ft": 549.33,
+      "top_elev_ft": 596.71,
+      "source_to_corrected_shift_ft": 55.333,
+      "fbi_block": "pt000007",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 3,
+      "equipment": 2,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 1,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F033",
+        "F051"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 11,
+      "pole_number": "109832E",
+      "source_lat": 34.364298,
+      "source_lon": -118.920296,
+      "corrected_lat": 34.364301,
+      "corrected_lon": -118.920301,
+      "bottom_elev_ft": 560.22,
+      "top_elev_ft": 602.39,
+      "source_to_corrected_shift_ft": 1.862,
+      "fbi_block": "pt000007",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 6,
+      "equipment": 0,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "PASS",
+      "remarks": null,
+      "finding_ids": [],
+      "related_poles": []
+    },
+    {
+      "internal_id": 12,
+      "pole_number": "1099834E",
+      "source_lat": 34.363747,
+      "source_lon": -118.920303,
+      "corrected_lat": 34.363751,
+      "corrected_lon": -118.920307,
+      "bottom_elev_ft": 564.39,
+      "top_elev_ft": 607.27,
+      "source_to_corrected_shift_ft": 1.891,
+      "fbi_block": "pt000007",
+      "crossarms": 1,
+      "comm_attachments": 4,
+      "util_attachments": 3,
+      "equipment": 0,
+      "anchors": 1,
+      "guys": 1,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 1,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F003",
+        "F023"
+      ],
+      "related_poles": [
+        14
+      ]
+    },
+    {
+      "internal_id": 13,
+      "pole_number": "4796611E",
+      "source_lat": 34.363227,
+      "source_lon": -118.920308,
+      "corrected_lat": 34.363223,
+      "corrected_lon": -118.920307,
+      "bottom_elev_ft": 569.6,
+      "top_elev_ft": 610.9,
+      "source_to_corrected_shift_ft": 1.487,
+      "fbi_block": "pt000006",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 4,
+      "equipment": 3,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 2,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F024",
+        "F034",
+        "F039"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 14,
+      "pole_number": "1099834E",
+      "source_lat": 34.36267,
+      "source_lon": -118.920312,
+      "corrected_lat": 34.362659,
+      "corrected_lon": -118.920312,
+      "bottom_elev_ft": 574.3,
+      "top_elev_ft": 617.2,
+      "source_to_corrected_shift_ft": 4.003,
+      "fbi_block": "pt000006",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 6,
+      "equipment": 0,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "REVIEW",
+      "remarks": null,
+      "finding_ids": [
+        "F004"
+      ],
+      "related_poles": [
+        12
+      ]
+    },
+    {
+      "internal_id": 15,
+      "pole_number": "1099835E",
+      "source_lat": 34.362096,
+      "source_lon": -118.92032,
+      "corrected_lat": 34.362096,
+      "corrected_lon": -118.920315,
+      "bottom_elev_ft": 579.4,
+      "top_elev_ft": 621.49,
+      "source_to_corrected_shift_ft": 1.509,
+      "fbi_block": "pt000006",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 3,
+      "equipment": 1,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "REVIEW",
+      "remarks": null,
+      "finding_ids": [
+        "F035"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 16,
+      "pole_number": "1099836E",
+      "source_lat": 34.361514,
+      "source_lon": -118.920322,
+      "corrected_lat": 34.361514,
+      "corrected_lon": -118.920322,
+      "bottom_elev_ft": 585.53,
+      "top_elev_ft": 628.6,
+      "source_to_corrected_shift_ft": 0.0,
+      "fbi_block": "pt000006",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 6,
+      "equipment": 0,
+      "anchors": 4,
+      "guys": 5,
+      "sidewalk_braces": 1,
+      "span_guys": 0,
+      "qc_fail": 1,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F044"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 17,
+      "pole_number": "1099837E",
+      "source_lat": 34.360951,
+      "source_lon": -118.920617,
+      "corrected_lat": 34.360965,
+      "corrected_lon": -118.92063,
+      "bottom_elev_ft": 590.19,
+      "top_elev_ft": 631.52,
+      "source_to_corrected_shift_ft": 6.43,
+      "fbi_block": "pt000006",
+      "crossarms": 1,
+      "comm_attachments": 3,
+      "util_attachments": 3,
+      "equipment": 0,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "PASS",
+      "remarks": null,
+      "finding_ids": [],
+      "related_poles": []
+    },
+    {
+      "internal_id": 18,
+      "pole_number": "1099838E",
+      "source_lat": 34.360527,
+      "source_lon": -118.920872,
+      "corrected_lat": 34.360527,
+      "corrected_lon": -118.920872,
+      "bottom_elev_ft": 595.14,
+      "top_elev_ft": 642.66,
+      "source_to_corrected_shift_ft": 0.0,
+      "fbi_block": "pt000004",
+      "crossarms": 3,
+      "comm_attachments": 3,
+      "util_attachments": 4,
+      "equipment": 2,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 3,
+      "qc_fail": 3,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F025",
+        "F036",
+        "F047",
+        "F048"
+      ],
+      "related_poles": [
+        23
+      ]
+    },
+    {
+      "internal_id": 19,
+      "pole_number": "1099839E",
+      "source_lat": 34.360034,
+      "source_lon": -118.920884,
+      "corrected_lat": 34.360034,
+      "corrected_lon": -118.920882,
+      "bottom_elev_ft": 602.25,
+      "top_elev_ft": 649.13,
+      "source_to_corrected_shift_ft": 0.604,
+      "fbi_block": "pt000004",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 6,
+      "equipment": 0,
+      "anchors": 1,
+      "guys": 1,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "PASS",
+      "remarks": null,
+      "finding_ids": [],
+      "related_poles": []
+    },
+    {
+      "internal_id": 20,
+      "pole_number": "1099840E",
+      "source_lat": 34.359478,
+      "source_lon": -118.920852,
+      "corrected_lat": 34.359488,
+      "corrected_lon": -118.920875,
+      "bottom_elev_ft": 609.49,
+      "top_elev_ft": 656.32,
+      "source_to_corrected_shift_ft": 7.838,
+      "fbi_block": "pt000004",
+      "crossarms": 1,
+      "comm_attachments": 3,
+      "util_attachments": 3,
+      "equipment": 0,
+      "anchors": 2,
+      "guys": 4,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 3,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F008",
+        "F040",
+        "F041"
+      ],
+      "related_poles": [
+        21
+      ]
+    },
+    {
+      "internal_id": 21,
+      "pole_number": "0074ATC",
+      "source_lat": 34.358713,
+      "source_lon": -118.920829,
+      "corrected_lat": 34.358706,
+      "corrected_lon": -118.920832,
+      "bottom_elev_ft": 621.78,
+      "top_elev_ft": 648.48,
+      "source_to_corrected_shift_ft": 2.704,
+      "fbi_block": "pt000004",
+      "crossarms": 0,
+      "comm_attachments": 1,
+      "util_attachments": 0,
+      "equipment": 0,
+      "anchors": 1,
+      "guys": 1,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 5,
+      "qc_review": 0,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F006",
+        "F007",
+        "F026",
+        "F045",
+        "F050"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 22,
+      "pole_number": "4796807E",
+      "source_lat": 34.357257,
+      "source_lon": -118.92014,
+      "corrected_lat": null,
+      "corrected_lon": null,
+      "bottom_elev_ft": null,
+      "top_elev_ft": null,
+      "source_to_corrected_shift_ft": null,
+      "fbi_block": "pt000002",
+      "crossarms": 0,
+      "comm_attachments": 0,
+      "util_attachments": 0,
+      "equipment": 0,
+      "anchors": 0,
+      "guys": 0,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 0,
+      "qc_review": 0,
+      "qc_unverifiable": 1,
+      "qc_status": "UNVERIFIABLE",
+      "remarks": "Not visible in LIDAR",
+      "finding_ids": [
+        "F005"
+      ],
+      "related_poles": []
+    },
+    {
+      "internal_id": 23,
+      "pole_number": "4297968E",
+      "source_lat": 34.360516,
+      "source_lon": -118.921005,
+      "corrected_lat": 34.36057,
+      "corrected_lon": -118.921049,
+      "bottom_elev_ft": 594.54,
+      "top_elev_ft": 629.46,
+      "source_to_corrected_shift_ft": 23.717,
+      "fbi_block": "pt000004",
+      "crossarms": 0,
+      "comm_attachments": 0,
+      "util_attachments": 0,
+      "equipment": 0,
+      "anchors": 2,
+      "guys": 3,
+      "sidewalk_braces": 0,
+      "span_guys": 3,
+      "qc_fail": 2,
+      "qc_review": 0,
+      "qc_unverifiable": 1,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F042",
+        "F049",
+        "F052"
+      ],
+      "related_poles": [
+        22
+      ]
+    },
+    {
+      "internal_id": 24,
+      "pole_number": "4215164E",
+      "source_lat": 34.358739,
+      "source_lon": -118.921082,
+      "corrected_lat": 34.358743,
+      "corrected_lon": -118.921078,
+      "bottom_elev_ft": 615.57,
+      "top_elev_ft": 666.31,
+      "source_to_corrected_shift_ft": 1.891,
+      "fbi_block": "pt000004",
+      "crossarms": 2,
+      "comm_attachments": 3,
+      "util_attachments": 3,
+      "equipment": 5,
+      "anchors": 1,
+      "guys": 1,
+      "sidewalk_braces": 0,
+      "span_guys": 0,
+      "qc_fail": 1,
+      "qc_review": 1,
+      "qc_unverifiable": 0,
+      "qc_status": "FAIL",
+      "remarks": null,
+      "finding_ids": [
+        "F027",
+        "F037"
+      ],
+      "related_poles": []
+    }
+  ],
+  "blocks": [
+    {
+      "name": "pt000001",
+      "xmin": 6284000.0,
+      "ymin": 1953000.0,
+      "xmax": 6285000.0,
+      "ymax": 1954000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000001.copc.laz"
+    },
+    {
+      "name": "pt000002",
+      "xmin": 6283000.0,
+      "ymin": 1953000.0,
+      "xmax": 6284000.0,
+      "ymax": 1954000.0,
+      "poles": [
+        22
+      ],
+      "object_key": "sample1/lidar/pt000002.copc.laz"
+    },
+    {
+      "name": "pt000003",
+      "xmin": 6284000.0,
+      "ymin": 1954000.0,
+      "xmax": 6285000.0,
+      "ymax": 1955000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000003.copc.laz"
+    },
+    {
+      "name": "pt000004",
+      "xmin": 6283000.0,
+      "ymin": 1954000.0,
+      "xmax": 6284000.0,
+      "ymax": 1955000.0,
+      "poles": [
+        18,
+        19,
+        20,
+        21,
+        23,
+        24
+      ],
+      "object_key": "sample1/lidar/pt000004.copc.laz"
+    },
+    {
+      "name": "pt000005",
+      "xmin": 6284000.0,
+      "ymin": 1955000.0,
+      "xmax": 6285000.0,
+      "ymax": 1956000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000005.copc.laz"
+    },
+    {
+      "name": "pt000006",
+      "xmin": 6283000.0,
+      "ymin": 1955000.0,
+      "xmax": 6284000.0,
+      "ymax": 1956000.0,
+      "poles": [
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "object_key": "sample1/lidar/pt000006.copc.laz"
+    },
+    {
+      "name": "pt000007",
+      "xmin": 6283000.0,
+      "ymin": 1956000.0,
+      "xmax": 6284000.0,
+      "ymax": 1957000.0,
+      "poles": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "object_key": "sample1/lidar/pt000007.copc.laz"
+    },
+    {
+      "name": "pt000008",
+      "xmin": 6284000.0,
+      "ymin": 1956000.0,
+      "xmax": 6285000.0,
+      "ymax": 1957000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000008.copc.laz"
+    },
+    {
+      "name": "pt000009",
+      "xmin": 6284000.0,
+      "ymin": 1957000.0,
+      "xmax": 6285000.0,
+      "ymax": 1958000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000009.copc.laz"
+    },
+    {
+      "name": "pt000010",
+      "xmin": 6283000.0,
+      "ymin": 1957000.0,
+      "xmax": 6284000.0,
+      "ymax": 1958000.0,
+      "poles": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "object_key": "sample1/lidar/pt000010.copc.laz"
+    },
+    {
+      "name": "pt000011",
+      "xmin": 6284000.0,
+      "ymin": 1958000.0,
+      "xmax": 6285000.0,
+      "ymax": 1959000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000011.copc.laz"
+    },
+    {
+      "name": "pt000012",
+      "xmin": 6283000.0,
+      "ymin": 1958000.0,
+      "xmax": 6284000.0,
+      "ymax": 1959000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000012.copc.laz"
+    },
+    {
+      "name": "pt000013",
+      "xmin": 6285000.0,
+      "ymin": 1959000.0,
+      "xmax": 6286000.0,
+      "ymax": 1960000.0,
+      "poles": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "object_key": "sample1/lidar/pt000013.copc.laz"
+    },
+    {
+      "name": "pt000014",
+      "xmin": 6286000.0,
+      "ymin": 1959000.0,
+      "xmax": 6287000.0,
+      "ymax": 1960000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000014.copc.laz"
+    },
+    {
+      "name": "pt000015",
+      "xmin": 6285000.0,
+      "ymin": 1960000.0,
+      "xmax": 6286000.0,
+      "ymax": 1961000.0,
+      "poles": [],
+      "object_key": "sample1/lidar/pt000015.copc.laz"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F001",
+      "rule_id": "PLA-R002",
+      "severity": "REVIEW",
+      "internal_id": 8,
+      "pole_number": "4638756E",
+      "sheet": "poles",
+      "field": "pole_number",
+      "message": "pole_number 4638756E appears on multiple internal_ids [8, 9]",
+      "actual": "4638756E",
+      "expected": "unique unless verified",
+      "related_poles": [
+        9
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "F002",
+      "rule_id": "PLA-R002",
+      "severity": "REVIEW",
+      "internal_id": 9,
+      "pole_number": "4638756E",
+      "sheet": "poles",
+      "field": "pole_number",
+      "message": "pole_number 4638756E appears on multiple internal_ids [8, 9]",
+      "actual": "4638756E",
+      "expected": "unique unless verified",
+      "related_poles": [
+        8
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "F003",
+      "rule_id": "PLA-R002",
+      "severity": "REVIEW",
+      "internal_id": 12,
+      "pole_number": "1099834E",
+      "sheet": "poles",
+      "field": "pole_number",
+      "message": "pole_number 1099834E appears on multiple internal_ids [12, 14]",
+      "actual": "1099834E",
+      "expected": "unique unless verified",
+      "related_poles": [
+        14
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "F004",
+      "rule_id": "PLA-R002",
+      "severity": "REVIEW",
+      "internal_id": 14,
+      "pole_number": "1099834E",
+      "sheet": "poles",
+      "field": "pole_number",
+      "message": "pole_number 1099834E appears on multiple internal_ids [12, 14]",
+      "actual": "1099834E",
+      "expected": "unique unless verified",
+      "related_poles": [
+        12
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "F005",
+      "rule_id": "PLA-R003",
+      "severity": "UNVERIFIABLE",
+      "internal_id": 22,
+      "pole_number": "4796807E",
+      "sheet": "poles",
+      "field": "latitude,longitude,bottom_elev_ft,top_lat,top_lon,top_elev_ft",
+      "message": "Pole has no measurable LiDAR geometry and is explicitly remarked as not visible in LiDAR.",
+      "actual": null,
+      "expected": "excluded/handled with remark",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F006",
+      "rule_id": "PLA-R006",
+      "severity": "FAIL",
+      "internal_id": 21,
+      "pole_number": "0074ATC",
+      "sheet": "poles",
+      "field": "other_2_id",
+      "message": "Other connection self-references internal_id 21.",
+      "actual": "21",
+      "expected": "different pole",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F007",
+      "rule_id": "PLA-R006",
+      "severity": "FAIL",
+      "internal_id": 21,
+      "pole_number": "0074ATC",
+      "sheet": "poles",
+      "field": "other_2_xyz",
+      "message": "In-scope Other 2 has internal_id and XYZ; SOW says leave XYZ empty for in-scope connections.",
+      "actual": "[\"34.359487999999999\", \"-118.920873\", \"609.49\"]",
+      "expected": "XYZ blank",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F008",
+      "rule_id": "PLA-R007",
+      "severity": "FAIL",
+      "internal_id": 20,
+      "pole_number": "1099840E",
+      "sheet": "poles",
+      "field": "other_1_id",
+      "message": "In-scope Other connection 20 \u2192 21 is not reciprocally marked on pole 21.",
+      "actual": "21",
+      "expected": "reciprocal Other connection",
+      "related_poles": [
+        21
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "F009",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "sheet": "attachments",
+      "field": "comm_1_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Double Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F010",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "sheet": "attachments",
+      "field": "comm_2_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Double Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F011",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "sheet": "attachments",
+      "field": "comm_3_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Double Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F012",
+      "rule_id": "PLA-R010",
+      "severity": "FAIL",
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "sheet": "attachments",
+      "field": "util_1_lat/lon",
+      "message": "Pole-mounted util_1 has lat/lon populated; SOW says leave lat/lon blank and use elevation only.",
+      "actual": "[\"34.372706000000001\", \"-118.915723\"]",
+      "expected": "blank",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F013",
+      "rule_id": "PLA-R010",
+      "severity": "FAIL",
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "sheet": "attachments",
+      "field": "util_10_lat/lon",
+      "message": "Pole-mounted util_10 has lat/lon populated; SOW says leave lat/lon blank and use elevation only.",
+      "actual": "[\"34.372706000000001\", \"-118.915723\"]",
+      "expected": "blank",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F014",
+      "rule_id": "PLA-R010",
+      "severity": "FAIL",
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "sheet": "attachments",
+      "field": "util_11_lat/lon",
+      "message": "Pole-mounted util_11 has lat/lon populated; SOW says leave lat/lon blank and use elevation only.",
+      "actual": "[\"34.372706000000001\", \"-118.915723\"]",
+      "expected": "blank",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F015",
+      "rule_id": "PLA-R010",
+      "severity": "FAIL",
+      "internal_id": 2,
+      "pole_number": "88872E",
+      "sheet": "attachments",
+      "field": "util_4_lat/lon",
+      "message": "Pole-mounted util_4 has lat/lon populated; SOW says leave lat/lon blank and use elevation only.",
+      "actual": "[\"34.372418000000003\", \"-118.91594600000001\"]",
+      "expected": "blank",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F016",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 3,
+      "pole_number": "504137H",
+      "sheet": "attachments",
+      "field": "comm_1_owner",
+      "message": "Communication owner not in LUT.",
+      "actual": "American Dark",
+      "expected": "lut_owners",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F017",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 3,
+      "pole_number": "504137H",
+      "sheet": "attachments",
+      "field": "comm_1_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Double Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F018",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 3,
+      "pole_number": "504137H",
+      "sheet": "attachments",
+      "field": "comm_2_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Double Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F019",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 3,
+      "pole_number": "504137H",
+      "sheet": "attachments",
+      "field": "comm_3_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Double Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F020",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 3,
+      "pole_number": "504137H",
+      "sheet": "attachments",
+      "field": "comm_4_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F021",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 4,
+      "pole_number": "No Tag 2",
+      "sheet": "attachments",
+      "field": "comm_1_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Double Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F022",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 4,
+      "pole_number": "No Tag 2",
+      "sheet": "attachments",
+      "field": "comm_2_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Double Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F023",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 12,
+      "pole_number": "1099834E",
+      "sheet": "attachments",
+      "field": "comm_3_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F024",
+      "rule_id": "PLA-R010",
+      "severity": "FAIL",
+      "internal_id": 13,
+      "pole_number": "4796611E",
+      "sheet": "attachments",
+      "field": "util_4_lat/lon",
+      "message": "Pole-mounted util_4 has lat/lon populated; SOW says leave lat/lon blank and use elevation only.",
+      "actual": "[\"34.363222\", \"-118.920306\"]",
+      "expected": "blank",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F025",
+      "rule_id": "PLA-R010",
+      "severity": "FAIL",
+      "internal_id": 18,
+      "pole_number": "1099838E",
+      "sheet": "attachments",
+      "field": "util_4_lat/lon",
+      "message": "Pole-mounted util_4 has lat/lon populated; SOW says leave lat/lon blank and use elevation only.",
+      "actual": "[\"34.360526999999998\", \"-118.920869\"]",
+      "expected": "blank",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F026",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 21,
+      "pole_number": "0074ATC",
+      "sheet": "attachments",
+      "field": "comm_1_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F027",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 24,
+      "pole_number": "4215164E",
+      "sheet": "attachments",
+      "field": "comm_2_support",
+      "message": "Communication support not in LUT.",
+      "actual": "Dead End",
+      "expected": "lut_insulators",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F028",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "sheet": "crossarms",
+      "field": "arm_1_key",
+      "message": "arm_1 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "1",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F029",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 1,
+      "pole_number": "926680E",
+      "sheet": "crossarms",
+      "field": "arm_6_key",
+      "message": "arm_6 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "6",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F030",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 2,
+      "pole_number": "88872E",
+      "sheet": "crossarms",
+      "field": "arm_2_key",
+      "message": "arm_2 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "2",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F031",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 5,
+      "pole_number": "960517E",
+      "sheet": "crossarms",
+      "field": "arm_2_key",
+      "message": "arm_2 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "2",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F032",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 5,
+      "pole_number": "960517E",
+      "sheet": "crossarms",
+      "field": "arm_3_key",
+      "message": "arm_3 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "3",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F033",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 10,
+      "pole_number": "4327970E",
+      "sheet": "crossarms",
+      "field": "arm_2_key",
+      "message": "arm_2 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "2",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F034",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 13,
+      "pole_number": "4796611E",
+      "sheet": "crossarms",
+      "field": "arm_2_key",
+      "message": "arm_2 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "2",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F035",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 15,
+      "pole_number": "1099835E",
+      "sheet": "crossarms",
+      "field": "arm_2_key",
+      "message": "arm_2 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "2",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F036",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 18,
+      "pole_number": "1099838E",
+      "sheet": "crossarms",
+      "field": "arm_2_key",
+      "message": "arm_2 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "2",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F037",
+      "rule_id": "PLA-R016",
+      "severity": "REVIEW",
+      "internal_id": 24,
+      "pole_number": "4215164E",
+      "sheet": "crossarms",
+      "field": "arm_2_key",
+      "message": "arm_2 is not referenced by any attachment. It may be a bare/equipment-only arm; visually verify.",
+      "actual": "2",
+      "expected": "referenced or valid bare/equipment arm",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F038",
+      "rule_id": "PLA-R018",
+      "severity": "FAIL",
+      "internal_id": 2,
+      "pole_number": "88872E",
+      "sheet": "equipment",
+      "field": "eq_3_owner",
+      "message": "eq_3 missing owner.",
+      "actual": null,
+      "expected": "owner",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F039",
+      "rule_id": "PLA-R018",
+      "severity": "FAIL",
+      "internal_id": 13,
+      "pole_number": "4796611E",
+      "sheet": "equipment",
+      "field": "eq_3_owner",
+      "message": "eq_3 missing owner.",
+      "actual": null,
+      "expected": "owner",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F040",
+      "rule_id": "PLA-R022",
+      "severity": "FAIL",
+      "internal_id": 20,
+      "pole_number": "1099840E",
+      "sheet": "guys",
+      "field": "guy_3_anchor_no",
+      "message": "guy_3 references anc_3, but that anchor does not exist.",
+      "actual": "3",
+      "expected": "existing anchor",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F041",
+      "rule_id": "PLA-R022",
+      "severity": "FAIL",
+      "internal_id": 20,
+      "pole_number": "1099840E",
+      "sheet": "guys",
+      "field": "guy_4_anchor_no",
+      "message": "guy_4 references anc_4, but that anchor does not exist.",
+      "actual": "4",
+      "expected": "existing anchor",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F042",
+      "rule_id": "PLA-R022",
+      "severity": "FAIL",
+      "internal_id": 23,
+      "pole_number": "4297968E",
+      "sheet": "guys",
+      "field": "guy_3_anchor_no",
+      "message": "guy_3 references anc_3, but that anchor does not exist.",
+      "actual": "3",
+      "expected": "existing anchor",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F043",
+      "rule_id": "PLA-R024",
+      "severity": "FAIL",
+      "internal_id": 9,
+      "pole_number": "4638756E",
+      "sheet": "sidewalk_braces",
+      "field": "swb_1_guy_nos",
+      "message": "swb_1 does not list the guy(s) passing through the brace.",
+      "actual": null,
+      "expected": "guy number(s)",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F044",
+      "rule_id": "PLA-R024",
+      "severity": "FAIL",
+      "internal_id": 16,
+      "pole_number": "1099836E",
+      "sheet": "sidewalk_braces",
+      "field": "swb_1_guy_nos",
+      "message": "swb_1 does not list the guy(s) passing through the brace.",
+      "actual": null,
+      "expected": "guy number(s)",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F045",
+      "rule_id": "PLA-R026",
+      "severity": "FAIL",
+      "internal_id": 21,
+      "pole_number": "0074ATC",
+      "sheet": "poles",
+      "field": "other_2_attach_N",
+      "message": "Other 2 references comm_2, but that attachment/span guy is not populated on this pole.",
+      "actual": "comm_2",
+      "expected": "existing comm_N/util_N/sgy_N",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F046",
+      "rule_id": "PLA-R029",
+      "severity": "FAIL",
+      "internal_id": 7,
+      "pole_number": "960519E",
+      "sheet": "span_guys",
+      "field": "sgy_1_runs_to",
+      "message": "sgy_1 runs_to OTHER_2, but that Other slot is not defined on the poles sheet.",
+      "actual": "OTHER_2",
+      "expected": "defined Other slot",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F047",
+      "rule_id": "PLA-R030",
+      "severity": "FAIL",
+      "internal_id": 18,
+      "pole_number": "1099838E",
+      "sheet": "span_guys",
+      "field": "sgy_N_runs_to",
+      "message": "Span-guy count mismatch between poles 18 and 23: 3 vs 1.",
+      "actual": "[3, 1]",
+      "expected": "equal counts",
+      "related_poles": [
+        23
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "F048",
+      "rule_id": "PLA-R031",
+      "severity": "FAIL",
+      "internal_id": 18,
+      "pole_number": "1099838E",
+      "sheet": "span_guys",
+      "field": "sgy_N_end_type",
+      "message": "Span-guy end types between poles 18 and 23 are not opposite as required. A:{'LOAD': 3} B:{'LOAD': 1}.",
+      "actual": "[{\"LOAD\": 3}, {\"LOAD\": 1}]",
+      "expected": "LOAD\u2194SUPPORT",
+      "related_poles": [
+        23
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "F049",
+      "rule_id": "PLA-R030",
+      "severity": "UNVERIFIABLE",
+      "internal_id": 23,
+      "pole_number": "4297968E",
+      "sheet": "span_guys",
+      "field": "sgy_N_runs_to",
+      "message": "2 span guy(s) run from pole 23 to in-scope pole 22, but no reverse span-guy record resolves back to 23.",
+      "actual": "2",
+      "expected": "matching far-end record(s)",
+      "related_poles": [
+        22
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "F050",
+      "rule_id": "PLA-R015",
+      "severity": "FAIL",
+      "internal_id": 21,
+      "pole_number": "0074ATC",
+      "sheet": "poles",
+      "field": "pole_owner_raw",
+      "message": "Pole owner \"VERIZON WIRELESS\" is not present in lut_owners.",
+      "actual": "VERIZON WIRELESS",
+      "expected": "lut_owners",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F051",
+      "rule_id": "PLA-R033",
+      "severity": "FAIL",
+      "internal_id": 10,
+      "pole_number": "4327970E",
+      "sheet": "poles",
+      "field": "grade_of_construction",
+      "message": "Grade is blank on a pole with Utility wires; SOW says add A.",
+      "actual": null,
+      "expected": "A",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F052",
+      "rule_id": "PLA-R034",
+      "severity": "FAIL",
+      "internal_id": 23,
+      "pole_number": "4297968E",
+      "sheet": "poles",
+      "field": "grade_of_construction",
+      "message": "Pole 23 shares a span guy with pole 18 (grade A) but its grade is blank; SOW requires both poles on a span guy to have the same grade.",
+      "actual": null,
+      "expected": "A",
+      "related_poles": [],
+      "status": "OPEN"
+    },
+    {
+      "id": "F053",
+      "rule_id": "PLA-R035",
+      "severity": "FAIL",
+      "internal_id": 9,
+      "pole_number": "4638756E",
+      "sheet": "attachments",
+      "field": "util_5_lon",
+      "message": "Coordinate/elevation field is not numeric: ', -118.920320'.",
+      "actual": ", -118.920320",
+      "expected": "numeric value",
+      "related_poles": [],
+      "status": "OPEN"
+    }
+  ],
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "bottom_elev_ft": 464.82,
+        "top_elev_ft": 535.89
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285349.286102881,
+            1959275.5061357755,
+            464.82
+          ],
+          [
+            6285349.286102881,
+            1959275.5061357755,
+            535.8899999999999
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "bottom_elev_ft": 469.86,
+        "top_elev_ft": 515.27
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285280.436370279,
+            1959170.9563461633,
+            469.86
+          ],
+          [
+            6285280.436370279,
+            1959170.9563461633,
+            515.2699999999999
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "bottom_elev_ft": 469.18,
+        "top_elev_ft": 513.27
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285399.232518589,
+            1959193.1658496985,
+            469.18
+          ],
+          [
+            6285399.232518589,
+            1959193.1658496985,
+            513.2699999999999
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 4,
+        "pole_number": "No Tag 2",
+        "bottom_elev_ft": 464.27,
+        "top_elev_ft": 494.19
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285432.397020086,
+            1959289.3064617908,
+            464.27
+          ],
+          [
+            6285432.397020086,
+            1959289.3064617908,
+            494.19
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "bottom_elev_ft": 517.56,
+        "top_elev_ft": 565.79
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283954.26065021,
+            1957828.8690311064,
+            517.56
+          ],
+          [
+            6283954.26065021,
+            1957828.8690311064,
+            565.7899999999998
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 6,
+        "pole_number": "960518E",
+        "bottom_elev_ft": 530.05,
+        "top_elev_ft": 573.08
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283947.680413402,
+            1957571.627427043,
+            530.05
+          ],
+          [
+            6283947.680413402,
+            1957571.627427043,
+            573.08
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "bottom_elev_ft": 538.7,
+        "top_elev_ft": 581.67
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283944.706436395,
+            1957279.779015324,
+            538.7
+          ],
+          [
+            6283944.706436395,
+            1957279.779015324,
+            581.67
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 8,
+        "pole_number": "4638756E",
+        "bottom_elev_ft": 540.27,
+        "top_elev_ft": 582.83
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283942.340314653,
+            1957087.2792214302,
+            540.27
+          ],
+          [
+            6283942.340314653,
+            1957087.2792214302,
+            582.83
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "bottom_elev_ft": 544.74,
+        "top_elev_ft": 586.45
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283941.52964806,
+            1956899.860276098,
+            544.74
+          ],
+          [
+            6283941.52964806,
+            1956899.860276098,
+            586.45
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "bottom_elev_ft": 549.33,
+        "top_elev_ft": 596.71
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283939.7774963025,
+            1956642.574497135,
+            549.3299999999999
+          ],
+          [
+            6283939.7774963025,
+            1956642.574497135,
+            596.71
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "bottom_elev_ft": 560.22,
+        "top_elev_ft": 602.39
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283939.918757029,
+            1956229.5073551785,
+            560.22
+          ],
+          [
+            6283939.915425141,
+            1956229.1434510297,
+            602.39
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "bottom_elev_ft": 564.39,
+        "top_elev_ft": 607.27
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283936.275588587,
+            1956029.3766523027,
+            564.39
+          ],
+          [
+            6283936.275588587,
+            1956029.3766523027,
+            607.27
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "bottom_elev_ft": 569.6,
+        "top_elev_ft": 610.9
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283934.516340593,
+            1955837.2352674908,
+            569.6
+          ],
+          [
+            6283934.516340593,
+            1955837.2352674908,
+            610.9
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "bottom_elev_ft": 574.3,
+        "top_elev_ft": 617.2
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283931.12826553,
+            1955632.0071542512,
+            574.3
+          ],
+          [
+            6283931.12826553,
+            1955632.0071542512,
+            617.2
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 15,
+        "pole_number": "1099835E",
+        "bottom_elev_ft": 579.4,
+        "top_elev_ft": 621.49
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283928.347057471,
+            1955427.1374245193,
+            579.4
+          ],
+          [
+            6283928.347057471,
+            1955427.1374245193,
+            621.49
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "bottom_elev_ft": 585.53,
+        "top_elev_ft": 628.6
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283924.295410917,
+            1955215.3645747975,
+            585.53
+          ],
+          [
+            6283924.295410917,
+            1955215.3645747975,
+            628.6
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 17,
+        "pole_number": "1099837E",
+        "bottom_elev_ft": 590.19,
+        "top_elev_ft": 631.52
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283829.517366798,
+            1955016.432420233,
+            590.19
+          ],
+          [
+            6283830.724494012,
+            1955016.4213639104,
+            631.52
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "bottom_elev_ft": 595.14,
+        "top_elev_ft": 642.66
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283755.025899535,
+            1954857.7114329408,
+            595.14
+          ],
+          [
+            6283750.3817694755,
+            1954858.1179157128,
+            642.66
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "bottom_elev_ft": 602.25,
+        "top_elev_ft": 649.13
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283750.364408512,
+            1954678.334377211,
+            602.2499999999999
+          ],
+          [
+            6283750.6595257055,
+            1954677.6038042156,
+            649.13
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "bottom_elev_ft": 609.49,
+        "top_elev_ft": 656.32
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283750.656559862,
+            1954479.6234081024,
+            609.49
+          ],
+          [
+            6283751.260134149,
+            1954479.6178783681,
+            656.32
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 21,
+        "pole_number": "0074ATC",
+        "bottom_elev_ft": 621.78,
+        "top_elev_ft": 648.48
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283761.026368321,
+            1954194.9315563638,
+            621.7799999999999
+          ],
+          [
+            6283759.822542247,
+            1954195.3065195023,
+            648.48
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 23,
+        "pole_number": "4297968E",
+        "bottom_elev_ft": 594.54,
+        "top_elev_ft": 629.46
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283701.753629046,
+            1954873.848729175,
+            594.54
+          ],
+          [
+            6283701.45184583,
+            1954873.8514945367,
+            629.46
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "pole",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "bottom_elev_ft": 615.57,
+        "top_elev_ft": 666.31
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283686.909419179,
+            1954209.0762292917,
+            615.5699999999999
+          ],
+          [
+            6283687.78477648,
+            1954205.7927964923,
+            666.31
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 492.52,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "Double Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285349.286102881,
+          1959275.5061357755,
+          492.5199999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 491.1,
+        "arm_no": null,
+        "owner": "Time Warner Cable",
+        "size": "0.5",
+        "support": "Double Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285349.286102881,
+          1959275.5061357755,
+          491.1
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 489.58,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "Double Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285349.286102881,
+          1959275.5061357755,
+          489.5799999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 534.74,
+        "arm_no": null,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285349.286102881,
+          1959275.5061357755,
+          534.74
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 528.71,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285345.061750854,
+          1959275.5446216012,
+          528.71
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 528.87,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285354.1006727405,
+          1959274.0065348893,
+          528.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 515.75,
+        "arm_no": "3",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285343.569630625,
+          1959277.377888931,
+          515.75
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_5",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 515.89,
+        "arm_no": "3",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285354.704151634,
+          1959274.0010370577,
+          515.8899999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_6",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 509.92,
+        "arm_no": "4",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285344.153217184,
+          1959275.1889641932,
+          509.91999999999996
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_7",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 509.7,
+        "arm_no": "4",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285355.307630528,
+          1959273.9955392398,
+          509.69999999999993
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_8",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 503.59,
+        "arm_no": "5",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285344.153217184,
+          1959275.1889641932,
+          503.59
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_9",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 503.49,
+        "arm_no": "5",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285354.399096934,
+          1959273.6398815203,
+          503.48999999999995
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_10",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 498.37,
+        "arm_no": null,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR Triplex (Neritina)",
+        "support": "3\" Spool Bolt",
+        "usage": "SECONDARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285349.286102881,
+          1959275.5061357755,
+          498.36999999999995
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_11",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "elev_ft": 497.64,
+        "arm_no": null,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR Triplex (Neritina)",
+        "support": "3\" Spool Bolt",
+        "usage": "SECONDARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285349.286102881,
+          1959275.5061357755,
+          497.64
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "elev_ft": 492.58,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285280.436370279,
+          1959170.9563461633,
+          492.5799999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "elev_ft": 491.26,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285280.436370279,
+          1959170.9563461633,
+          491.26
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "elev_ft": 489.29,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285280.436370279,
+          1959170.9563461633,
+          489.28999999999996
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "elev_ft": 513.88,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285278.964145542,
+          1959174.9730432609,
+          513.88
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "elev_ft": 514.02,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285280.416473501,
+          1959168.7729195363,
+          514.0199999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "elev_ft": 514.06,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285280.698317233,
+          1959166.5867432614,
+          514.06
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "elev_ft": 505.55,
+        "arm_no": null,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR Triplex (Neritina)",
+        "support": "3\" Spool Bolt",
+        "usage": "SECONDARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285281.043167337,
+          1959171.3147513005,
+          505.55
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "elev_ft": 494.91,
+        "arm_no": null,
+        "owner": "American Dark",
+        "size": "0.5",
+        "support": "Double Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285399.232518589,
+          1959193.1658496985,
+          494.91
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "elev_ft": 493.37,
+        "arm_no": null,
+        "owner": "Verizon (ATC)",
+        "size": "0.5",
+        "support": "Double Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285399.232518589,
+          1959193.1658496985,
+          493.36999999999995
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "elev_ft": 491.74,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "Double Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285399.232518589,
+          1959193.1658496985,
+          491.73999999999995
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_4",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "elev_ft": 491.16,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285399.232518589,
+          1959193.1658496985,
+          491.16
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 4,
+        "pole_number": "No Tag 2",
+        "elev_ft": 490.21,
+        "arm_no": null,
+        "owner": "Time Warner Cable",
+        "size": "0.5",
+        "support": "Double Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285432.397020086,
+          1959289.3064617908,
+          490.21
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 4,
+        "pole_number": "No Tag 2",
+        "elev_ft": 489.09,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "Double Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285432.397020086,
+          1959289.3064617908,
+          489.09
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "elev_ft": 543.56,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283954.26065021,
+          1957828.8690311064,
+          543.56
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "elev_ft": 542.41,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283954.26065021,
+          1957828.8690311064,
+          542.41
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "elev_ft": 541.5,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.75",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283954.26065021,
+          1957828.8690311064,
+          541.5
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "elev_ft": 564.29,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283949.721015096,
+          1957827.4548572144,
+          564.2899999999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "elev_ft": 564.29,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283953.053634923,
+          1957828.8800825083,
+          564.2899999999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "elev_ft": 564.29,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283958.163458837,
+          1957826.649689,
+          564.2899999999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 6,
+        "pole_number": "960518E",
+        "elev_ft": 552.69,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283947.680413402,
+          1957571.627427043,
+          552.69
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 6,
+        "pole_number": "960518E",
+        "elev_ft": 551.64,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283947.680413402,
+          1957571.627427043,
+          551.64
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 6,
+        "pole_number": "960518E",
+        "elev_ft": 550.2,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283947.680413402,
+          1957571.627427043,
+          550.1999999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 6,
+        "pole_number": "960518E",
+        "elev_ft": 572.55,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283943.15073568,
+          1957571.3049668244,
+          572.55
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 6,
+        "pole_number": "960518E",
+        "elev_ft": 572.55,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283946.463392007,
+          1957570.546766058,
+          572.55
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 6,
+        "pole_number": "960518E",
+        "elev_ft": 572.55,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283952.200095357,
+          1957570.8581752833,
+          572.55
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "elev_ft": 564.74,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283944.706436395,
+          1957279.779015324,
+          564.74
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "elev_ft": 563.62,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283944.706436395,
+          1957279.779015324,
+          563.62
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "elev_ft": 562.64,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283944.706436395,
+          1957279.779015324,
+          562.64
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "elev_ft": 580.32,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283936.263840511,
+          1957280.5841872275,
+          580.3199999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "elev_ft": 580.32,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.881619834,
+          1957280.1871269534,
+          580.3199999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "elev_ft": 580.32,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283943.804490493,
+          1957280.1512083567,
+          580.3199999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "elev_ft": 578.63,
+        "arm_no": "2",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283945.648365531,
+          1957283.773672725,
+          578.6299999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_5",
+        "internal_id": 7,
+        "pole_number": "960519E",
+        "elev_ft": 578.63,
+        "arm_no": "2",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283945.568399091,
+          1957275.039971913,
+          578.6299999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 8,
+        "pole_number": "4638756E",
+        "elev_ft": 564.43,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283942.340314653,
+          1957087.2792214302,
+          564.43
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 8,
+        "pole_number": "4638756E",
+        "elev_ft": 563.49,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283942.340314653,
+          1957087.2792214302,
+          563.49
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 8,
+        "pole_number": "4638756E",
+        "elev_ft": 562.29,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283942.340314653,
+          1957087.2792214302,
+          562.2899999999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 8,
+        "pole_number": "4638756E",
+        "elev_ft": 581.63,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283937.498807404,
+          1957085.8678124682,
+          581.6299999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 8,
+        "pole_number": "4638756E",
+        "elev_ft": 581.63,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283940.818180769,
+          1957085.8374195164,
+          581.6299999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 8,
+        "pole_number": "4638756E",
+        "elev_ft": 581.63,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283946.551643852,
+          1957085.784923459,
+          581.6299999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 573.81,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283941.52964806,
+          1956899.860276098,
+          573.81
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 572.72,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283941.52964806,
+          1956899.860276098,
+          572.72
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 571.58,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283941.52964806,
+          1956899.860276098,
+          571.58
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 585.39,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283937.314961132,
+          1956900.9906705522,
+          585.39
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 580.72,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.7257336,
+          1956900.6046623588,
+          580.72
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 585.39,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283946.059425926,
+          1956900.182736042,
+          585.39
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 580.72,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283940.064148219,
+          1956904.6048453725,
+          580.72
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_5",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 580.72,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283940.309267976,
+          1956898.4157112897,
+          580.72
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_6",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "elev_ft": 580.72,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283940.581043481,
+          1956895.1378106542,
+          580.72
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "elev_ft": 574.85,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.7774963025,
+          1956642.574497135,
+          574.8499999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "elev_ft": 573.5,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.7774963025,
+          1956642.574497135,
+          573.5
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "elev_ft": 572.1,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.7774963025,
+          1956642.574497135,
+          572.0999999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "elev_ft": 595.37,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283935.231020008,
+          1956640.4325172913,
+          595.37
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "elev_ft": 595.37,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283938.580429655,
+          1956643.677261625,
+          595.37
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "elev_ft": 595.37,
+        "arm_no": "1",
+        "owner": "UNKNOWN",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283944.293985033,
+          1956641.4413401159,
+          595.37
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 583.53,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.918757029,
+          1956229.5073551785,
+          583.53
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 582.94,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.918757029,
+          1956229.5073551785,
+          582.94
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 581.85,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.918757029,
+          1956229.5073551785,
+          581.8499999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 602.12,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283938.7183419,
+          1956230.246215455,
+          602.12
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 602.24,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283944.7504046,
+          1956229.8270519075,
+          602.24
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 602.61,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283935.693980755,
+          1956229.5460373065,
+          602.61
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 597.58,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283943.82510437,
+          1956227.6519158275,
+          597.58
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_5",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 597.62,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.925420803,
+          1956230.2351634766,
+          597.62
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_6",
+        "internal_id": 11,
+        "pole_number": "109832E",
+        "elev_ft": 597.92,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283935.680653002,
+          1956228.0904206918,
+          597.92
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "elev_ft": 588.44,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283936.275588587,
+          1956029.3766523027,
+          588.44
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "elev_ft": 587.21,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283936.275588587,
+          1956029.3766523027,
+          587.21
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "elev_ft": 586.41,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.5",
+        "support": "Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283936.275588587,
+          1956029.3766523027,
+          586.4099999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_4",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "elev_ft": 585.12,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283936.275588587,
+          1956029.3766523027,
+          585.12
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "elev_ft": 606.89,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283931.440577061,
+          1956028.693052786,
+          606.89
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "elev_ft": 607.01,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283934.76006611,
+          1956028.66265917,
+          607.01
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "elev_ft": 607.14,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283940.795500749,
+          1956028.6073989866,
+          607.14
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "elev_ft": 593.36,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283934.516340593,
+          1955837.2352674908,
+          593.36
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "elev_ft": 592.25,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283934.516340593,
+          1955837.2352674908,
+          592.25
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "elev_ft": 591.15,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.75",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283934.516340593,
+          1955837.2352674908,
+          591.15
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "elev_ft": 610.19,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283929.983072119,
+          1955836.5489051912,
+          610.1899999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "elev_ft": 610.56,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283932.699034913,
+          1955836.5240375318,
+          610.5599999999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "elev_ft": 611.05,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.036281428,
+          1955836.4660139377,
+          611.05
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "elev_ft": 600.06,
+        "arm_no": null,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR Triplex (Neritina)",
+        "support": "3\" Spool Bolt",
+        "usage": "SECONDARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283934.814782325,
+          1955836.8686003168,
+          600.0599999999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 601.92,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283931.12826553,
+          1955632.0071542512,
+          601.92
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 600.3,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283931.12826553,
+          1955632.0071542512,
+          600.3
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 599.29,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283931.12826553,
+          1955632.0071542512,
+          599.29
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 616.25,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283927.500293454,
+          1955631.3125031234,
+          616.2499999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 615.81,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283932.9289238835,
+          1955630.898863479,
+          615.8099999999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 616.58,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283927.500293454,
+          1955631.3125031234,
+          616.58
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 609.83,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283932.292053376,
+          1955627.2653483637,
+          609.83
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_5",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 609.35,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283931.7351488015,
+          1955632.365532225,
+          609.3499999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_6",
+        "internal_id": 14,
+        "pole_number": "1099834E",
+        "elev_ft": 609.71,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283930.866473018,
+          1955636.376766822,
+          609.71
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 15,
+        "pole_number": "1099835E",
+        "elev_ft": 603.38,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283928.347057471,
+          1955427.1374245193,
+          603.3799999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 15,
+        "pole_number": "1099835E",
+        "elev_ft": 602.54,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283928.347057471,
+          1955427.1374245193,
+          602.54
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 15,
+        "pole_number": "1099835E",
+        "elev_ft": 600.34,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283928.347057471,
+          1955427.1374245193,
+          600.34
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 15,
+        "pole_number": "1099835E",
+        "elev_ft": 619.99,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283923.817059734,
+          1955426.8149672886,
+          619.99
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 15,
+        "pole_number": "1099835E",
+        "elev_ft": 619.88,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283928.045279753,
+          1955427.1401876276,
+          619.88
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 15,
+        "pole_number": "1099835E",
+        "elev_ft": 620.19,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283933.1721690595,
+          1955426.7293111382,
+          620.1899999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 608.39,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283924.295410917,
+          1955215.3645747975,
+          608.39
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 607.36,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283924.295410917,
+          1955215.3645747975,
+          607.36
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 606.19,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "Extension Bracket",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283924.295410917,
+          1955215.3645747975,
+          606.1899999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 626.9,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283919.782041639,
+          1955216.8616386973,
+          626.8999999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 626.92,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283923.091623605,
+          1955215.7395315052,
+          626.92
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 627.83,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283928.510332708,
+          1955214.234178768,
+          627.83
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 621.89,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283919.178482028,
+          1955216.8671650812,
+          621.89
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_5",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 622.0,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283922.179620174,
+          1955215.0200127647,
+          621.9999999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_6",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "elev_ft": 622.36,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283928.805448727,
+          1955213.5036074591,
+          622.36
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 17,
+        "pole_number": "1099837E",
+        "elev_ft": 616.71,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283829.517366798,
+          1955016.432420233,
+          616.71
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 17,
+        "pole_number": "1099837E",
+        "elev_ft": 615.6,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283829.517366798,
+          1955016.432420233,
+          615.5999999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 17,
+        "pole_number": "1099837E",
+        "elev_ft": 614.26,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283829.517366798,
+          1955016.432420233,
+          614.26
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 17,
+        "pole_number": "1099837E",
+        "elev_ft": 630.52,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283826.817996136,
+          1955018.2768175541,
+          630.52
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 17,
+        "pole_number": "1099837E",
+        "elev_ft": 629.96,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283831.318058442,
+          1955015.324123518,
+          629.96
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 17,
+        "pole_number": "1099837E",
+        "elev_ft": 631.13,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283834.315878461,
+          1955013.113058466,
+          631.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "elev_ft": 623.91,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283755.025899535,
+          1954857.7114329408,
+          623.91
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "elev_ft": 622.87,
+        "arm_no": "3",
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283755.025899535,
+          1954857.7114329408,
+          622.87
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "elev_ft": 621.22,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.5",
+        "support": "Extension Bracket",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283755.025899535,
+          1954857.7114329408,
+          621.2199999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "elev_ft": 642.5,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283749.908918113,
+          1954859.2140517165,
+          642.4999999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "elev_ft": 641.47,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283753.526984539,
+          1954858.816969321,
+          641.4699999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "elev_ft": 641.24,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283759.247532975,
+          1954857.3088215776,
+          641.24
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "elev_ft": 632.03,
+        "arm_no": null,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR Triplex (Neritina)",
+        "support": "3\" Spool Bolt",
+        "usage": "UTILITY_SERVICE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283755.931249675,
+          1954857.7031384767,
+          632.0299999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 628.65,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.364408512,
+          1954678.334377211,
+          628.6499999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 627.53,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.364408512,
+          1954678.334377211,
+          627.5299999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 626.61,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "1",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.364408512,
+          1954678.334377211,
+          626.61
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 649.03,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283745.844299121,
+          1954679.103658768,
+          649.03
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 648.85,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283749.167269865,
+          1954679.4371489172,
+          648.85
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 648.52,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Post Insulator (Crossarm)",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283755.189637241,
+          1954677.926235552,
+          648.52
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_4",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 636.7,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.619517866,
+          1954673.2369554779,
+          636.7
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_5",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 636.79,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.944640964,
+          1954675.7815190428,
+          636.79
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_6",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "elev_ft": 636.8,
+        "arm_no": "2",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.702867532,
+          1954682.334557005,
+          636.8
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "elev_ft": 635.3,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.656559862,
+          1954479.6234081024,
+          635.3
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "elev_ft": 634.1,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.656559862,
+          1954479.6234081024,
+          634.1
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "elev_ft": 633.69,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.75",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.656559862,
+          1954479.6234081024,
+          633.6899999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "elev_ft": 655.1,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283747.336901295,
+          1954479.6538218653,
+          655.1
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "elev_ft": 655.13,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283750.066321462,
+          1954481.0845540655,
+          655.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "elev_ft": 655.19,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283756.383847787,
+          1954478.843067993,
+          655.19
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 21,
+        "pole_number": "0074ATC",
+        "elev_ft": 621.61,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283761.026368321,
+          1954194.9315563638,
+          621.61
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_1",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "elev_ft": 645.27,
+        "arm_no": null,
+        "owner": "Dark Fiber",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283686.909419179,
+          1954209.0762292917,
+          645.27
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_2",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "elev_ft": 644.46,
+        "arm_no": null,
+        "owner": "Verizon Wireless ATC",
+        "size": "0.5",
+        "support": "Dead End",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283686.909419179,
+          1954209.0762292917,
+          644.46
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "comm",
+        "slot": "comm_3",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "elev_ft": 643.64,
+        "arm_no": null,
+        "owner": "ATnT",
+        "size": "0.5",
+        "support": "3-Bolt Clamp",
+        "usage": null
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283686.909419179,
+          1954209.0762292917,
+          643.64
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_1",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "elev_ft": 665.29,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283682.074112315,
+          1954208.3926696926,
+          665.29
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_2",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "elev_ft": 665.21,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283688.720158186,
+          1954209.0596363123,
+          665.2099999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "attachment",
+        "category": "util",
+        "slot": "util_3",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "elev_ft": 665.29,
+        "arm_no": "1",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "size": "1/0 ACSR (Raven)",
+        "support": "15 kV Deadend Insulator",
+        "usage": "PRIMARY"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283691.121138261,
+          1954207.5818963796,
+          665.29
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "key": "DRIP_LOOP|Secondary",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 497.13
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285348.967786856,
+          1959273.6893624943,
+          497.13
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_2",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "key": "STREET_LIGHT|Roadway - 6 ft",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 495.44
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285351.394963599,
+          1959275.1229886317,
+          495.44
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "key": "CUTOUT_ARRESTOR|3 Cutouts on Crossarm",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 511.34
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285279.832889334,
+          1959170.961845468,
+          511.34
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_2",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "key": "TRANSFORMER|25 kVA Single Phase",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 507.79
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285280.711581736,
+          1959168.0423610099,
+          507.78999999999996
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_3",
+        "internal_id": 2,
+        "pole_number": "88872E",
+        "key": "DRIP_LOOP|Secondary",
+        "owner": null,
+        "elev_ft": 503.93
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285280.462899314,
+          1959173.8675816648,
+          503.93
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "key": "RISER|3 PVC",
+        "owner": "AT&T",
+        "elev_ft": 477.92
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285399.547517645,
+          1959194.6187190444,
+          477.91999999999996
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "key": "CUTOUT_ARRESTOR|3 Cutouts on Crossarm",
+        "owner": "UNKNOWN",
+        "elev_ft": 561.46
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283954.237326968,
+          1957826.321701515,
+          561.46
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_2",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "key": "CUTOUT_ARRESTOR|3 Cutouts on Crossarm",
+        "owner": "UNKNOWN",
+        "elev_ft": 557.67
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283956.671348931,
+          1957828.4830242093,
+          557.67
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_3",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "key": "RECLOSER|2.4-14.4 kV Three Phase",
+        "owner": "UNKNOWN",
+        "elev_ft": 553.37
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283956.021195095,
+          1957823.3938906717,
+          553.37
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_4",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "key": "JOINT_USE_BOX|Large (18\" X 18\")",
+        "owner": "UNKNOWN",
+        "elev_ft": 528.76
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283956.057845665,
+          1957827.396837175,
+          528.76
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_5",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "key": "RISER|3 PVC",
+        "owner": "UNKNOWN",
+        "elev_ft": 550.76
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283955.4476742335,
+          1957826.6745543783,
+          550.7599999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_6",
+        "internal_id": 5,
+        "pole_number": "960517E",
+        "key": "RISER|2 PVC",
+        "owner": "UNKNOWN",
+        "elev_ft": 555.09
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283954.26065021,
+          1957828.8690311064,
+          555.09
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "key": "CUTOUT_ARRESTOR|3 Cutouts on Crossarm",
+        "owner": "UNKNOWN",
+        "elev_ft": 592.39
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.784160172,
+          1956643.3023054698,
+          592.39
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_2",
+        "internal_id": 10,
+        "pole_number": "4327970E",
+        "key": "RISER|2 PVC",
+        "owner": "UNKNOWN",
+        "elev_ft": 587.01
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283939.780828237,
+          1956642.9384012977,
+          587.01
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "key": "CUTOUT_ARRESTOR|3 Cutouts on Crossarm",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 605.2
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283934.81145042,
+          1955836.5046961864,
+          605.2
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_2",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "key": "TRANSFORMER|25 kVA Single Phase",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 603.07
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283934.513008684,
+          1955836.8713633602,
+          603.0699999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_3",
+        "internal_id": 13,
+        "pole_number": "4796611E",
+        "key": "CAPACITOR|3-Unit Rack 600 Kvar (Fixed)",
+        "owner": null,
+        "elev_ft": 592.44
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283934.194575479,
+          1955835.0546057282,
+          592.44
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 15,
+        "pole_number": "1099835E",
+        "key": "CUTOUT_ARRESTOR|3 Cutouts on Crossarm",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 615.99
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283928.350389409,
+          1955427.5013286355,
+          615.99
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "key": "CUTOUT_ARRESTOR|3 Cutouts on Crossarm",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 637.61
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283752.601630534,
+          1954856.6418394533,
+          637.61
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_2",
+        "internal_id": 18,
+        "pole_number": "1099838E",
+        "key": "TRANSFORMER|25 kVA Single Phase",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 634.24
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283754.425666732,
+          1954858.080866675,
+          634.24
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_1",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "key": "TRANSFORMER|25 kVA Single Phase",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 663.04
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283687.211209015,
+          1954209.0734637862,
+          663.04
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_2",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "key": "WIRELESS_ANTENNA|Antenna",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 650.29
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283687.808119301,
+          1954208.3401247226,
+          650.29
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_3",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "key": "RISER|3 PVC",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 660.33
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283687.207874319,
+          1954208.7095597533,
+          660.33
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_4",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "key": "RISER|3 PVC",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 657.3
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283687.204539623,
+          1954208.3456557202,
+          657.2999999999998
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "equipment",
+        "slot": "eq_5",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "key": "RISER|3 PVC",
+        "owner": "VZW/ATC",
+        "elev_ft": 643.1
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283687.496325381,
+          1954207.2511781205,
+          643.1
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "Dark Fiber",
+        "elev_ft": 466.86
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285349.630987736,
+          1959247.116090801,
+          466.86
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_2",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "Time Warner Cable",
+        "elev_ft": 466.87
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285349.644248967,
+          1959248.5717085956,
+          466.86999999999995
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 469.18
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285406.799227146,
+          1959195.6444700598,
+          469.18
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_2",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "AT&T",
+        "elev_ft": 469.18
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6285400.250542131,
+          1959172.4123021336,
+          469.18
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 545.51
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283945.777654211,
+          1956902.3689240771,
+          545.5099999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "AT&T",
+        "elev_ft": 564.59
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283941.11726359,
+          1956030.7880608698,
+          564.59
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 585.39
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283938.754188151,
+          1955212.3207145266,
+          585.39
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_2",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 585.43
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283937.865507589,
+          1955214.1485240625,
+          585.43
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_3",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "Dark Fiber",
+        "elev_ft": 585.31
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283937.5903821895,
+          1955217.0625199173,
+          585.31
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_4",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "VZW/ATC",
+        "elev_ft": 585.47
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283925.867616994,
+          1955222.2649370967,
+          585.47
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 603.47
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283747.066498636,
+          1954647.794085036,
+          603.4699999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 609.19
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283749.499420984,
+          1954485.0930283978,
+          609.1899999999999
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_2",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 609.48
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283758.154564198,
+          1954474.459630517,
+          609.48
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 21,
+        "pole_number": "0074ATC",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "VZW/ATC",
+        "elev_ft": 623.16
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283756.352828717,
+          1954178.9612504535,
+          623.16
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 23,
+        "pole_number": "4297968E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 601.93
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283694.099003916,
+          1954861.9090299662,
+          601.93
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_2",
+        "internal_id": 23,
+        "pole_number": "4297968E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "Dark Fiber",
+        "elev_ft": 601.98
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283694.099003916,
+          1954861.9090299662,
+          601.98
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "anchor",
+        "slot": "anc_1",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "key": "10\" Single Helix (Class 4) 1\" Rod",
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 599.29
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6283687.342929532,
+          1954190.5115926005,
+          599.29
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "anchor_no": 1,
+        "owner": "Dark Fiber",
+        "elev_ft": 492.02
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285349.286102881,
+            1959275.5061357755,
+            492.0199999999999
+          ],
+          [
+            6285349.630987736,
+            1959247.116090801,
+            466.86
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_2",
+        "internal_id": 1,
+        "pole_number": "926680E",
+        "anchor_no": 2,
+        "owner": "Time Warner Cable",
+        "elev_ft": 491.17
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285349.286102881,
+            1959275.5061357755,
+            491.16999999999996
+          ],
+          [
+            6285349.644248967,
+            1959248.5717085956,
+            466.86999999999995
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "anchor_no": 1,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 509.22
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285399.232518589,
+            1959193.1658496985,
+            509.21999999999997
+          ],
+          [
+            6285406.799227146,
+            1959195.6444700598,
+            469.18
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_2",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "anchor_no": 1,
+        "owner": "AT&T",
+        "elev_ft": 491.16
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285399.232518589,
+            1959193.1658496985,
+            491.16
+          ],
+          [
+            6285406.799227146,
+            1959195.6444700598,
+            469.18
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_3",
+        "internal_id": 3,
+        "pole_number": "504137H",
+        "anchor_no": 2,
+        "owner": "AT&T",
+        "elev_ft": 491.74
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6285399.232518589,
+            1959193.1658496985,
+            491.73999999999995
+          ],
+          [
+            6285400.250542131,
+            1959172.4123021336,
+            469.18
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 9,
+        "pole_number": "4638756E",
+        "anchor_no": 1,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 580.88
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283941.52964806,
+            1956899.860276098,
+            580.8799999999999
+          ],
+          [
+            6283945.777654211,
+            1956902.3689240771,
+            545.5099999999999
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 12,
+        "pole_number": "1099834E",
+        "anchor_no": 1,
+        "owner": "AT&T",
+        "elev_ft": 586.41
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283936.275588587,
+            1956029.3766523027,
+            586.4099999999999
+          ],
+          [
+            6283941.11726359,
+            1956030.7880608698,
+            564.59
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "anchor_no": 1,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 625.51
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283924.295410917,
+            1955215.3645747975,
+            625.51
+          ],
+          [
+            6283938.754188151,
+            1955212.3207145266,
+            585.39
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_2",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "anchor_no": 2,
+        "owner": "Dark Fiber",
+        "elev_ft": 608.39
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283924.295410917,
+            1955215.3645747975,
+            608.39
+          ],
+          [
+            6283937.865507589,
+            1955214.1485240625,
+            585.43
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_3",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "anchor_no": 3,
+        "owner": "VZW/ATC",
+        "elev_ft": 607.36
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283924.295410917,
+            1955215.3645747975,
+            607.36
+          ],
+          [
+            6283937.5903821895,
+            1955217.0625199173,
+            585.31
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_4",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "anchor_no": 4,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 621.48
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283924.295410917,
+            1955215.3645747975,
+            621.48
+          ],
+          [
+            6283925.867616994,
+            1955222.2649370967,
+            585.47
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_5",
+        "internal_id": 16,
+        "pole_number": "1099836E",
+        "anchor_no": 4,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 620.89
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283924.295410917,
+            1955215.3645747975,
+            620.89
+          ],
+          [
+            6283925.867616994,
+            1955222.2649370967,
+            585.47
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 19,
+        "pole_number": "1099839E",
+        "anchor_no": 1,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 636.79
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283750.364408512,
+            1954678.334377211,
+            636.79
+          ],
+          [
+            6283747.066498636,
+            1954647.794085036,
+            603.4699999999999
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "anchor_no": 1,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 655.1
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283750.656559862,
+            1954479.6234081024,
+            655.1
+          ],
+          [
+            6283749.499420984,
+            1954485.0930283978,
+            609.1899999999999
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_2",
+        "internal_id": 20,
+        "pole_number": "1099840E",
+        "anchor_no": 2,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 655.1
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283750.656559862,
+            1954479.6234081024,
+            655.1
+          ],
+          [
+            6283758.154564198,
+            1954474.459630517,
+            609.48
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 21,
+        "pole_number": "0074ATC",
+        "anchor_no": 1,
+        "owner": "VZW/ATC",
+        "elev_ft": 643.35
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283761.026368321,
+            1954194.9315563638,
+            643.35
+          ],
+          [
+            6283756.352828717,
+            1954178.9612504535,
+            623.16
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 23,
+        "pole_number": "4297968E",
+        "anchor_no": 1,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 641.1
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283701.753629046,
+            1954873.848729175,
+            641.1
+          ],
+          [
+            6283694.099003916,
+            1954861.9090299662,
+            601.93
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_2",
+        "internal_id": 23,
+        "pole_number": "4297968E",
+        "anchor_no": 2,
+        "owner": "Dark Fiber",
+        "elev_ft": 623.75
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283701.753629046,
+            1954873.848729175,
+            623.7499999999999
+          ],
+          [
+            6283694.099003916,
+            1954861.9090299662,
+            601.98
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "feature_type": "guy",
+        "slot": "guy_1",
+        "internal_id": 24,
+        "pole_number": "4215164E",
+        "anchor_no": 1,
+        "owner": "SOUTHERN CALIFORNIA EDISON",
+        "elev_ft": 665.51
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6283686.909419179,
+            1954209.0762292917,
+            665.51
+          ],
+          [
+            6283687.342929532,
+            1954190.5115926005,
+            599.29
+          ]
+        ]
+      }
+    }
+  ]
+}

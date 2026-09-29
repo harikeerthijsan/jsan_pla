@@ -1,0 +1,13 @@
+.env
+*.db
+__pycache__/
+.pytest_cache/
+node_modules/
+.venv/
+web/sample1/lidar/
+api/test_pla_qc.db
+api/storage/
+api/test-storage/
+backup-*/
+hotfix-backup-*/
+.railway/config.json
