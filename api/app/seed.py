@@ -14,7 +14,7 @@ def seed_database(db: Session):
     db.add(Project(**p))
     for b in data['blocks']:
         db.add(LidarBlock(project_id='sample1', name=b['name'], object_key=b['object_key'],
-            xmin=b['xmin'],ymin=b['ymin'],xmax=b['xmax'],ymax=b['ymax'],poles_json=json.dumps(b['poles'])))
+            x_min=b['xmin'],y_min=b['ymin'],x_max=b['xmax'],y_max=b['ymax'],poles_json=json.dumps(b['poles'])))
     for pole in data['poles']:
         db.add(Pole(project_id='sample1', internal_id=pole['internal_id'], pole_number=pole.get('pole_number'),
             block_name=pole.get('fbi_block'), corrected_lat=pole.get('corrected_lat'), corrected_lon=pole.get('corrected_lon'),

@@ -148,7 +148,7 @@ def scene(project_id:str,internal_id:int,include_related:bool=Query(True),u:User
     if not p: raise HTTPException(404,'Pole not found')
     fs=db.query(Finding).filter_by(project_id=project_id,internal_id=internal_id).all(); related=sorted(set(x for f in fs for x in json.loads(f.related_poles_json or '[]'))); ids=[internal_id]+(related if include_related else [])
     feats=db.query(SceneFeature).filter(SceneFeature.project_id==project_id,SceneFeature.internal_id.in_(ids)).all(); selected=db.query(Pole).filter(Pole.project_id==project_id,Pole.internal_id.in_(ids)).all(); names=sorted(set(x.block_name for x in selected if x.block_name)); blocks=[]
-    for b in db.query(LidarBlock).filter(LidarBlock.project_id==project_id,LidarBlock.name.in_(names)).all(): blocks.append({'name':b.name,'bbox':[b.xmin,b.ymin,b.xmax,b.ymax],'copc_url':block_url(b.object_key),'object_key':b.object_key,'point_count':b.point_count})
+    for b in db.query(LidarBlock).filter(LidarBlock.project_id==project_id,LidarBlock.name.in_(names)).all(): blocks.append({'name':b.name,'bbox':[b.x_min,b.y_min,b.x_max,b.y_max],'copc_url':block_url(b.object_key),'object_key':b.object_key,'point_count':b.point_count})
     return {'project_id':project_id,'pole':pole_dict(p),'related_poles':related,'block':next((b for b in blocks if b['name']==p.block_name),None),'blocks':blocks,'features':[json.loads(x.payload_json) for x in feats],'findings':[finding_dict(f) for f in fs]}
 
 @app.get('/api/projects/{project_id}/poles/{internal_id}/analysis-frame')
