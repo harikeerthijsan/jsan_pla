@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -17,6 +18,9 @@ from app import storage
 from railway_entrypoint import validate_production_environment
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
+
 def test_railway_image_serves_frontend_and_api_from_one_app():
     with TestClient(app) as client:
         root = client.get('/')
@@ -29,6 +33,15 @@ def test_railway_image_serves_frontend_and_api_from_one_app():
     assert health.json()['status'] == 'ok'
     assert docs.status_code == 200
     assert 'Swagger UI' in docs.text
+
+
+def test_railway_image_isolates_and_validates_native_geospatial_libraries():
+    dockerfile = (REPOSITORY_ROOT / 'Dockerfile').read_text(encoding='utf-8')
+
+    assert 'mamba create --yes --name pla' in dockerfile
+    assert 'mamba install --yes' not in dockerfile
+    assert '/opt/conda/envs/pla/bin/pdal --drivers' in dockerfile
+    assert 'PDAL_BIN=/opt/conda/envs/pla/bin/pdal' in dockerfile
 
 
 def test_bucket_cors_supports_multipart_and_copc_reads(monkeypatch):
