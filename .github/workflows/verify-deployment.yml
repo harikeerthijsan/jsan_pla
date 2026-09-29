@@ -1,0 +1,59 @@
+name: Verify deployment
+
+# Manual post-deploy gate for staging and production (docs/RELEASE_RUNBOOK.md).
+# It only performs unauthenticated GETs against public health endpoints; no secrets are used.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Railway environment that was deployed
+        type: choice
+        options: [staging, production]
+        required: true
+      base_url:
+        description: Public base URL of that environment, e.g. https://pla-qc-staging.up.railway.app
+        type: string
+        required: true
+      expected_sha:
+        description: Optional commit SHA you expect to be live (recorded in the run summary)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Health checks
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          EXPECTED_ENV: ${{ inputs.environment }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          case "$BASE_URL" in https://*) ;; *) echo "base_url must be https"; exit 1;; esac
+          BASE_URL="${BASE_URL%/}"
+          curl -fsS --max-time 20 "$BASE_URL/health/live" | tee live.json; echo
+          curl -fsS --max-time 20 "$BASE_URL/health/ready" | tee ready.json; echo
+          python3 - <<'PY'
+          import json, os, sys
+          ready = json.load(open("ready.json"))
+          expected = os.environ["EXPECTED_ENV"]
+          problems = []
+          if ready.get("status") != "ready": problems.append(f"status={ready.get('status')}")
+          if ready.get("app_env") != expected: problems.append(f"app_env={ready.get('app_env')} expected {expected}")
+          if ready.get("storage_mode") != "s3": problems.append(f"storage_mode={ready.get('storage_mode')}")
+          if problems:
+              print("Deployment verification failed: " + "; ".join(problems)); sys.exit(1)
+          print(f"{expected} is ready: {ready}")
+          PY
+          {
+            echo "### Deployment verified"
+            echo "- environment: $EXPECTED_ENV"
+            echo "- url: $BASE_URL"
+            echo "- expected commit: ${EXPECTED_SHA:-not provided}"
+            echo "- ready: \`$(cat ready.json)\`"
+          } >> "$GITHUB_STEP_SUMMARY"

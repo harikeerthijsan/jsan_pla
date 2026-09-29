@@ -1,0 +1,23 @@
+# Railway environment "production". Set in Railway only; never commit real values.
+# The API refuses to start if these are unsafe or if APP_ENV disagrees with the Railway environment.
+APP_ENV=production
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+STORAGE_MODE=s3
+BUCKET=${{pla-files.BUCKET}}
+BUCKET_ENDPOINT=${{pla-files.ENDPOINT}}
+BUCKET_ACCESS_KEY_ID=${{pla-files.ACCESS_KEY_ID}}
+BUCKET_SECRET_ACCESS_KEY=${{pla-files.SECRET_ACCESS_KEY}}
+BUCKET_REGION=${{pla-files.REGION}}
+S3_ADDRESSING_STYLE=virtual
+AUTO_CONFIGURE_BUCKET_CORS=true
+BUCKET_CORS_ORIGINS=<production-origin-allowlist>
+SEED_DEMO=false
+WORKER_POLL_SECONDS=3
+DB_CONNECT_TIMEOUT=120
+JWT_SECRET=<production-only-random-value-of-32+-chars>
+ADMIN_EMAIL=<named-production-administrator>
+ADMIN_PASSWORD=<production-only-password-of-12+-chars>
+# Only if the production Railway environment is not named "production":
+# PRODUCTION_RAILWAY_ENVIRONMENT=<railway-environment-name>
+# Optional; only for a cross-origin frontend. Never *.
+# CORS_ORIGINS=https://qc.example.com
