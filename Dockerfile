@@ -3,7 +3,7 @@ FROM condaforge/miniforge3:25.3.1-0
 WORKDIR /app
 
 COPY api/requirements.txt /tmp/requirements.txt
-RUN mamba install --yes --channel conda-forge "python=3.12" "pdal=2.10.2" \
+RUN mamba install --yes --channel conda-forge "python=3.12" "pdal=2.10.2" "gdal>=3.10" "sqlite=3.46" \
     && mamba clean --all --yes \
     && python -m pip install --no-cache-dir -r /tmp/requirements.txt
 
