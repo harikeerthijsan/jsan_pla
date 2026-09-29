@@ -81,7 +81,7 @@ def process_job(job_id:str):
 
             summ=pdal_summary(out); b=summ['bounds']
             blocks.append({'name':stem,'source_object_key':f.object_key,'object_key':key,'point_count':summ.get('num_points'),
-                'xmin':b['minx'],'ymin':b['miny'],'xmax':b['maxx'],'ymax':b['maxy'],'zmin':b.get('minz'),'zmax':b.get('maxz')})
+                'x_min':b['minx'],'y_min':b['miny'],'x_max':b['maxx'],'y_max':b['maxy'],'zmin':b.get('minz'),'zmax':b.get('maxz')})
 
         setjob(db,job,60,'Parsing workbook and building 3D delivery geometry')
         parsed=parse_workbook(str(wbpath),project.crs)
@@ -105,7 +105,7 @@ def process_job(job_id:str):
             elif p.get('corrected_lat') is not None and p.get('corrected_lon') is not None:
                 x,y=tf.transform(float(p['corrected_lon']), float(p['corrected_lat']))
             if x is not None and y is not None:
-                candidates=[b for b in blocks if b['xmin']<=x<=b['xmax'] and b['ymin']<=y<=b['ymax']]
+                candidates=[b for b in blocks if b['x_min']<=x<=b['x_max'] and b['y_min']<=y<=b['y_max']]
                 if candidates:
                     block=candidates[0]['name']; poles_by_block[block].append(p['internal_id'])
             db.add(Pole(project_id=project.id,internal_id=p['internal_id'],pole_number=p['pole_number'],block_name=block,
