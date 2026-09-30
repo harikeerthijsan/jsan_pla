@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from .db import Base, engine, get_db, SessionLocal
+from .db import Base, engine, get_db, SessionLocal, initialize_schema
 from .models import User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,Finding,SceneFeature,ReviewDecision,AuditLog
 from .auth import current_user, verify_password, create_token, hash_password
 from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for
@@ -49,7 +49,7 @@ def validate_runtime_environment():
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     validate_runtime_environment()
-    Base.metadata.create_all(bind=engine); db=SessionLocal()
+    initialize_schema(); db=SessionLocal()
     try:
         configure_bucket_cors()
         seed_admin(db)

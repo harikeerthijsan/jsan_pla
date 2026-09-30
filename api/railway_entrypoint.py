@@ -108,6 +108,13 @@ def main() -> int:
     validate_production_environment()
     wait_for_database()
 
+    # Initialize the additive schema once before starting child processes.
+    # initialize_schema also uses a PostgreSQL advisory lock, so concurrent
+    # replicas are safe during rolling deploys.
+    from app.db import initialize_schema
+    initialize_schema()
+    print("Database schema ready", flush=True)
+
     port = os.getenv("PORT", "8000")
     commands = [
         [sys.executable, "worker.py"],

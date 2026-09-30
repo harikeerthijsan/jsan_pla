@@ -15,6 +15,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app import storage
+from app.db import Base, initialize_schema
 from railway_entrypoint import validate_production_environment
 
 
@@ -104,3 +105,18 @@ def test_preview_startup_skips_entrypoint_checks(monkeypatch):
     monkeypatch.setenv('APP_ENV', 'preview')
     monkeypatch.delenv('JWT_SECRET', raising=False)
     validate_production_environment()
+
+
+def test_schema_initializer_registers_v34_tables():
+    initialize_schema()
+    names = set(Base.metadata.tables)
+    assert 'dataset_versions' in names
+    assert 'processing_leases' in names
+    assert 'correction_requests' in names
+
+
+def test_railway_entrypoint_initializes_schema_before_children():
+    source = (REPOSITORY_ROOT / 'api' / 'railway_entrypoint.py').read_text(encoding='utf-8')
+    schema_pos = source.index('initialize_schema()')
+    worker_pos = source.index('[sys.executable, "worker.py"]')
+    assert schema_pos < worker_pos
