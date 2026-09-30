@@ -125,11 +125,14 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: jsan-pla-app:ci
-          format: table
-          exit-code: '1'
+          format: json
+          output: trivy-app.json
+          exit-code: '0'
           ignore-unfixed: true
           vuln-type: os,library
           severity: HIGH,CRITICAL
+      - name: Enforce app vulnerability gate
+        run: python scripts/ci/check_trivy_report.py trivy-app.json --source Dockerfile
 
   image-worker:
     name: Worker image (worker/Dockerfile)
@@ -155,8 +158,11 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: jsan-pla-worker:ci
-          format: table
-          exit-code: '1'
+          format: json
+          output: trivy-worker.json
+          exit-code: '0'
           ignore-unfixed: true
           vuln-type: os,library
           severity: HIGH,CRITICAL
+      - name: Enforce worker vulnerability gate
+        run: python scripts/ci/check_trivy_report.py trivy-worker.json --source worker/Dockerfile

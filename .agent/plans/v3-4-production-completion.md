@@ -109,7 +109,7 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - [x] Hardened bucket CORS.
 - [x] Added profile-parity evidence harness.
 - [x] Updated documentation.
-- [x] Completed Python compile, 70-test pytest, JavaScript syntax, hygiene and diff checks.
+- [x] Completed Python compile, 73-test pytest, JavaScript syntax, hygiene and diff checks.
 - [ ] Completed Docker image builds and vulnerability scans (first CI build/smoke passed, but Trivy blocked the old Miniforge base; rerun required).
 - [ ] Pushed feature branch.
 - [ ] Staging acceptance completed.

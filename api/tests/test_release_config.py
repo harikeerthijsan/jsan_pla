@@ -73,7 +73,8 @@ def test_ci_reviews_dependencies_and_scans_built_images():
     assert 'actions/dependency-review-action@v4' in ci
     assert ci.count('aquasecurity/trivy-action@v0.36.0') == 2
     assert ci.count("severity: HIGH,CRITICAL") == 2
-    assert ci.count("exit-code: '1'") == 2
+    assert ci.count("exit-code: '0'") == 2
+    assert ci.count('scripts/ci/check_trivy_report.py') == 2
 
 
 def test_workflows_use_no_secrets_or_privileged_triggers():
