@@ -16,9 +16,12 @@ from .workflow import DatasetVersion, CorrectionRequest, ensure_current_version,
 from .seed import seed_database, seed_admin
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
+from .v4_domain import SourceRecord, EngineeringAsset, Run, RuleDefinition, ValidationResult, Release
+from .v4_rules import RULES
+from .v4_release import evaluate_release_gate
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
-APP_VERSION=os.getenv('APP_VERSION','3.4.0-operational')
+APP_VERSION=os.getenv('APP_VERSION','4.0.0-platform')
 # Staging is production-like: it gets the same startup guard so misconfiguration is caught before promotion.
 STRICT_ENVIRONMENTS={'production','staging'}
 DEFAULT_JWT_SECRETS={'dev-only-change-me','replace-with-a-long-random-secret','replace-with-at-least-32-random-characters'}
@@ -57,7 +60,7 @@ async def lifespan(app:FastAPI):
     finally: db.close()
     yield
 
-app=FastAPI(title='JSAN PLA Quality Validation API',version=APP_VERSION,lifespan=lifespan)
+app=FastAPI(title='JSAN PLA Engineering Operations Platform API',version=APP_VERSION,lifespan=lifespan)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag'])
 
@@ -128,6 +131,63 @@ def user_dict(u): return {'id':u.id,'email':u.email,'name':u.name,'role':u.role,
 def finding_dict(f): return {'id':f.id,'rule_id':f.rule_id,'severity':f.severity,'internal_id':f.internal_id,'pole_number':f.pole_number,'sheet':f.sheet,'field':f.field,'message':f.message,'actual':f.actual,'expected':f.expected,'related_poles':json.loads(f.related_poles_json or '[]'),'status':f.status}
 def pole_dict(p):
     d=json.loads(p.manifest_json or '{}'); d.update({'internal_id':p.internal_id,'pole_number':p.pole_number,'block_name':p.block_name,'qc_status':p.qc_status,'qc_fail':p.qc_fail,'qc_review':p.qc_review,'qc_unverifiable':p.qc_unverifiable,'remarks':p.remarks,'bottom_elev_ft':p.bottom_elev_ft,'top_elev_ft':p.top_elev_ft}); return d
+
+@app.get('/api/v1/platform')
+def v4_platform():
+    return {
+        'name':'JSAN PLA Engineering Operations Platform',
+        'version':'4.0',
+        'promise':'Source-to-release engineering with evidence, automated validation, independent QC and immutable traceability.',
+        'workspaces':['Operations','Production','Validation','QC','Release','Analytics','Admin'],
+        'engineering_evidence':['Plan / Top','Longitudinal Profile','Cross Section','3D Perspective'],
+        'release_model':'immutable',
+        'rule_model':'versioned-rule-packs'
+    }
+
+@app.get('/api/v1/rules')
+def v4_rules(u:User=Depends(current_user)):
+    return [
+        {
+            'id': r.id, 'family': r.family, 'title': r.title,
+            'automation_class': r.automation_class, 'severity': r.severity,
+            'blocking': r.blocking, 'evaluator': r.evaluator,
+            'source_reference': r.source_reference,
+        }
+        for r in RULES
+    ]
+
+@app.get('/api/v1/projects/{project_id}/source-records')
+def v4_source_records(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    rows=db.query(SourceRecord).filter_by(project_id=project_id).order_by(SourceRecord.snapshot_id,SourceRecord.row_number).all()
+    return [
+        {
+            'id':x.id,'snapshot_id':x.snapshot_id,'sheet_name':x.sheet_name,'row_number':x.row_number,
+            'pole_number':x.pole_number,'source_internal_id':x.source_internal_id,
+            'source':json.loads(x.source_payload_json or '{}')
+        } for x in rows
+    ]
+
+@app.get('/api/v1/projects/{project_id}/assets')
+def v4_assets(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    rows=db.query(EngineeringAsset).filter_by(project_id=project_id).order_by(EngineeringAsset.snapshot_id,EngineeringAsset.internal_id,EngineeringAsset.id).all()
+    return [
+        {
+            'id':x.id,'snapshot_id':x.snapshot_id,'source_record_id':x.source_record_id,'asset_type':x.asset_type,
+            'pole_number':x.pole_number,'internal_id':x.internal_id,'production_state':x.production_state,
+            'evidence_state':x.evidence_state,'qc_state':x.qc_state,'release_state':x.release_state,'remarks':x.remarks
+        } for x in rows
+    ]
+
+@app.get('/api/v1/projects/{project_id}/release-readiness')
+def v4_release_readiness(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    results=db.query(ValidationResult).filter_by(project_id=project_id).all()
+    defs={x.id:x for x in db.query(RuleDefinition).all()}
+    items=[]
+    for x in results:
+        rd=defs.get(x.rule_id)
+        items.append({'rule_id':x.rule_id,'outcome':x.outcome,'blocking':bool(rd.blocking) if rd else False,'message':x.message})
+    gate=evaluate_release_gate(items)
+    return {'ready':gate.ready,'blockers':list(gate.blockers),'warnings':list(gate.warnings),'evaluated_results':len(items)}
 
 @app.get('/health')
 def health(): return {'status':'ok','service':'pla-qc-api','version':APP_VERSION,'storage_mode':MODE}

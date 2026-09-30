@@ -8,6 +8,8 @@ from .storage import MODE, local_path, download_to, upload_from
 from pyproj import Transformer
 from .ingest import parse_workbook
 from .sections import generate_lidar_section
+from .v4_ingest import build_source_records
+from .v4_domain import SourceRecord, EngineeringAsset
 
 
 def utcnow(): return datetime.now(timezone.utc)
@@ -93,6 +95,36 @@ def process_job(job_id:str):
 
         setjob(db,job,60,'Parsing workbook and building 3D delivery geometry')
         parsed=parse_workbook(str(wbpath),project.crs)
+
+        # v4 canonical source layer: preserve every non-empty pole source row, including
+        # records intentionally left without internal_id. This runs alongside the legacy
+        # v3.4 projection while the platform/v4.0 branch is validated in staging.
+        snapshot_id = version_id or f"JOB-{job.id}"
+        db.query(EngineeringAsset).filter_by(project_id=project.id, snapshot_id=snapshot_id).delete()
+        db.query(SourceRecord).filter_by(project_id=project.id, snapshot_id=snapshot_id).delete()
+        for source in build_source_records(project.id, snapshot_id, str(wbpath), "poles"):
+            db.add(SourceRecord(**source))
+            payload_source = json.loads(source["source_payload_json"])
+            raw_id = payload_source.get("internal_id")
+            try:
+                canonical_internal_id = int(float(raw_id)) if raw_id not in (None, "") else None
+            except (TypeError, ValueError):
+                canonical_internal_id = None
+            db.add(EngineeringAsset(
+                id=f"AST-{source['id'][4:]}",
+                project_id=project.id,
+                snapshot_id=snapshot_id,
+                source_record_id=source["id"],
+                asset_type="POLE",
+                pole_number=source.get("pole_number"),
+                internal_id=canonical_internal_id,
+                production_state="IMPORTED",
+                evidence_state="UNASSESSED",
+                qc_state="NOT_REVIEWED",
+                release_state="NOT_ELIGIBLE",
+                remarks=payload_source.get("remarks"),
+            ))
+        db.flush()
 
         # Preserve reviewer history, then replace project-derived state atomically.
         archived_decisions=archive_review_decisions(db,project.id)

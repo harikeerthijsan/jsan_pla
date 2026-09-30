@@ -36,6 +36,7 @@ def initialize_schema():
     # without introducing module-import cycles.
     from . import models as _models  # noqa: F401
     from . import workflow as _workflow  # noqa: F401
+    from . import v4_domain as _v4_domain  # noqa: F401
 
     if engine.dialect.name == 'postgresql':
         # Transaction-scoped advisory lock serializes DDL across concurrent

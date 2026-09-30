@@ -18,7 +18,7 @@ COPY api/railway_entrypoint.py /app/api/railway_entrypoint.py
 COPY web /app/web
 
 ENV APP_ENV=production \
-    APP_VERSION=3.4.0-operational \
+    APP_VERSION=4.0.0-platform \
     PATH=/opt/conda/envs/pla/bin:$PATH \
     PDAL_BIN=/opt/conda/envs/pla/bin/pdal \
     PYTHONPATH=/app/api \
@@ -29,4 +29,4 @@ ENV APP_ENV=production \
 WORKDIR /app/api
 EXPOSE 8000
 
-CMD ["python", "railway_entrypoint.py"]
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
