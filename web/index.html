@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>JSAN PLA Quality Validation Workbench v3.3</title>
+  <title>JSAN PLA Operations & Quality Platform v3.4</title>
   <link rel="stylesheet" href="potree/build/potree/potree.css" />
   <link rel="stylesheet" href="potree/libs/jquery-ui/jquery-ui.min.css" />
   <link rel="stylesheet" href="potree/libs/openlayers3/ol.css" />
@@ -18,20 +18,20 @@
       <h1>PLA Quality Validation Workbench</h1>
       <p>Automated QC + synchronized Plan / Profile / Cross Section / 3D evidence.</p>
       <label>API URL<input id="apiUrl" placeholder="https://your-api.up.railway.app" /></label>
-      <label>Email<input id="email" value="admin@jsan.local" autocomplete="username" /></label>
-      <label>Password<input id="password" type="password" value="ChangeMe123!" autocomplete="current-password" /></label>
+      <label>Email<input id="email" placeholder="name@jsanconsulting.com" autocomplete="username" /></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" /></label>
       <button id="loginBtn" class="primary">Sign in</button><div id="loginError" class="error"></div>
-      <div class="hint">Local API: <code>http://localhost:8000</code></div>
+      <div class="hint">Use your assigned JSAN account. Local developers may point the API URL to <code>http://localhost:8000</code>.</div>
     </div>
   </div>
 
   <div id="appView" class="app-shell hidden">
     <header class="topbar">
-      <div class="brand-block"><div class="eyebrow">JSAN CONSULTING · VALIDATE</div><div class="title">PLA Quality Validation Workbench <span class="version">v3.3 Industry</span></div><div class="brand-subline">Real-World Operations · Spatial Intelligence · Digital Engineering</div></div>
-      <div class="top-actions"><select id="projectSelect" class="project-select"></select><button id="newDatasetBtn" class="primary">+ New dataset</button><button id="reprocessBtn" class="ghost" title="Re-run LiDAR mapping, geometry build and QC using the files already uploaded for this dataset">Reprocess</button><span id="userBadge" class="badge muted"></span><button id="logoutBtn" class="ghost">Logout</button></div>
+      <div class="brand-block"><div class="eyebrow">JSAN CONSULTING · PLA OPERATIONS</div><div class="title">PLA Operations & Quality Platform <span id="runtimeBadge" class="version">v3.4</span></div><div class="brand-subline">Real-World Operations · Spatial Intelligence · Digital Engineering</div></div>
+      <div class="top-actions"><div id="workspaceSwitch" class="workspace-switch hidden"><button id="deliveryWorkspaceBtn" class="workspace-btn">Delivery</button><button id="qcWorkspaceBtn" class="workspace-btn">QC</button></div><select id="projectSelect" class="project-select"></select><button id="newDatasetBtn" class="primary">+ New dataset</button><button id="reprocessBtn" class="ghost" title="Re-run LiDAR mapping, geometry build and QC using the files already uploaded for this dataset">Reprocess</button><span id="userBadge" class="badge muted"></span><button id="logoutBtn" class="ghost">Logout</button></div>
     </header>
 
-    <section class="kpi-strip">
+    <section id="qcKpis" class="kpi-strip">
       <div class="kpi"><span>Poles</span><strong id="kpiPoles">—</strong></div>
       <div class="kpi fail"><span>Fail</span><strong id="kpiFail">—</strong></div>
       <div class="kpi review"><span>Review</span><strong id="kpiReview">—</strong></div>
@@ -40,7 +40,9 @@
       <div class="kpi"><span>Current pole</span><strong id="kpiCurrent">—</strong></div>
     </section>
 
-    <main class="workspace">
+    <section id="deliveryWorkspace" class="delivery-workspace hidden"><div class="delivery-head"><div><span class="eyebrow">DELIVERY PRODUCTION</span><h2>Dataset & correction workflow</h2><p>Upload once, process once, and hand the same version to QC.</p></div><div class="delivery-actions"><button id="newRevisionBtn" class="primary">+ New revision</button><button id="approveVersionBtn" class="ghost hidden">Approve version</button></div></div><div class="delivery-grid"><article class="delivery-card"><span>Current version</span><strong id="deliveryVersion">—</strong><small id="deliveryStatus">Select a dataset</small></article><article class="delivery-card"><span>Revision comparison</span><div id="deliveryComparison" class="comparison-grid"><b>NEW —</b><b>STILL OPEN —</b><b>RESOLVED —</b></div></article><article class="delivery-card wide"><span>Version history</span><div id="deliveryVersions" class="workflow-list"></div></article><article class="delivery-card wide"><span>Correction queue</span><div id="deliveryCorrections" class="workflow-list"></div></article></div></section>
+
+    <main id="qcWorkspace" class="workspace">
       <aside class="pole-panel">
         <div class="panel-head"><div><b>Poles</b><small>Asset-first review</small></div></div>
         <input id="poleSearch" class="search" placeholder="Search pole / ID" />
@@ -101,7 +103,7 @@
   <dialog id="uploadDialog" class="upload-dialog"><form id="uploadForm">
     <h2>New PLA dataset</h2><p class="dialog-note">Upload a COLLECTION workbook and LAS / LAZ / COPC. Processing converts LiDAR to COPC, maps poles to blocks, rebuilds geometry, runs QC and enables profile analysis.</p>
     <div class="form-grid"><label>Dataset / sample name<input id="datasetName" required placeholder="PLA Sample 2" /></label><label>Customer<input id="datasetCustomer" value="PLA" /></label><label>Project CRS<input id="datasetCrs" value="EPSG:6424" required /></label><label>Units<input id="datasetUnits" value="US survey foot" /></label></div>
-    <label>COLLECTION workbook (.xlsx)<input id="workbookFile" type="file" accept=".xlsx" required /></label><label>LiDAR (.las, .laz, .copc.laz)<input id="lidarFiles" type="file" accept=".las,.laz" multiple required /></label>
+    <label>COLLECTION workbook (.xlsx)<input id="workbookFile" type="file" accept=".xlsx" required /></label><label>LiDAR (.las, .laz, .copc.laz)<input id="lidarFiles" type="file" accept=".las,.laz" multiple /><small class="hint">Required for a new dataset. A revision can reuse the prior LiDAR or upload replacements.</small></label>
     <div id="uploadProgress" class="upload-progress hidden"><div id="uploadBar"></div><span id="uploadMessage">Preparing…</span></div><div id="uploadError" class="error"></div>
     <div class="dialog-actions"><button type="button" id="cancelUpload">Cancel</button><button type="submit" class="primary">Upload & process</button></div>
   </form></dialog>
