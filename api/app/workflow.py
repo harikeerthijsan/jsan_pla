@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from .db import Base
-from .models import AuditLog, DatasetFile, Finding, ProcessingJob, Project
+from .models import AuditLog, DatasetFile, Finding, ProcessingJob, Project, ReviewDecision
 
 
 def now_utc():
@@ -85,13 +85,27 @@ class CorrectionRequest(Base):
     id: Mapped[str] = mapped_column(String(120), primary_key=True)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     version_id: Mapped[str] = mapped_column(ForeignKey("dataset_versions.id"), index=True)
-    finding_id: Mapped[str] = mapped_column(ForeignKey("findings.id"), index=True)
+    # Findings are rebuilt per QC run; retain the source finding id without a FK.
+    finding_id: Mapped[str] = mapped_column(String(120), index=True)
     status: Mapped[str] = mapped_column(String(40), default="OPEN", index=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     resolved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ReviewDecisionArchive(Base):
+    __tablename__ = "review_decision_archive"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    version_id: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
+    finding_id: Mapped[str] = mapped_column(String(120), index=True)
+    reviewer_email: Mapped[str] = mapped_column(String(255))
+    decision: Mapped[str] = mapped_column(String(60))
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    original_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    archived_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
 
 
 class ProcessingLease(Base):
@@ -429,6 +443,32 @@ def workflow_snapshot(db: Session, project_id: str, actor: str) -> dict:
             for r in runs
         ],
     }
+
+
+
+def archive_review_decisions(db: Session, project_id: str) -> int:
+    finding_ids = [x.id for x in db.query(Finding).filter_by(project_id=project_id).all()]
+    if not finding_ids:
+        return 0
+    links = db.query(FindingRevision).filter(FindingRevision.finding_id.in_(finding_ids)).all()
+    version_by_finding = {}
+    for link in links:
+        version_by_finding[link.finding_id] = link.version_id
+    rows = db.query(ReviewDecision).filter(ReviewDecision.finding_id.in_(finding_ids)).all()
+    for row in rows:
+        db.add(ReviewDecisionArchive(
+            project_id=project_id,
+            version_id=version_by_finding.get(row.finding_id),
+            finding_id=row.finding_id,
+            reviewer_email=row.reviewer_email,
+            decision=row.decision,
+            comment=row.comment,
+            original_created_at=row.created_at,
+        ))
+    if rows:
+        db.query(ReviewDecision).filter(ReviewDecision.finding_id.in_(finding_ids)).delete(synchronize_session=False)
+        db.flush()
+    return len(rows)
 
 
 def _recover_stale_leases(db: Session, max_attempts: int) -> None:
