@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from .db import SessionLocal
 from .models import Project,DatasetFile,ProcessingJob,LidarBlock,Pole,Finding,SceneFeature,AuditLog
-from .workflow import DatasetVersion, QCRun, version_files, record_findings_for_run, complete_qc_run
+from .workflow import DatasetVersion, QCRun, version_files, record_findings_for_run, complete_qc_run, archive_review_decisions
 from .storage import MODE, local_path, download_to, upload_from
 from pyproj import Transformer
 from .ingest import parse_workbook
@@ -94,7 +94,8 @@ def process_job(job_id:str):
         setjob(db,job,60,'Parsing workbook and building 3D delivery geometry')
         parsed=parse_workbook(str(wbpath),project.crs)
 
-        # Replace project-derived state atomically in this transaction.
+        # Preserve reviewer history, then replace project-derived state atomically.
+        archived_decisions=archive_review_decisions(db,project.id)
         db.query(SceneFeature).filter_by(project_id=project.id).delete(); db.query(Finding).filter_by(project_id=project.id).delete(); db.query(Pole).filter_by(project_id=project.id).delete(); db.query(LidarBlock).filter_by(project_id=project.id).delete(); db.flush()
         for b in blocks: db.add(LidarBlock(project_id=project.id,poles_json='[]',**b))
         db.flush()
@@ -139,7 +140,7 @@ def process_job(job_id:str):
             complete_qc_run(db,qc_run_id,True,{'blocks':len(blocks),'poles':len(parsed['poles']),'findings':len(parsed['findings']),'comparison':comparison})
         project.source_workbook_key=workbook.object_key; project.status='READY_FOR_QC'
         job.status='SUCCEEDED'; job.progress=100; job.stage='Ready for QC'; job.finished_at=utcnow();
-        db.add(AuditLog(actor='worker',action='PROCESS_DATASET',entity_type='project',entity_id=project.id,detail_json=json.dumps({'blocks':len(blocks),'poles':len(parsed['poles']),'findings':len(parsed['findings']),'version_id':version_id,'qc_run_id':qc_run_id,'comparison':comparison})))
+        db.add(AuditLog(actor='worker',action='PROCESS_DATASET',entity_type='project',entity_id=project.id,detail_json=json.dumps({'blocks':len(blocks),'poles':len(parsed['poles']),'findings':len(parsed['findings']),'version_id':version_id,'qc_run_id':qc_run_id,'comparison':comparison,'archived_decisions':archived_decisions})))
         db.commit()
     except Exception as e:
         db.rollback(); job=db.query(ProcessingJob).filter_by(id=job_id).first(); project=db.query(Project).filter_by(id=job.project_id).first() if job else None
