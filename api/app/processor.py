@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from .db import SessionLocal
 from .models import Project,DatasetFile,ProcessingJob,LidarBlock,Pole,Finding,SceneFeature,AuditLog
-from .workflow import QCRun, version_files, record_findings_for_run, complete_qc_run
+from .workflow import DatasetVersion, QCRun, version_files, record_findings_for_run, complete_qc_run
 from .storage import MODE, local_path, download_to, upload_from
 from pyproj import Transformer
 from .ingest import parse_workbook
@@ -61,6 +61,8 @@ def process_job(job_id:str):
         if MODE != 'local':
             download_to(workbook.object_key,str(wbpath))
 
+        version=db.query(DatasetVersion).filter_by(id=version_id).first() if version_id else None
+        lidar_prefix=f'{project.id}/versions/v{version.version_no}/lidar' if version else f'{project.id}/lidar'
         blocks=[]
         for idx,f in enumerate(lidar,1):
             setjob(db,job,5+int(50*(idx-1)/max(1,len(lidar))),f'Converting LiDAR {idx}/{len(lidar)}: {f.filename}')
@@ -73,7 +75,7 @@ def process_job(job_id:str):
                     out = src
                     key = f.object_key
                 else:
-                    key=f'{project.id}/lidar/{stem}.copc.laz'
+                    key=f'{lidar_prefix}/{stem}.copc.laz'
                     out=local_path(key)
                     out.parent.mkdir(parents=True, exist_ok=True)
                     if not out.exists():
@@ -82,7 +84,7 @@ def process_job(job_id:str):
                 src=tmp/f.filename; download_to(f.object_key,str(src))
                 out=tmp/f'{stem}.copc.laz'
                 to_copc(src,out,project.crs)
-                key=f'{project.id}/lidar/{out.name}'
+                key=f'{lidar_prefix}/{out.name}'
                 upload_from(str(out),key,'application/octet-stream')
 
             summ=pdal_summary(out); b=summ['bounds']
