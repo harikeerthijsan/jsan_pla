@@ -20,7 +20,7 @@ body.layout-lock{overflow:hidden}.view-card.maximized .view-action[data-action=m
 .workspace-switch{display:flex;gap:3px;padding:3px;border:1px solid #315464;border-radius:8px;background:#081820}
 .workspace-btn{padding:5px 9px;font-size:10px;background:transparent;border-color:transparent}
 .workspace-btn.active{background:#24607a;border-color:#4b9dbc;color:#fff}
-.delivery-workspace{min-height:0;overflow:auto;padding:18px;background:radial-gradient(circle at 45% 0,#102b36 0,#071118 60%);border-bottom:1px solid var(--line)}
+.delivery-workspace{grid-row:2/4;min-height:0;overflow:auto;padding:18px;background:radial-gradient(circle at 45% 0,#102b36 0,#071118 60%);border-bottom:1px solid var(--line)}
 .delivery-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:16px}
 .delivery-head h2{margin:5px 0 4px;font-size:22px}.delivery-head p{margin:0;color:var(--muted);font-size:12px}
 .delivery-actions{display:flex;gap:8px}
