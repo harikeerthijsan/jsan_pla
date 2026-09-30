@@ -5,13 +5,13 @@ RUN mamba create --yes --name pla --channel conda-forge --strict-channel-priorit
         "python=3.12" "pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4" \
         "setuptools>=78.1.1" "msgpack-python>=1.2.1" \
     && /opt/conda/envs/pla/bin/python -m pip install --no-cache-dir -r /app/requirements.txt \
-    && rm -rf /opt/conda/envs/pla/lib/python3.12/site-packages/setuptools-*.dist-info \
-        /opt/conda/envs/pla/lib/python3.12/site-packages/msgpack-*.dist-info \
-    && /opt/conda/envs/pla/bin/python -m pip install --no-cache-dir --upgrade --force-reinstall \
-        "setuptools>=78.1.1" "msgpack>=1.2.1" \
     && /opt/conda/envs/pla/bin/python -c "import msgpack, setuptools; assert tuple(map(int, setuptools.__version__.split('.')[:3])) >= (78, 1, 1); assert msgpack.version >= (1, 2, 1)" \
-    && rm -f /opt/conda/envs/pla/conda-meta/setuptools-*.json \
-        /opt/conda/envs/pla/conda-meta/msgpack-python-*.json \
+    && /opt/conda/envs/pla/bin/python -m pip check \
+    && rm -rf /opt/conda/envs/pla/lib/python3.12/site-packages/pip \
+        /opt/conda/envs/pla/lib/python3.12/site-packages/pip-*.dist-info \
+        /opt/conda/envs/pla/bin/pip /opt/conda/envs/pla/bin/pip3 \
+        /opt/conda/envs/pla/bin/pip3.12 \
+    && rm -f /opt/conda/envs/pla/conda-meta/pip-*.json \
     && /opt/conda/envs/pla/bin/python -c "import sqlite3; assert sqlite3.sqlite_version_info >= (3, 38, 0), sqlite3.sqlite_version" \
     && /opt/conda/envs/pla/bin/gdalinfo --version \
     && /opt/conda/envs/pla/bin/pdal --drivers > /dev/null \
