@@ -59,9 +59,11 @@ class QCRun(Base):
 class FindingRevision(Base):
     __tablename__ = "finding_revisions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    finding_id: Mapped[str] = mapped_column(ForeignKey("findings.id"), index=True)
+    # finding_id is deliberately not a FK: the current findings table is rebuilt on each QC run.
+    finding_id: Mapped[str] = mapped_column(String(120), index=True)
     version_id: Mapped[str] = mapped_column(ForeignKey("dataset_versions.id"), index=True)
     qc_run_id: Mapped[str] = mapped_column(ForeignKey("qc_runs.id"), index=True)
+    snapshot_json: Mapped[str] = mapped_column(Text, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now_utc)
     __table_args__ = (UniqueConstraint("finding_id", "version_id", name="uq_finding_version"),)
 
@@ -249,33 +251,36 @@ def create_qc_run(db: Session, project_id: str, job_id: str, actor: str) -> tupl
     return v, run
 
 
-def _finding_signature(f: Finding) -> tuple:
+def _finding_snapshot(f: Finding) -> dict:
+    return {
+        "id": f.id, "rule_id": f.rule_id, "severity": f.severity,
+        "internal_id": int(f.internal_id), "pole_number": f.pole_number,
+        "sheet": f.sheet, "field": f.field, "message": f.message,
+        "actual": f.actual, "expected": f.expected, "status": f.status,
+    }
+
+
+def _snapshot_signature(s: dict) -> tuple:
     return (
-        f.rule_id,
-        int(f.internal_id),
-        f.field or "",
-        f.pole_number or "",
-        f.actual or "",
-        f.expected or "",
+        s.get("rule_id"), int(s.get("internal_id") or 0), s.get("field") or "",
+        s.get("pole_number") or "", s.get("actual") or "", s.get("expected") or "",
     )
 
 
 def record_findings_for_run(db: Session, project_id: str, version_id: str, qc_run_id: str) -> dict:
     current = db.query(Finding).filter_by(project_id=project_id).all()
     for f in current:
+        snap = _finding_snapshot(f)
         if not db.query(FindingRevision).filter_by(finding_id=f.id, version_id=version_id).first():
-            db.add(FindingRevision(finding_id=f.id, version_id=version_id, qc_run_id=qc_run_id))
+            db.add(FindingRevision(finding_id=f.id, version_id=version_id, qc_run_id=qc_run_id, snapshot_json=json.dumps(snap)))
 
     version = db.query(DatasetVersion).filter_by(id=version_id).first()
     db.query(FindingComparison).filter_by(to_version_id=version_id).delete()
     stats = {"NEW": 0, "STILL_OPEN": 0, "RESOLVED": 0}
     if version and version.parent_version_id:
         parent_links = db.query(FindingRevision).filter_by(version_id=version.parent_version_id).all()
-        parent_findings = {
-            x.finding_id: db.query(Finding).filter_by(id=x.finding_id).first() for x in parent_links
-        }
-        old_by_sig = {_finding_signature(f): f for f in parent_findings.values() if f}
-        new_by_sig = {_finding_signature(f): f for f in current}
+        old_by_sig = {_snapshot_signature(json.loads(x.snapshot_json or "{}")): json.loads(x.snapshot_json or "{}") for x in parent_links}
+        new_by_sig = {_snapshot_signature(_finding_snapshot(f)): _finding_snapshot(f) for f in current}
         for sig in sorted(set(old_by_sig) | set(new_by_sig), key=str):
             old = old_by_sig.get(sig)
             new = new_by_sig.get(sig)
@@ -286,13 +291,13 @@ def record_findings_for_run(db: Session, project_id: str, version_id: str, qc_ru
                     project_id=project_id,
                     from_version_id=version.parent_version_id,
                     to_version_id=version_id,
-                    from_finding_id=old.id if old else None,
-                    to_finding_id=new.id if new else None,
+                    from_finding_id=old.get("id") if old else None,
+                    to_finding_id=new.get("id") if new else None,
                     status=status,
                 )
             )
             if status == "RESOLVED" and old:
-                for correction in db.query(CorrectionRequest).filter_by(finding_id=old.id, status="OPEN").all():
+                for correction in db.query(CorrectionRequest).filter_by(finding_id=old.get("id"), status="OPEN").all():
                     correction.status = "RESOLVED"
                     correction.resolved_by = "worker"
                     correction.resolved_at = now_utc()
