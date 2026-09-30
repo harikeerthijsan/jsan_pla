@@ -99,6 +99,8 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - 2026-09-30: Do not invent profile tolerances or remaining SOW rules; provide auditable input formats and keep acceptance external.
 - 2026-09-30: Preserve the combined Railway app topology for this patch; splitting API/worker changes failure and scaling behavior and needs a separate staging capacity decision.
 - 2026-09-30: Refresh Miniforge from `25.3.1-0` to the current official `26.7.2-0` after Trivy blocked both images; retain exact PDAL/GDAL/libsqlite pins and require CI smoke tests.
+- 2026-09-30: Use Miniforge only as a build stage and copy the pinned `/opt/conda/envs/pla` environment into a security-updated Ubuntu runtime. This removes unused vulnerable `rattler` libraries from the deployed image without relocating or repinning the geospatial environment.
+- 2026-09-30: Upgrade FastAPI/Starlette and explicitly require fixed setuptools/msgpack versions in response to actionable HIGH findings from the staging image scan.
 
 ## Progress
 
@@ -109,8 +111,8 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - [x] Hardened bucket CORS.
 - [x] Added profile-parity evidence harness.
 - [x] Updated documentation.
-- [x] Completed Python compile, 73-test pytest, JavaScript syntax, hygiene and diff checks.
-- [ ] Completed Docker image builds and vulnerability scans (first CI build/smoke passed, but Trivy blocked the old Miniforge base; rerun required).
-- [ ] Pushed feature branch.
+- [x] Completed Python compile, 75-test pytest, JavaScript syntax, hygiene and diff checks after dependency remediation.
+- [ ] Completed Docker image builds and vulnerability scans (image build/smoke passed; targeted remediation for the reported findings is awaiting CI).
+- [x] Pushed feature branch and exact commit to `staging` for CI/deployment gating.
 - [ ] Staging acceptance completed.
 - [ ] Promoted to `main`.

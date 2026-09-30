@@ -52,6 +52,7 @@ def test_ci_gates_pull_requests_and_deploy_branches():
     ci = read('.github/workflows/ci.yml')
     assert re.search(r'^\s*pull_request:\s*$', ci, re.MULTILINE)
     assert 'branches: [main, staging]' in ci
+    assert 'python -m pip check' in ci
     assert 'python -m compileall' in ci
     assert 'python -m pytest -q' in ci
     assert 'node --check web/assets/app.js' in ci
@@ -93,9 +94,30 @@ def test_ci_never_cancels_deploy_branch_runs():
 def test_deployed_images_keep_pinned_native_geospatial_stack():
     for dockerfile in ('Dockerfile', 'worker/Dockerfile'):
         text = read(dockerfile)
-        assert 'FROM condaforge/miniforge3:26.7.2-0' in text, dockerfile
+        assert 'FROM condaforge/miniforge3:26.7.2-0 AS geospatial' in text, dockerfile
+        assert 'FROM ubuntu:24.04' in text, dockerfile
+        assert 'COPY --from=geospatial /opt/conda/envs/pla /opt/conda/envs/pla' in text, dockerfile
         assert '"pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4"' in text, dockerfile
         assert '--strict-channel-priority' in text, dockerfile
+
+
+def test_deployed_images_apply_os_security_updates():
+    for dockerfile in ('Dockerfile', 'worker/Dockerfile', 'api/Dockerfile'):
+        text = read(dockerfile)
+        assert 'apt-get update' in text, dockerfile
+        assert 'apt-get upgrade --yes' in text, dockerfile
+        assert 'rm -rf /var/lib/apt/lists/*' in text, dockerfile
+
+
+def test_runtime_dependencies_include_fixed_security_versions():
+    requirements = read('api/requirements.txt')
+    for requirement in (
+        'fastapi==0.142.2',
+        'starlette==1.7.0',
+        'setuptools>=78.1.1',
+        'msgpack>=1.2.1',
+    ):
+        assert requirement in requirements
 
 
 def test_deployed_images_include_database_migrations():

@@ -1,4 +1,4 @@
-FROM condaforge/miniforge3:26.7.2-0
+FROM condaforge/miniforge3:26.7.2-0 AS geospatial
 WORKDIR /app
 COPY api/requirements.txt /app/requirements.txt
 RUN mamba create --yes --name pla --channel conda-forge --strict-channel-priority \
@@ -8,6 +8,13 @@ RUN mamba create --yes --name pla --channel conda-forge --strict-channel-priorit
     && /opt/conda/envs/pla/bin/gdalinfo --version \
     && /opt/conda/envs/pla/bin/pdal --drivers > /dev/null \
     && mamba clean --all --yes
+
+FROM ubuntu:24.04
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && apt-get install --yes --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=geospatial /opt/conda/envs/pla /opt/conda/envs/pla
 COPY api /app
 ENV PATH=/opt/conda/envs/pla/bin:$PATH \
     PDAL_BIN=/opt/conda/envs/pla/bin/pdal \
