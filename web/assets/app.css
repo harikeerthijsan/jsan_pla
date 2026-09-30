@@ -12,3 +12,25 @@ dialog{background:#0f202a;color:#fff;border:1px solid #395c6c;border-radius:12px
 .compact-btn{padding:5px 8px;font-size:10px;white-space:nowrap;background:#102a35;border-color:#315364}.compact-btn:hover{background:#194557}.view-dock{display:flex;gap:4px;align-items:center;min-width:0}.view-dock:empty{display:none}.view-dock button{padding:4px 7px;font-size:9px;background:#163946;border-color:#3b687a;color:#d9f4fb}.workspace.focus-workspace{grid-template-columns:0 minmax(0,1fr) 0}.workspace.focus-workspace>.pole-panel,.workspace.focus-workspace>.qc-panel{visibility:hidden;overflow:hidden}.modebar{min-width:0}.modebar .section-status{flex:1;text-align:right}.toast-stack{position:fixed;right:18px;bottom:18px;z-index:5000;display:grid;gap:8px;pointer-events:none}.toast{min-width:280px;max-width:440px;padding:10px 12px;border-radius:8px;border:1px solid #376476;background:#0d2732;color:#eaf8fc;box-shadow:var(--shadow);font-size:12px;line-height:1.4;animation:toastIn .18s ease}.toast.error{border-color:#8f3b3e;background:#341c20;color:#ffd9da}.toast.success{border-color:#2f755f;background:#12382e;color:#d5ffef}@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 body.layout-lock{overflow:hidden}.view-card.maximized .view-action[data-action=maximize]{background:#245d72;border-color:#62b8d5}.view-card.maximized>header{background:linear-gradient(90deg,#0d303d,#102b36)}
 @media(max-width:1450px){.brand-subline{display:none}.top-actions{gap:5px}.project-select{min-width:170px}.compact-btn{padding:5px 6px}}
+
+/* v3.4 linked Delivery / QC production workspaces */
+.version.env-production{color:#a8f2d7;border-color:#347a64;background:#12372e}
+.version.env-staging{color:#ffe29b;border-color:#8a6b2b;background:#3a2d12}
+.version.env-development,.version.env-local,.version.env-preview{color:#a9dfff;border-color:#38657c;background:#122c39}
+.workspace-switch{display:flex;gap:3px;padding:3px;border:1px solid #315464;border-radius:8px;background:#081820}
+.workspace-btn{padding:5px 9px;font-size:10px;background:transparent;border-color:transparent}
+.workspace-btn.active{background:#24607a;border-color:#4b9dbc;color:#fff}
+.delivery-workspace{min-height:0;overflow:auto;padding:18px;background:radial-gradient(circle at 45% 0,#102b36 0,#071118 60%);border-bottom:1px solid var(--line)}
+.delivery-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:16px}
+.delivery-head h2{margin:5px 0 4px;font-size:22px}.delivery-head p{margin:0;color:var(--muted);font-size:12px}
+.delivery-actions{display:flex;gap:8px}
+.delivery-grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:12px;max-width:1400px;margin:auto}
+.delivery-card{background:linear-gradient(180deg,#102832,#0b1c25);border:1px solid #2b4d5d;border-radius:10px;padding:14px;box-shadow:0 10px 24px rgba(0,0,0,.16)}
+.delivery-card.wide{min-height:180px}.delivery-card>span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
+.delivery-card>strong{font-size:28px}.delivery-card>small{display:block;color:#a9c2cd;margin-top:4px}
+.comparison-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.comparison-grid b{background:#0b1a22;border:1px solid #264957;border-radius:7px;padding:10px;font-size:11px;text-align:center}
+.workflow-list{display:grid;gap:6px}.workflow-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 10px;border:1px solid #264755;border-radius:7px;background:#0b1c24}
+.workflow-row span{display:flex;gap:7px;align-items:center}.workflow-row small{color:var(--muted)}.workflow-status{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.04em;padding:4px 6px;border-radius:999px;background:#183947;color:#c8eaf7}
+.resolve-correction{padding:3px 6px;font-size:9px}.empty-workflow{padding:12px;color:var(--muted);font-size:11px;border:1px dashed #294b59;border-radius:7px}
+.finding-actions{display:flex;gap:5px}
+@media(max-width:1000px){.delivery-grid{grid-template-columns:1fr}.delivery-head{flex-direction:column}.workspace-switch{display:none}}
