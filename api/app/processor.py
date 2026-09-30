@@ -100,8 +100,8 @@ def process_job(job_id:str):
         # records intentionally left without internal_id. This runs alongside the legacy
         # v3.4 projection while the platform/v4.0 branch is validated in staging.
         snapshot_id = version_id or f"JOB-{job.id}"
-        db.query(EngineeringAsset).filter_by(project_id=project.id).delete()
-        db.query(SourceRecord).filter_by(project_id=project.id).delete()
+        db.query(EngineeringAsset).filter_by(project_id=project.id, snapshot_id=snapshot_id).delete()
+        db.query(SourceRecord).filter_by(project_id=project.id, snapshot_id=snapshot_id).delete()
         for source in build_source_records(project.id, snapshot_id, str(wbpath), "poles"):
             db.add(SourceRecord(**source))
             payload_source = json.loads(source["source_payload_json"])
@@ -113,6 +113,7 @@ def process_job(job_id:str):
             db.add(EngineeringAsset(
                 id=f"AST-{source['id'][4:]}",
                 project_id=project.id,
+                snapshot_id=snapshot_id,
                 source_record_id=source["id"],
                 asset_type="POLE",
                 pole_number=source.get("pole_number"),
