@@ -16,6 +16,9 @@ from .workflow import DatasetVersion, CorrectionRequest, ensure_current_version,
 from .seed import seed_database, seed_admin
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
+from .v4_domain import SourceRecord, EngineeringAsset, Run, RuleDefinition, ValidationResult, Release
+from .v4_rules import RULES
+from .v4_release import evaluate_release_gate
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
 APP_VERSION=os.getenv('APP_VERSION','4.0.0-platform')
@@ -140,6 +143,51 @@ def v4_platform():
         'release_model':'immutable',
         'rule_model':'versioned-rule-packs'
     }
+
+@app.get('/api/v1/rules')
+def v4_rules(u:User=Depends(current_user)):
+    return [
+        {
+            'id': r.id, 'family': r.family, 'title': r.title,
+            'automation_class': r.automation_class, 'severity': r.severity,
+            'blocking': r.blocking, 'evaluator': r.evaluator,
+            'source_reference': r.source_reference,
+        }
+        for r in RULES
+    ]
+
+@app.get('/api/v1/projects/{project_id}/source-records')
+def v4_source_records(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    rows=db.query(SourceRecord).filter_by(project_id=project_id).order_by(SourceRecord.snapshot_id,SourceRecord.row_number).all()
+    return [
+        {
+            'id':x.id,'snapshot_id':x.snapshot_id,'sheet_name':x.sheet_name,'row_number':x.row_number,
+            'pole_number':x.pole_number,'source_internal_id':x.source_internal_id,
+            'source':json.loads(x.source_payload_json or '{}')
+        } for x in rows
+    ]
+
+@app.get('/api/v1/projects/{project_id}/assets')
+def v4_assets(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    rows=db.query(EngineeringAsset).filter_by(project_id=project_id).order_by(EngineeringAsset.snapshot_id,EngineeringAsset.internal_id,EngineeringAsset.id).all()
+    return [
+        {
+            'id':x.id,'snapshot_id':x.snapshot_id,'source_record_id':x.source_record_id,'asset_type':x.asset_type,
+            'pole_number':x.pole_number,'internal_id':x.internal_id,'production_state':x.production_state,
+            'evidence_state':x.evidence_state,'qc_state':x.qc_state,'release_state':x.release_state,'remarks':x.remarks
+        } for x in rows
+    ]
+
+@app.get('/api/v1/projects/{project_id}/release-readiness')
+def v4_release_readiness(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    results=db.query(ValidationResult).filter_by(project_id=project_id).all()
+    defs={x.id:x for x in db.query(RuleDefinition).all()}
+    items=[]
+    for x in results:
+        rd=defs.get(x.rule_id)
+        items.append({'rule_id':x.rule_id,'outcome':x.outcome,'blocking':bool(rd.blocking) if rd else False,'message':x.message})
+    gate=evaluate_release_gate(items)
+    return {'ready':gate.ready,'blockers':list(gate.blockers),'warnings':list(gate.warnings),'evaluated_results':len(items)}
 
 @app.get('/health')
 def health(): return {'status':'ok','service':'pla-qc-api','version':APP_VERSION,'storage_mode':MODE}
