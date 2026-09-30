@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from .db import SessionLocal
 from .models import Project,DatasetFile,ProcessingJob,LidarBlock,Pole,Finding,SceneFeature,AuditLog
+from .workflow import DatasetVersion, QCRun, version_files, record_findings_for_run, complete_qc_run, archive_review_decisions
 from .storage import MODE, local_path, download_to, upload_from
 from pyproj import Transformer
 from .ingest import parse_workbook
@@ -40,11 +41,16 @@ def process_job(job_id:str):
     db=SessionLocal(); job=db.query(ProcessingJob).filter_by(id=job_id).first()
     if not job: db.close(); return
     project=db.query(Project).filter_by(id=job.project_id).first()
+    payload=json.loads(job.payload_json or '{}')
+    version_id=payload.get('version_id'); qc_run_id=payload.get('qc_run_id')
+    if qc_run_id:
+        runrow=db.query(QCRun).filter_by(id=qc_run_id).first()
+        if runrow: runrow.status='RUNNING'; runrow.started_at=utcnow()
     job.status='RUNNING'; job.started_at=utcnow(); db.commit()
     tmp=pathlib.Path(tempfile.mkdtemp(prefix=f'pla-{project.id}-'))
     try:
-        files=db.query(DatasetFile).filter_by(project_id=project.id).all()
-        workbook=next((f for f in files if f.role=='WORKBOOK' and f.status=='UPLOADED'),None)
+        files=version_files(db,version_id) if version_id else db.query(DatasetFile).filter_by(project_id=project.id).all()
+        workbook=next((f for f in reversed(files) if f.role=='WORKBOOK' and f.status=='UPLOADED'),None)
         lidar=[f for f in files if f.role=='LIDAR_SOURCE' and f.status=='UPLOADED']
         if not workbook: raise RuntimeError('No uploaded workbook is available')
         if not lidar: raise RuntimeError('No LAS/LAZ/COPC LiDAR files are uploaded')
@@ -55,6 +61,8 @@ def process_job(job_id:str):
         if MODE != 'local':
             download_to(workbook.object_key,str(wbpath))
 
+        version=db.query(DatasetVersion).filter_by(id=version_id).first() if version_id else None
+        lidar_prefix=f'{project.id}/versions/v{version.version_no}/lidar' if version else f'{project.id}/lidar'
         blocks=[]
         for idx,f in enumerate(lidar,1):
             setjob(db,job,5+int(50*(idx-1)/max(1,len(lidar))),f'Converting LiDAR {idx}/{len(lidar)}: {f.filename}')
@@ -67,7 +75,7 @@ def process_job(job_id:str):
                     out = src
                     key = f.object_key
                 else:
-                    key=f'{project.id}/lidar/{stem}.copc.laz'
+                    key=f'{lidar_prefix}/{stem}.copc.laz'
                     out=local_path(key)
                     out.parent.mkdir(parents=True, exist_ok=True)
                     if not out.exists():
@@ -76,7 +84,7 @@ def process_job(job_id:str):
                 src=tmp/f.filename; download_to(f.object_key,str(src))
                 out=tmp/f'{stem}.copc.laz'
                 to_copc(src,out,project.crs)
-                key=f'{project.id}/lidar/{out.name}'
+                key=f'{lidar_prefix}/{out.name}'
                 upload_from(str(out),key,'application/octet-stream')
 
             summ=pdal_summary(out); b=summ['bounds']
@@ -86,7 +94,8 @@ def process_job(job_id:str):
         setjob(db,job,60,'Parsing workbook and building 3D delivery geometry')
         parsed=parse_workbook(str(wbpath),project.crs)
 
-        # Replace project-derived state atomically in this transaction.
+        # Preserve reviewer history, then replace project-derived state atomically.
+        archived_decisions=archive_review_decisions(db,project.id)
         db.query(SceneFeature).filter_by(project_id=project.id).delete(); db.query(Finding).filter_by(project_id=project.id).delete(); db.query(Pole).filter_by(project_id=project.id).delete(); db.query(LidarBlock).filter_by(project_id=project.id).delete(); db.flush()
         for b in blocks: db.add(LidarBlock(project_id=project.id,poles_json='[]',**b))
         db.flush()
@@ -125,15 +134,20 @@ def process_job(job_id:str):
         for p in db.query(Pole).filter_by(project_id=project.id).all():
             c=counts.get(p.internal_id,{}); p.qc_fail=c.get('FAIL',0); p.qc_review=c.get('REVIEW',0); p.qc_unverifiable=c.get('UNVERIFIABLE',0)
             p.qc_status='FAIL' if p.qc_fail else ('REVIEW' if p.qc_review else ('UNVERIFIABLE' if p.qc_unverifiable else 'PASS'))
-        project.source_workbook_key=workbook.object_key; project.status='READY_FOR_REVIEW'
-        job.status='SUCCEEDED'; job.progress=100; job.stage='Ready for review'; job.finished_at=utcnow();
-        db.add(AuditLog(actor='worker',action='PROCESS_DATASET',entity_type='project',entity_id=project.id,detail_json=json.dumps({'blocks':len(blocks),'poles':len(parsed['poles']),'findings':len(parsed['findings'])})))
+        comparison={}
+        if version_id and qc_run_id:
+            comparison=record_findings_for_run(db,project.id,version_id,qc_run_id)
+            complete_qc_run(db,qc_run_id,True,{'blocks':len(blocks),'poles':len(parsed['poles']),'findings':len(parsed['findings']),'comparison':comparison})
+        project.source_workbook_key=workbook.object_key; project.status='READY_FOR_QC'
+        job.status='SUCCEEDED'; job.progress=100; job.stage='Ready for QC'; job.finished_at=utcnow();
+        db.add(AuditLog(actor='worker',action='PROCESS_DATASET',entity_type='project',entity_id=project.id,detail_json=json.dumps({'blocks':len(blocks),'poles':len(parsed['poles']),'findings':len(parsed['findings']),'version_id':version_id,'qc_run_id':qc_run_id,'comparison':comparison,'archived_decisions':archived_decisions})))
         db.commit()
     except Exception as e:
         db.rollback(); job=db.query(ProcessingJob).filter_by(id=job_id).first(); project=db.query(Project).filter_by(id=job.project_id).first() if job else None
         if job:
             job.status='FAILED'; job.stage='Failed'; job.error=f'{e}\n{traceback.format_exc()}'; job.finished_at=utcnow()
         if project: project.status='FAILED'
+        if qc_run_id: complete_qc_run(db,qc_run_id,False,{'error':str(e)[:1000]})
         db.commit()
     finally:
         shutil.rmtree(tmp,ignore_errors=True); db.close()

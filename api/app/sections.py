@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from .models import Project, Pole, Finding, SceneFeature, LidarBlock
 from pyproj import Transformer
 from .storage import MODE, local_path, block_url, upload_from, object_exists, download_to
+from .workflow import DatasetVersion
 
 
 def _pole_feature(db: Session, project_id: str, internal_id: int):
@@ -163,14 +164,15 @@ def vector_analysis(db: Session, project_id: str, internal_id: int, target_inter
     return {'frame': frame, 'features': project_features(frame, feats)}
 
 
-def _section_cache_key(project_id, internal_id, target_id, width, depth, resolution, max_points):
-    raw = f'{project_id}|{internal_id}|{target_id}|{width:.3f}|{depth:.3f}|{resolution:.3f}|{max_points}'
+def _section_cache_key(project_id, internal_id, target_id, width, depth, resolution, max_points, version_id=None):
+    raw = f'{project_id}|{version_id or "legacy"}|{internal_id}|{target_id}|{width:.3f}|{depth:.3f}|{resolution:.3f}|{max_points}'
     return hashlib.sha256(raw.encode()).hexdigest()[:20]
 
 
-def section_result_key(project_id, internal_id, target_id, width, depth, resolution, max_points):
-    h = _section_cache_key(project_id, internal_id, target_id, width, depth, resolution, max_points)
-    return f'{project_id}/analysis/section-p{internal_id}-t{target_id or 0}-{h}.json'
+def section_result_key(project_id, internal_id, target_id, width, depth, resolution, max_points, version_id=None):
+    h = _section_cache_key(project_id, internal_id, target_id, width, depth, resolution, max_points, version_id)
+    version_part = f'/versions/{version_id}' if version_id else ''
+    return f'{project_id}{version_part}/analysis/section-p{internal_id}-t{target_id or 0}-{h}.json'
 
 
 def _pdal_source(block: LidarBlock):
@@ -203,7 +205,8 @@ def generate_lidar_section(db: Session, project_id: str, internal_id: int, targe
                            max_points: int = 90000):
     analysis = vector_analysis(db, project_id, internal_id, target_internal_id)
     frame = analysis['frame']; target_id = frame.get('target_internal_id')
-    key = section_result_key(project_id, internal_id, target_id, width, depth, resolution, max_points)
+    current_version = db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).first()
+    key = section_result_key(project_id, internal_id, target_id, width, depth, resolution, max_points, current_version.id if current_version else None)
     if object_exists(key):
         return key
 
