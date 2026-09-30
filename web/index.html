@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>JSAN PLA Operations & Quality Platform v3.4</title>
+  <title>JSAN PLA Engineering Operations Platform v4.0</title>
   <link rel="stylesheet" href="potree/build/potree/potree.css" />
   <link rel="stylesheet" href="potree/libs/jquery-ui/jquery-ui.min.css" />
   <link rel="stylesheet" href="potree/libs/openlayers3/ol.css" />
@@ -15,8 +15,8 @@
   <div id="loginView" class="login-shell">
     <div class="login-card">
       <div class="brand-mark">J</div><div class="eyebrow">JSAN CONSULTING</div>
-      <h1>PLA Quality Validation Workbench</h1>
-      <p>Automated QC + synchronized Plan / Profile / Cross Section / 3D evidence.</p>
+      <h1>PLA Engineering Operations Platform</h1>
+      <p>Source-to-release engineering with evidence, automated validation, independent QC and immutable traceability.</p>
       <label>API URL<input id="apiUrl" placeholder="https://your-api.up.railway.app" /></label>
       <label>Email<input id="email" placeholder="name@jsanconsulting.com" autocomplete="username" /></label>
       <label>Password<input id="password" type="password" autocomplete="current-password" /></label>
@@ -27,7 +27,7 @@
 
   <div id="appView" class="app-shell hidden">
     <header class="topbar">
-      <div class="brand-block"><div class="eyebrow">JSAN CONSULTING · PLA OPERATIONS</div><div class="title">PLA Operations & Quality Platform <span id="runtimeBadge" class="version">v3.4</span></div><div class="brand-subline">Real-World Operations · Spatial Intelligence · Digital Engineering</div></div>
+      <div class="brand-block"><div class="eyebrow">JSAN CONSULTING · PLA OPERATIONS</div><div class="title">PLA Engineering Operations Platform <span id="runtimeBadge" class="version">v4.0</span></div><div class="brand-subline">Source-to-release engineering · Evidence · Validation · Independent QC · Immutable Traceability</div></div>
       <div class="top-actions"><div id="workspaceSwitch" class="workspace-switch hidden"><button id="deliveryWorkspaceBtn" class="workspace-btn">Delivery</button><button id="qcWorkspaceBtn" class="workspace-btn">QC</button></div><select id="projectSelect" class="project-select"></select><button id="newDatasetBtn" class="primary">+ New dataset</button><button id="reprocessBtn" class="ghost" title="Re-run LiDAR mapping, geometry build and QC using the files already uploaded for this dataset">Reprocess</button><span id="userBadge" class="badge muted"></span><button id="logoutBtn" class="ghost">Logout</button></div>
     </header>
 
