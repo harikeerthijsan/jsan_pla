@@ -10,12 +10,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from .db import Base, engine, get_db, SessionLocal
 from .models import User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,Finding,SceneFeature,ReviewDecision,AuditLog
-from .auth import current_user, verify_password, create_token
+from .auth import current_user, verify_password, create_token, hash_password
+from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for
+from .workflow import DatasetVersion, CorrectionRequest, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
 from .seed import seed_database, seed_admin
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
+APP_VERSION=os.getenv('APP_VERSION','3.4.0-operational')
 # Staging is production-like: it gets the same startup guard so misconfiguration is caught before promotion.
 STRICT_ENVIRONMENTS={'production','staging'}
 DEFAULT_JWT_SECRETS={'dev-only-change-me','replace-with-a-long-random-secret','replace-with-at-least-32-random-characters'}
@@ -54,12 +57,17 @@ async def lifespan(app:FastAPI):
     finally: db.close()
     yield
 
-app=FastAPI(title='JSAN PLA Quality Validation API',version='3.3.0-industry',lifespan=lifespan)
+app=FastAPI(title='JSAN PLA Quality Validation API',version=APP_VERSION,lifespan=lifespan)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag'])
 
 class LoginIn(BaseModel): email:str; password:str
 class DecisionIn(BaseModel): decision:str; comment:str|None=None
+class CorrectionIn(BaseModel): comment:str|None=None
+class UserCreateIn(BaseModel):
+    email:str; name:str=Field(min_length=2,max_length=255); role:str='QC_REVIEWER'; password:str=Field(min_length=12,max_length=256)
+class UserUpdateIn(BaseModel):
+    name:str|None=None; role:str|None=None; password:str|None=Field(default=None,min_length=12,max_length=256)
 class ProjectIn(BaseModel):
     name:str=Field(min_length=2,max_length=255); customer:str='PLA'; crs:str='EPSG:6424'; units:str='US survey foot'
 class UploadRequest(BaseModel): filename:str; role:str; size_bytes:int|None=None; content_type:str|None=None
@@ -74,14 +82,18 @@ class SectionRequest(BaseModel):
 def slug(s): return re.sub(r'[^a-z0-9]+','-',s.lower()).strip('-')[:50] or 'dataset'
 
 def project_dict(p): return {'id':p.id,'name':p.name,'customer':p.customer,'status':p.status,'crs':p.crs,'units':p.units,'created_at':p.created_at.isoformat() if p.created_at else None}
+def user_dict(u): return {'id':u.id,'email':u.email,'name':u.name,'role':u.role,'created_at':u.created_at.isoformat() if u.created_at else None}
 def finding_dict(f): return {'id':f.id,'rule_id':f.rule_id,'severity':f.severity,'internal_id':f.internal_id,'pole_number':f.pole_number,'sheet':f.sheet,'field':f.field,'message':f.message,'actual':f.actual,'expected':f.expected,'related_poles':json.loads(f.related_poles_json or '[]'),'status':f.status}
 def pole_dict(p):
     d=json.loads(p.manifest_json or '{}'); d.update({'internal_id':p.internal_id,'pole_number':p.pole_number,'block_name':p.block_name,'qc_status':p.qc_status,'qc_fail':p.qc_fail,'qc_review':p.qc_review,'qc_unverifiable':p.qc_unverifiable,'remarks':p.remarks,'bottom_elev_ft':p.bottom_elev_ft,'top_elev_ft':p.top_elev_ft}); return d
 
 @app.get('/health')
-def health(): return {'status':'ok','service':'pla-qc-api','version':'3.3.0-industry','storage_mode':MODE}
+def health(): return {'status':'ok','service':'pla-qc-api','version':APP_VERSION,'storage_mode':MODE}
 @app.get('/health/live')
-def health_live(): return {'status':'live','service':'pla-qc-api','version':'3.3.0-industry','app_env':APP_ENV}
+def health_live(): return {'status':'live','service':'pla-qc-api','version':APP_VERSION,'app_env':APP_ENV}
+@app.get('/api/system/info')
+def system_info():
+    return {'version':APP_VERSION,'app_env':APP_ENV,'railway_environment':os.getenv('RAILWAY_ENVIRONMENT_NAME') or APP_ENV,'git_branch':os.getenv('RAILWAY_GIT_BRANCH') or os.getenv('GIT_BRANCH') or 'local','git_commit':(os.getenv('RAILWAY_GIT_COMMIT_SHA') or os.getenv('GIT_COMMIT') or '')[:8] or None,'service':'pla-qc'}
 @app.get('/health/ready')
 def health_ready():
     # Railway only switches traffic once this returns 2xx. Never echo exception text: it can contain hosts/credentials.
@@ -94,7 +106,7 @@ def health_ready():
     storage_ok=bool(bucket_name()) if MODE=='s3' else (not LOCAL_ROOT.exists() or LOCAL_ROOT.is_dir())
     checks['storage']='ok' if storage_ok else 'fail'
     ready=all(v=='ok' for v in checks.values())
-    body={'status':'ready' if ready else 'not_ready','service':'pla-qc-api','version':'3.3.0-industry','app_env':APP_ENV,'storage_mode':MODE,'checks':checks}
+    body={'status':'ready' if ready else 'not_ready','service':'pla-qc-api','version':APP_VERSION,'app_env':APP_ENV,'storage_mode':MODE,'checks':checks}
     return JSONResponse(body,status_code=200 if ready else 503)
 @app.post('/api/auth/login')
 def login(body:LoginIn,db:Session=Depends(get_db)):
@@ -102,21 +114,46 @@ def login(body:LoginIn,db:Session=Depends(get_db)):
     if not u or not verify_password(body.password,u.password_hash): raise HTTPException(401,'Invalid email or password')
     return {'token':create_token(u),'user':{'email':u.email,'name':u.name,'role':u.role}}
 @app.get('/api/auth/me')
-def me(u:User=Depends(current_user)): return {'email':u.email,'name':u.name,'role':u.role}
+def me(u:User=Depends(current_user)): return {'email':u.email,'name':u.name,'role':u.role,'workspaces':workspaces_for(u)}
+@app.get('/api/workspaces')
+def workspaces(u:User=Depends(current_user)): return {'workspaces':workspaces_for(u),'permissions':sorted(ROLE_PERMISSIONS.get((u.role or '').upper(),set()))}
+
+@app.get('/api/users')
+def list_users(u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
+    return [user_dict(x) for x in db.query(User).order_by(User.name,User.email).all()]
+@app.post('/api/users')
+def create_user(body:UserCreateIn,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
+    role=body.role.upper()
+    if role not in ROLE_PERMISSIONS: raise HTTPException(400,'Unsupported role')
+    if db.query(User).filter(func.lower(User.email)==body.email.lower()).first(): raise HTTPException(409,'User already exists')
+    row=User(email=body.email.lower(),name=body.name,role=role,password_hash=hash_password(body.password)); db.add(row); db.add(AuditLog(actor=u.email,action='CREATE_USER',entity_type='user',entity_id=body.email.lower(),detail_json=json.dumps({'role':role,'name':body.name}))); db.commit(); return user_dict(row)
+@app.put('/api/users/{user_id}')
+def update_user(user_id:int,body:UserUpdateIn,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
+    row=db.query(User).filter_by(id=user_id).first()
+    if not row: raise HTTPException(404,'User not found')
+    if body.name is not None: row.name=body.name
+    if body.role is not None:
+        role=body.role.upper()
+        if role not in ROLE_PERMISSIONS: raise HTTPException(400,'Unsupported role')
+        row.role=role
+    if body.password is not None: row.password_hash=hash_password(body.password)
+    db.add(AuditLog(actor=u.email,action='UPDATE_USER',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'role':row.role,'name':row.name,'password_changed':body.password is not None}))); db.commit(); return user_dict(row)
 
 @app.get('/api/projects')
-def projects(u:User=Depends(current_user),db:Session=Depends(get_db)): return [project_dict(p) for p in db.query(Project).order_by(Project.created_at.desc()).all()]
+def projects(u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)): return [project_dict(p) for p in db.query(Project).order_by(Project.created_at.desc()).all()]
 @app.post('/api/projects')
-def create_project(body:ProjectIn,u:User=Depends(current_user),db:Session=Depends(get_db)):
-    pid=f"{slug(body.name)}-{uuid.uuid4().hex[:8]}"; p=Project(id=pid,name=body.name,customer=body.customer,crs=body.crs,units=body.units,status='UPLOADING'); db.add(p); db.add(AuditLog(actor=u.email,action='CREATE_PROJECT',entity_type='project',entity_id=pid,detail_json=body.model_dump_json())); db.commit(); return project_dict(p)
+def create_project(body:ProjectIn,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
+    pid=f"{slug(body.name)}-{uuid.uuid4().hex[:8]}"; p=Project(id=pid,name=body.name,customer=body.customer,crs=body.crs,units=body.units,status='UPLOADING'); db.add(p); db.flush(); ensure_current_version(db,pid,u.email); db.add(AuditLog(actor=u.email,action='CREATE_PROJECT',entity_type='project',entity_id=pid,detail_json=body.model_dump_json())); db.commit(); return project_dict(p)
 
 @app.post('/api/projects/{project_id}/uploads/prepare')
-def prepare_upload(project_id:str,body:UploadRequest,u:User=Depends(current_user),db:Session=Depends(get_db)):
+def prepare_upload(project_id:str,body:UploadRequest,u:User=Depends(require_permission('upload.create')),db:Session=Depends(get_db)):
     p=db.query(Project).filter_by(id=project_id).first()
     if not p: raise HTTPException(404,'Project not found')
     if body.role not in {'WORKBOOK','LIDAR_SOURCE'}: raise HTTPException(400,'Unsupported file role')
-    fid=uuid.uuid4().hex; safe=pathlib.Path(body.filename).name; key=f'{project_id}/source/{fid}-{safe}'
-    rec=DatasetFile(id=fid,project_id=project_id,filename=safe,role=body.role,object_key=key,content_type=body.content_type,size_bytes=body.size_bytes,status='PENDING'); db.add(rec); db.commit()
+    version=ensure_current_version(db,project_id,u.email)
+    if version.status!='UPLOADING': raise HTTPException(409,'Create a new dataset revision before uploading new source files')
+    fid=uuid.uuid4().hex; safe=pathlib.Path(body.filename).name; key=f'{project_id}/versions/v{version.version_no}/source/{fid}-{safe}'
+    rec=DatasetFile(id=fid,project_id=project_id,filename=safe,role=body.role,object_key=key,content_type=body.content_type,size_bytes=body.size_bytes,status='PENDING'); db.add(rec); db.flush(); attach_file_to_current_version(db,project_id,fid,u.email); db.commit()
     if MODE=='local': return {'file_id':fid,'mode':'local','upload_url':f'/api/projects/{project_id}/uploads/{fid}/local'}
     # Large LiDAR uses multipart so browser uploads are chunked and retryable.
     threshold=int(os.getenv('MULTIPART_THRESHOLD_BYTES',str(100*1024*1024)))
@@ -130,7 +167,7 @@ def prepare_upload(project_id:str,body:UploadRequest,u:User=Depends(current_user
     return {'file_id':fid,'mode':'direct','upload_url':url,'method':'PUT','headers':({'Content-Type':body.content_type} if body.content_type else {})}
 
 @app.put('/api/projects/{project_id}/uploads/{file_id}/local')
-async def local_upload(project_id:str,file_id:str,file:UploadFile=File(...),u:User=Depends(current_user),db:Session=Depends(get_db)):
+async def local_upload(project_id:str,file_id:str,file:UploadFile=File(...),u:User=Depends(require_permission('upload.create')),db:Session=Depends(get_db)):
     if MODE!='local': raise HTTPException(400,'Local upload endpoint disabled')
     rec=db.query(DatasetFile).filter_by(id=file_id,project_id=project_id).first()
     if not rec: raise HTTPException(404,'Upload record not found')
@@ -141,7 +178,7 @@ async def local_upload(project_id:str,file_id:str,file:UploadFile=File(...),u:Us
     rec.size_bytes=size; rec.status='UPLOADED'; db.commit(); return {'ok':True,'size_bytes':size}
 
 @app.post('/api/projects/{project_id}/uploads/{file_id}/multipart-complete')
-def multipart_complete(project_id:str,file_id:str,body:MultipartComplete,u:User=Depends(current_user),db:Session=Depends(get_db)):
+def multipart_complete(project_id:str,file_id:str,body:MultipartComplete,u:User=Depends(require_permission('upload.create')),db:Session=Depends(get_db)):
     rec=db.query(DatasetFile).filter_by(id=file_id,project_id=project_id).first()
     if not rec: raise HTTPException(404,'Upload record not found')
     if MODE=='local': raise HTTPException(400,'Multipart endpoint is for S3 storage mode')
@@ -150,7 +187,7 @@ def multipart_complete(project_id:str,file_id:str,body:MultipartComplete,u:User=
     rec.status='UPLOADED'; db.commit(); return {'ok':True,'file_id':file_id}
 
 @app.post('/api/projects/{project_id}/uploads/{file_id}/complete')
-def complete_upload(project_id:str,file_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
+def complete_upload(project_id:str,file_id:str,u:User=Depends(require_permission('upload.create')),db:Session=Depends(get_db)):
     rec=db.query(DatasetFile).filter_by(id=file_id,project_id=project_id).first()
     if not rec: raise HTTPException(404,'Upload record not found')
     if not object_exists(rec.object_key): raise HTTPException(400,'Uploaded object is not present in storage')
@@ -161,13 +198,13 @@ def project_files(project_id:str,u:User=Depends(current_user),db:Session=Depends
     return [{'id':f.id,'filename':f.filename,'role':f.role,'size_bytes':f.size_bytes,'status':f.status} for f in db.query(DatasetFile).filter_by(project_id=project_id).order_by(DatasetFile.created_at).all()]
 
 @app.post('/api/projects/{project_id}/process')
-def queue_process(project_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
+def queue_process(project_id:str,u:User=Depends(require_permission('processing.run')),db:Session=Depends(get_db)):
     p=db.query(Project).filter_by(id=project_id).first()
     if not p: raise HTTPException(404,'Project not found')
-    files=db.query(DatasetFile).filter_by(project_id=project_id,status='UPLOADED').all()
-    if not any(f.role=='WORKBOOK' for f in files): raise HTTPException(400,'Upload a COLLECTION workbook first')
-    if not any(f.role=='LIDAR_SOURCE' for f in files): raise HTTPException(400,'Upload at least one LAS/LAZ/COPC file first')
-    jid=uuid.uuid4().hex; j=ProcessingJob(id=jid,project_id=project_id,job_type='INGEST',payload_json='{}',status='QUEUED',progress=0,stage='Queued'); p.status='PROCESSING'; db.add(j); db.add(AuditLog(actor=u.email,action='QUEUE_PROCESSING',entity_type='project',entity_id=project_id,detail_json=json.dumps({'job_id':jid}))); db.commit(); return {'job_id':jid,'status':'QUEUED'}
+    version=ensure_current_version(db,project_id,u.email); files=[f for f in version_files(db,version.id) if f.status=='UPLOADED']
+    if not any(f.role=='WORKBOOK' for f in files): raise HTTPException(400,'Upload a COLLECTION workbook for this version first')
+    if not any(f.role=='LIDAR_SOURCE' for f in files): raise HTTPException(400,'Upload or inherit at least one LAS/LAZ/COPC file for this version first')
+    jid=uuid.uuid4().hex; j=ProcessingJob(id=jid,project_id=project_id,job_type='INGEST',payload_json='{}',status='QUEUED',progress=0,stage='Queued'); db.add(j); db.flush(); version,run=create_qc_run(db,project_id,jid,u.email); j.payload_json=json.dumps({'version_id':version.id,'qc_run_id':run.id}); p.status='PROCESSING'; db.add(AuditLog(actor=u.email,action='QUEUE_PROCESSING',entity_type='project',entity_id=project_id,detail_json=json.dumps({'job_id':jid,'version_id':version.id,'qc_run_id':run.id}))); db.commit(); return {'job_id':jid,'status':'QUEUED','version_id':version.id,'qc_run_id':run.id}
 @app.get('/api/jobs/{job_id}')
 def get_job(job_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
     j=db.query(ProcessingJob).filter_by(id=job_id).first()
@@ -235,7 +272,7 @@ def analysis_result(project_id:str,key:str,u:User=Depends(current_user)):
     except Exception as e: raise HTTPException(500,f'Unable to read analysis result: {e}')
 
 @app.post('/api/findings/{finding_id}/decision')
-def decide(finding_id:str,body:DecisionIn,u:User=Depends(current_user),db:Session=Depends(get_db)):
+def decide(finding_id:str,body:DecisionIn,u:User=Depends(require_permission('finding.review')),db:Session=Depends(get_db)):
     allowed={'CONFIRMED_FAIL','ACCEPTED_EXCEPTION','NEEDS_FIELD_REVIEW','CORRECTED','OPEN'}
     if body.decision not in allowed: raise HTTPException(400,'Unsupported decision')
     f=db.query(Finding).filter_by(id=finding_id).first()
@@ -244,6 +281,34 @@ def decide(finding_id:str,body:DecisionIn,u:User=Depends(current_user),db:Sessio
 @app.get('/api/findings/{finding_id}/history')
 def history(finding_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
     rows=db.query(ReviewDecision).filter_by(finding_id=finding_id).order_by(ReviewDecision.created_at.desc()).all(); return [{'reviewer':r.reviewer_email,'decision':r.decision,'comment':r.comment,'created_at':r.created_at.isoformat()} for r in rows]
+
+
+@app.get('/api/projects/{project_id}/workflow')
+def project_workflow(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
+    snap=workflow_snapshot(db,project_id,u.email); db.commit(); return snap
+
+@app.post('/api/projects/{project_id}/versions')
+def new_version(project_id:str,u:User=Depends(require_permission('version.create')),db:Session=Depends(get_db)):
+    v=create_revision(db,project_id,u.email); db.commit(); return version_dict(v)
+
+@app.get('/api/projects/{project_id}/corrections')
+def project_corrections(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    snap=workflow_snapshot(db,project_id,u.email); db.commit(); return snap['corrections']
+
+@app.post('/api/findings/{finding_id}/correction')
+def request_correction(finding_id:str,body:CorrectionIn,u:User=Depends(require_permission('correction.create')),db:Session=Depends(get_db)):
+    f=db.query(Finding).filter_by(id=finding_id).first()
+    if not f: raise HTTPException(404,'Finding not found')
+    row=create_correction(db,f,u.email,body.comment); db.commit(); return {'id':row.id,'status':row.status,'finding_id':row.finding_id}
+
+@app.post('/api/corrections/{correction_id}/resolve')
+def close_correction(correction_id:str,u:User=Depends(require_permission('correction.resolve')),db:Session=Depends(get_db)):
+    row=resolve_correction(db,correction_id,u.email); db.commit(); return {'id':row.id,'status':row.status}
+
+@app.post('/api/projects/{project_id}/versions/{version_id}/approve')
+def approve_dataset(project_id:str,version_id:str,u:User=Depends(require_permission('version.approve')),db:Session=Depends(get_db)):
+    row=approve_version(db,project_id,version_id,u.email); db.commit(); return version_dict(row)
 
 @app.get('/api/storage/{key:path}')
 def local_storage(key:str):
