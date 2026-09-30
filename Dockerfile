@@ -7,6 +7,8 @@ RUN mamba create --yes --name pla --channel conda-forge --strict-channel-priorit
         "python=3.12" "pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4" \
         "setuptools>=78.1.1" "msgpack-python>=1.2.1" \
     && /opt/conda/envs/pla/bin/python -m pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm -rf /opt/conda/envs/pla/lib/python3.12/site-packages/setuptools-*.dist-info \
+        /opt/conda/envs/pla/lib/python3.12/site-packages/msgpack-*.dist-info \
     && /opt/conda/envs/pla/bin/python -m pip install --no-cache-dir --upgrade --force-reinstall \
         "setuptools>=78.1.1" "msgpack>=1.2.1" \
     && /opt/conda/envs/pla/bin/python -c "import msgpack, setuptools; assert tuple(map(int, setuptools.__version__.split('.')[:3])) >= (78, 1, 1); assert msgpack.version >= (1, 2, 1)" \

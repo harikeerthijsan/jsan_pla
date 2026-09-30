@@ -104,6 +104,7 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - 2026-09-30: Preserve the worker runtime working directory explicitly after the multi-stage boundary; Docker stage-local `WORKDIR` settings do not carry into the final stage.
 - 2026-09-30: Constrain fixed setuptools and msgpack versions in the Conda solve as well as Python requirements. A pip upgrade alone left vulnerable Conda metadata visible to Trivy even though the imported wheel was newer.
 - 2026-09-30: Assert the imported setuptools/msgpack versions while building, then remove only their duplicate Conda records after pip becomes authoritative for those two packages. Retain all native/geospatial Conda records so the final image remains meaningfully scannable.
+- 2026-09-30: Remove stale setuptools/msgpack `dist-info` directories before reinstalling the asserted fixed wheels. Include Trivy `PkgPath` in CI annotations so future language-package findings identify their exact on-image metadata source.
 
 ## Progress
 

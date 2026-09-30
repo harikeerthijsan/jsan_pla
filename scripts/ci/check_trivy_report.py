@@ -26,6 +26,7 @@ def blocking_findings(report: dict[str, Any]) -> list[dict[str, str]]:
                 'package': str(vulnerability.get('PkgName') or 'unknown-package'),
                 'installed': str(vulnerability.get('InstalledVersion') or 'unknown'),
                 'fixed': fixed,
+                'path': str(vulnerability.get('PkgPath') or '').strip(),
                 'severity': severity,
                 'title': str(vulnerability.get('Title') or '').strip(),
             })
@@ -51,8 +52,9 @@ def main(argv: list[str] | None = None) -> int:
     findings = blocking_findings(report)
     for finding in findings:
         title = f"{finding['severity']} {finding['id']} in {finding['package']}"
+        location = finding['target'] + (f" ({finding['path']})" if finding['path'] else '')
         message = (
-            f"{finding['target']}: installed {finding['installed']}; fixed in {finding['fixed']}"
+            f"{location}: installed {finding['installed']}; fixed in {finding['fixed']}"
             + (f"; {finding['title']}" if finding['title'] else '')
         )
         print(f'::error file={_escape(args.source)},title={_escape(title)}::{_escape(message)}')

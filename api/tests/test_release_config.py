@@ -99,6 +99,8 @@ def test_deployed_images_keep_pinned_native_geospatial_stack():
         assert 'COPY --from=geospatial /opt/conda/envs/pla /opt/conda/envs/pla' in text, dockerfile
         assert '"pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4"' in text, dockerfile
         assert '"setuptools>=78.1.1" "msgpack-python>=1.2.1"' in text, dockerfile
+        assert 'site-packages/setuptools-*.dist-info' in text, dockerfile
+        assert 'site-packages/msgpack-*.dist-info' in text, dockerfile
         assert '--upgrade --force-reinstall' in text, dockerfile
         assert "setuptools.__version__.split('.')[:3]" in text, dockerfile
         assert 'assert msgpack.version >= (1, 2, 1)' in text, dockerfile
