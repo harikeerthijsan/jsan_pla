@@ -92,6 +92,7 @@ def test_ci_never_cancels_deploy_branch_runs():
 def test_deployed_images_keep_pinned_native_geospatial_stack():
     for dockerfile in ('Dockerfile', 'worker/Dockerfile'):
         text = read(dockerfile)
+        assert 'FROM condaforge/miniforge3:26.7.2-0' in text, dockerfile
         assert '"pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4"' in text, dockerfile
         assert '--strict-channel-priority' in text, dockerfile
 

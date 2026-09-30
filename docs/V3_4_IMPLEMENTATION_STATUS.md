@@ -18,6 +18,7 @@
 - Explicit bucket CORS derivation/rejection instead of a committed wildcard.
 - Machine-readable profile-parity evidence validation and tolerance comparison with no default thresholds.
 - Pull-request dependency review and high/critical vulnerability gates for both container images.
+- Miniforge base refreshed to `26.7.2-0`; PDAL 2.10.2, GDAL 3.13.3 and libsqlite compatibility pins remain unchanged.
 
 ## Preserved
 - Existing dynamic COLLECTION + LAS/LAZ/COPC ingestion.

@@ -98,6 +98,7 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - 2026-09-30: Do not implement or activate speculative OIDC without an approved JSAN IdP registration and claims contract.
 - 2026-09-30: Do not invent profile tolerances or remaining SOW rules; provide auditable input formats and keep acceptance external.
 - 2026-09-30: Preserve the combined Railway app topology for this patch; splitting API/worker changes failure and scaling behavior and needs a separate staging capacity decision.
+- 2026-09-30: Refresh Miniforge from `25.3.1-0` to the current official `26.7.2-0` after Trivy blocked both images; retain exact PDAL/GDAL/libsqlite pins and require CI smoke tests.
 
 ## Progress
 
@@ -109,7 +110,7 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - [x] Added profile-parity evidence harness.
 - [x] Updated documentation.
 - [x] Completed Python compile, 70-test pytest, JavaScript syntax, hygiene and diff checks.
-- [ ] Completed Docker image builds (Docker is unavailable locally; GitHub CI must perform them).
+- [ ] Completed Docker image builds and vulnerability scans (first CI build/smoke passed, but Trivy blocked the old Miniforge base; rerun required).
 - [ ] Pushed feature branch.
 - [ ] Staging acceptance completed.
 - [ ] Promoted to `main`.

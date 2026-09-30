@@ -7,6 +7,7 @@
 - Removed committed wildcard bucket CORS and derive or require explicit browser origins in staging/production.
 - Added machine-readable profile-parity evidence validation and approved-tolerance comparison.
 - Added pull-request dependency review and Trivy gates for both built container images.
+- Refreshed the pinned Miniforge base to `26.7.2-0` while retaining the proven PDAL/GDAL/libsqlite pins.
 - Documented the external OIDC, PLA rule-matrix, and trusted MicroStation/TerraScan acceptance gates.
 
 ## 3.0.0-profile-dev — 2026-09-29
