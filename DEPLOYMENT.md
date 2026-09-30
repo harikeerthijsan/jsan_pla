@@ -10,7 +10,8 @@ managed resources:
 
 The root `Dockerfile` is the deployable image. It listens on Railway's `PORT`,
 serves the UI and API on the same origin, waits for PostgreSQL during startup,
-starts the background worker, and exposes `/health` for deployment checks.
+starts the background worker, and exposes `/health/live` and `/health/ready`
+for deployment checks (`/health` is kept for existing monitors).
 
 ## Recommended CLI deployment
 
@@ -61,7 +62,7 @@ You can deploy the same package without the IaC file:
 1. Create a Railway project, a PostgreSQL database, and a Storage Bucket.
 2. Create a service from this GitHub repository. Keep the root directory at the
    repository root; Railway will detect the root `Dockerfile`.
-3. Generate a public domain and configure `/health` as the healthcheck path.
+3. Generate a public domain and configure `/health/ready` as the healthcheck path.
 4. Add the variables below using Railway reference variables.
 5. Keep the service at one replica and deploy.
 
@@ -106,12 +107,14 @@ Redeploy after changing this value so the policy is reapplied.
 After deployment, verify the health endpoint:
 
 ```powershell
-Invoke-RestMethod "https://your-app.up.railway.app/health"
+Invoke-RestMethod "https://your-app.up.railway.app/health/ready"
 ```
 
-Expected fields include `status: ok`, version `3.3.0-industry`, and
-`storage_mode: s3`. Then open the domain, sign in with the configured admin
-credentials, and run one real workbook plus LAS/LAZ/COPC upload.
+Expected fields include `status: ready`, `app_env: production`, version
+`3.3.0-industry`, `storage_mode: s3` and `checks` all `ok`. Staging, CI gates and
+rollback are described in `docs/RELEASE_RUNBOOK.md`. Then open the domain, sign
+in with the configured admin credentials, and run one real workbook plus
+LAS/LAZ/COPC upload.
 
 ## Operational notes
 

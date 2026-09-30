@@ -87,3 +87,20 @@ def test_production_startup_rejects_incomplete_bucket_configuration(monkeypatch)
 
     with pytest.raises(RuntimeError, match='bucket endpoint'):
         validate_production_environment()
+
+
+def test_staging_startup_uses_the_same_entrypoint_checks(monkeypatch):
+    monkeypatch.setenv('APP_ENV', 'staging')
+    monkeypatch.setenv('DATABASE_URL', 'postgresql://example')
+    monkeypatch.setenv('ADMIN_EMAIL', 'admin@example.com')
+    monkeypatch.setenv('ADMIN_PASSWORD', 'a-unique-password')
+    monkeypatch.setenv('JWT_SECRET', 'short')
+
+    with pytest.raises(RuntimeError, match='JWT_SECRET'):
+        validate_production_environment()
+
+
+def test_preview_startup_skips_entrypoint_checks(monkeypatch):
+    monkeypatch.setenv('APP_ENV', 'preview')
+    monkeypatch.delenv('JWT_SECRET', raising=False)
+    validate_production_environment()

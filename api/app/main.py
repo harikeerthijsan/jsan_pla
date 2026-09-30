@@ -5,17 +5,47 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from .db import Base, engine, get_db, SessionLocal
 from .models import User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,Finding,SceneFeature,ReviewDecision,AuditLog
 from .auth import current_user, verify_password, create_token
 from .seed import seed_database, seed_admin
-from .storage import MODE, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, configure_bucket_cors
+from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
+
+APP_ENV=os.getenv('APP_ENV','development').lower()
+# Staging is production-like: it gets the same startup guard so misconfiguration is caught before promotion.
+STRICT_ENVIRONMENTS={'production','staging'}
+DEFAULT_JWT_SECRETS={'dev-only-change-me','replace-with-a-long-random-secret','replace-with-at-least-32-random-characters'}
+DEFAULT_ADMIN_PASSWORDS={'ChangeMe123!','replace-with-a-unique-password-of-12-or-more-characters'}
+
+def validate_runtime_environment():
+    """Refuse to start staging/production with unsafe configuration. Do not weaken; fix the environment."""
+    if APP_ENV not in STRICT_ENVIRONMENTS: return
+    errors=[]
+    db_url=os.getenv('DATABASE_URL','')
+    if not db_url or db_url.startswith('sqlite'): errors.append('DATABASE_URL must point to PostgreSQL, not SQLite')
+    if MODE!='s3': errors.append("STORAGE_MODE must be 's3' (private object storage)")
+    jwt_secret=os.getenv('JWT_SECRET','')
+    if len(jwt_secret)<32 or jwt_secret in DEFAULT_JWT_SECRETS: errors.append('JWT_SECRET must be a unique value of at least 32 characters')
+    admin_password=os.getenv('ADMIN_PASSWORD','')
+    if len(admin_password)<12 or admin_password in DEFAULT_ADMIN_PASSWORDS: errors.append('ADMIN_PASSWORD must be a unique value of at least 12 characters')
+    # The Railway image serves the UI same-origin, so an unset allowlist is valid; a wildcard never is.
+    if any(x.strip()=='*' for x in os.getenv('CORS_ORIGINS','').split(',')): errors.append('CORS_ORIGINS must be an explicit allowlist, not *')
+    if os.getenv('SEED_DEMO','false').lower()=='true': errors.append('SEED_DEMO must be false')
+    # A Railway environment duplicated from production keeps APP_ENV=production; catch that mismatch.
+    railway_env=os.getenv('RAILWAY_ENVIRONMENT_NAME','').strip().lower()
+    production_name=os.getenv('PRODUCTION_RAILWAY_ENVIRONMENT','production').strip().lower()
+    if railway_env:
+        if APP_ENV=='production' and railway_env!=production_name: errors.append(f"APP_ENV=production but Railway environment is '{railway_env}'; set APP_ENV for this environment")
+        if APP_ENV!='production' and railway_env==production_name: errors.append(f"Railway environment '{railway_env}' is production but APP_ENV={APP_ENV}")
+    if errors: raise RuntimeError(f'Unsafe {APP_ENV} configuration: '+'; '.join(errors))
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
+    validate_runtime_environment()
     Base.metadata.create_all(bind=engine); db=SessionLocal()
     try:
         configure_bucket_cors()
@@ -50,6 +80,22 @@ def pole_dict(p):
 
 @app.get('/health')
 def health(): return {'status':'ok','service':'pla-qc-api','version':'3.3.0-industry','storage_mode':MODE}
+@app.get('/health/live')
+def health_live(): return {'status':'live','service':'pla-qc-api','version':'3.3.0-industry','app_env':APP_ENV}
+@app.get('/health/ready')
+def health_ready():
+    # Railway only switches traffic once this returns 2xx. Never echo exception text: it can contain hosts/credentials.
+    checks={}
+    try:
+        with engine.connect() as connection: connection.execute(text('SELECT 1'))
+        checks['database']='ok'
+    except Exception: checks['database']='fail'
+    # Configuration only, not a bucket round-trip: a transient bucket blip must not fail every deploy.
+    storage_ok=bool(bucket_name()) if MODE=='s3' else (not LOCAL_ROOT.exists() or LOCAL_ROOT.is_dir())
+    checks['storage']='ok' if storage_ok else 'fail'
+    ready=all(v=='ok' for v in checks.values())
+    body={'status':'ready' if ready else 'not_ready','service':'pla-qc-api','version':'3.3.0-industry','app_env':APP_ENV,'storage_mode':MODE,'checks':checks}
+    return JSONResponse(body,status_code=200 if ready else 503)
 @app.post('/api/auth/login')
 def login(body:LoginIn,db:Session=Depends(get_db)):
     u=db.query(User).filter(func.lower(User.email)==body.email.lower()).first()

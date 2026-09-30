@@ -14,7 +14,8 @@ STOPPING = False
 
 
 def validate_production_environment() -> None:
-    if os.getenv("APP_ENV", "development").lower() != "production":
+    # Staging is production-like and must fail the same way on incomplete configuration.
+    if os.getenv("APP_ENV", "development").lower() not in {"production", "staging"}:
         return
 
     required = ["DATABASE_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD", "JWT_SECRET"]

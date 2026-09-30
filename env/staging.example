@@ -1,0 +1,23 @@
+# Railway environment "staging" (persistent, production-like, isolated).
+# Set in Railway only; this file documents shape and must never hold real values.
+# The API refuses to start if these are unsafe or if APP_ENV disagrees with the Railway environment.
+APP_ENV=staging
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+STORAGE_MODE=s3
+BUCKET=${{pla-files.BUCKET}}
+BUCKET_ENDPOINT=${{pla-files.ENDPOINT}}
+BUCKET_ACCESS_KEY_ID=${{pla-files.ACCESS_KEY_ID}}
+BUCKET_SECRET_ACCESS_KEY=${{pla-files.SECRET_ACCESS_KEY}}
+BUCKET_REGION=${{pla-files.REGION}}
+S3_ADDRESSING_STYLE=virtual
+AUTO_CONFIGURE_BUCKET_CORS=true
+BUCKET_CORS_ORIGINS=<staging-origin-allowlist>
+SEED_DEMO=false
+WORKER_POLL_SECONDS=3
+DB_CONNECT_TIMEOUT=120
+# Unique to staging: never the production values.
+JWT_SECRET=<staging-only-random-value-of-32+-chars>
+ADMIN_EMAIL=<staging-admin-email>
+ADMIN_PASSWORD=<staging-only-password-of-12+-chars>
+# Optional; only needed if a separate (e.g. Vercel) frontend calls this API cross-origin. Never *.
+# CORS_ORIGINS=https://staging-qc.example.com

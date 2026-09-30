@@ -1,0 +1,17 @@
+# Railway PR environment (ephemeral, forked from STAGING, never from production).
+# Set in Railway only; this file documents shape and must never hold real values.
+APP_ENV=preview
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+STORAGE_MODE=s3
+BUCKET=${{pla-files.BUCKET}}
+BUCKET_ENDPOINT=${{pla-files.ENDPOINT}}
+BUCKET_ACCESS_KEY_ID=${{pla-files.ACCESS_KEY_ID}}
+BUCKET_SECRET_ACCESS_KEY=${{pla-files.SECRET_ACCESS_KEY}}
+BUCKET_REGION=${{pla-files.REGION}}
+S3_ADDRESSING_STYLE=virtual
+SEED_DEMO=false
+# Use synthetic or sanitized data only. Reference variables resolve to the PR environment's own
+# Postgres and bucket; never paste literal staging or production credentials here.
+JWT_SECRET=<preview-only-random-value>
+ADMIN_EMAIL=<preview-admin-email>
+ADMIN_PASSWORD=<preview-only-password>
