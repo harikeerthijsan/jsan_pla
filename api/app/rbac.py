@@ -11,12 +11,12 @@ from .models import User
 ROLE_PERMISSIONS = {
     "ADMIN": {
         "workspace.delivery", "workspace.qc", "project.read", "project.create",
-        "upload.create", "processing.run", "finding.review", "correction.create",
+        "upload.create", "processing.run", "analysis.run", "finding.review", "correction.create",
         "correction.resolve", "version.create", "version.approve", "user.manage",
     },
     "PROGRAM_MANAGER": {
         "workspace.delivery", "workspace.qc", "project.read", "project.create",
-        "upload.create", "processing.run", "finding.review", "correction.create",
+        "upload.create", "processing.run", "analysis.run", "finding.review", "correction.create",
         "correction.resolve", "version.create", "version.approve",
     },
     "DELIVERY_MANAGER": {
@@ -28,11 +28,11 @@ ROLE_PERMISSIONS = {
         "correction.resolve", "version.create",
     },
     "QC_LEAD": {
-        "workspace.qc", "project.read", "processing.run", "finding.review",
+        "workspace.qc", "project.read", "processing.run", "analysis.run", "finding.review",
         "correction.create", "version.approve",
     },
     "QC_REVIEWER": {
-        "workspace.qc", "project.read", "finding.review", "correction.create",
+        "workspace.qc", "project.read", "analysis.run", "finding.review", "correction.create",
     },
     "CUSTOMER_VIEWER": {
         "workspace.qc", "project.read",
