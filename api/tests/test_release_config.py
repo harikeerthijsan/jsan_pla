@@ -98,7 +98,11 @@ def test_deployed_images_keep_pinned_native_geospatial_stack():
         assert 'FROM ubuntu:24.04' in text, dockerfile
         assert 'COPY --from=geospatial /opt/conda/envs/pla /opt/conda/envs/pla' in text, dockerfile
         assert '"pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4"' in text, dockerfile
+        assert '"setuptools>=78.1.1" "msgpack-python>=1.2.1"' in text, dockerfile
         assert '--strict-channel-priority' in text, dockerfile
+
+    worker_runtime = read('worker/Dockerfile').split('FROM ubuntu:24.04', maxsplit=1)[1]
+    assert 'WORKDIR /app' in worker_runtime
 
 
 def test_deployed_images_apply_os_security_updates():

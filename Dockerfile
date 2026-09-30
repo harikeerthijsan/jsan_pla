@@ -5,6 +5,7 @@ WORKDIR /app
 COPY api/requirements.txt /tmp/requirements.txt
 RUN mamba create --yes --name pla --channel conda-forge --strict-channel-priority \
         "python=3.12" "pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4" \
+        "setuptools>=78.1.1" "msgpack-python>=1.2.1" \
     && /opt/conda/envs/pla/bin/python -m pip install --no-cache-dir -r /tmp/requirements.txt \
     && /opt/conda/envs/pla/bin/python -c "import sqlite3; assert sqlite3.sqlite_version_info >= (3, 38, 0), sqlite3.sqlite_version" \
     && /opt/conda/envs/pla/bin/gdalinfo --version \

@@ -101,6 +101,8 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - 2026-09-30: Refresh Miniforge from `25.3.1-0` to the current official `26.7.2-0` after Trivy blocked both images; retain exact PDAL/GDAL/libsqlite pins and require CI smoke tests.
 - 2026-09-30: Use Miniforge only as a build stage and copy the pinned `/opt/conda/envs/pla` environment into a security-updated Ubuntu runtime. This removes unused vulnerable `rattler` libraries from the deployed image without relocating or repinning the geospatial environment.
 - 2026-09-30: Upgrade FastAPI/Starlette and explicitly require fixed setuptools/msgpack versions in response to actionable HIGH findings from the staging image scan.
+- 2026-09-30: Preserve the worker runtime working directory explicitly after the multi-stage boundary; Docker stage-local `WORKDIR` settings do not carry into the final stage.
+- 2026-09-30: Constrain fixed setuptools and msgpack versions in the Conda solve as well as Python requirements. A pip upgrade alone left vulnerable Conda metadata visible to Trivy even though the imported wheel was newer.
 
 ## Progress
 
