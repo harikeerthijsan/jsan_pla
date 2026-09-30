@@ -246,7 +246,8 @@ def prepare_section(project_id:str,internal_id:int,body:SectionRequest,u:User=De
     try: frame=build_frame(db,project_id,internal_id,body.target_internal_id)
     except ValueError as e: raise HTTPException(422,str(e))
     target=frame.get('target_internal_id')
-    key=section_result_key(project_id,internal_id,target,body.width,body.depth,body.resolution,body.max_points)
+    current_version=db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).first()
+    key=section_result_key(project_id,internal_id,target,body.width,body.depth,body.resolution,body.max_points,current_version.id if current_version else None)
     if object_exists(key):
         return {'cached':True,'result_key':key,'frame':frame}
     payload={'internal_id':internal_id,'target_internal_id':target,'width':body.width,'depth':body.depth,'resolution':body.resolution,'max_points':body.max_points}
@@ -266,7 +267,8 @@ def job_result(job_id:str,u:User=Depends(current_user),db:Session=Depends(get_db
 @app.get('/api/projects/{project_id}/analysis/result')
 def analysis_result(project_id:str,key:str,u:User=Depends(current_user)):
     # Small JSON analysis products may be returned through the API; large COPC files remain direct-from-storage.
-    if not key.startswith(f'{project_id}/analysis/') or not key.endswith('.json'): raise HTTPException(400,'Invalid analysis key')
+    allowed_prefixes=(f'{project_id}/analysis/',f'{project_id}/versions/')
+    if not key.startswith(allowed_prefixes) or '/analysis/' not in key or not key.endswith('.json'): raise HTTPException(400,'Invalid analysis key')
     try: return json.loads(read_bytes(key))
     except FileNotFoundError: raise HTTPException(404,'Analysis result not found')
     except Exception as e: raise HTTPException(500,f'Unable to read analysis result: {e}')
