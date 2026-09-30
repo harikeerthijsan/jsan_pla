@@ -2,7 +2,7 @@ import * as THREE from "../potree/libs/three.js/build/three.module.js";
 
 const cfg=window.PLA_CONFIG||{};
 const defaultApiBase=cfg.API_BASE||(["5500","3000"].includes(window.location.port)?"http://localhost:8000":window.location.origin);
-const state={layout:{maximized:null,minimized:new Set(),focusWorkspace:false},apiBase:localStorage.getItem("pla_api_base")||defaultApiBase,token:localStorage.getItem("pla_token")||"",user:JSON.parse(localStorage.getItem("pla_user")||"null"),projects:[],projectId:localStorage.getItem("pla_project_id")||"",poles:[],summary:null,currentPole:null,currentScene:null,analysis:null,section:null,mode:"both",severity:"",viewer:null,overlay:null,relation:null,pointclouds:[],crossStation:0,canvasRanges:{}};
+const state={layout:{maximized:null,minimized:new Set(),focusWorkspace:false},apiBase:localStorage.getItem("pla_api_base")||defaultApiBase,token:localStorage.getItem("pla_token")||"",user:JSON.parse(localStorage.getItem("pla_user")||"null"),runtime:null,workspaces:[],permissions:new Set(),workspace:localStorage.getItem("pla_workspace")||"QC",workflow:null,uploadRevisionProjectId:null,projects:[],projectId:localStorage.getItem("pla_project_id")||"",poles:[],summary:null,currentPole:null,currentScene:null,analysis:null,section:null,mode:"both",severity:"",viewer:null,overlay:null,relation:null,pointclouds:[],crossStation:0,canvasRanges:{}};
 const $=id=>document.getElementById(id),loginView=$("loginView"),appView=$("appView");
 $("apiUrl").value=state.apiBase;
 
