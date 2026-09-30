@@ -25,6 +25,7 @@ class EngineeringAsset(Base):
     __tablename__ = "v4_engineering_assets"
     id: Mapped[str] = mapped_column(String(120), primary_key=True)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    snapshot_id: Mapped[str] = mapped_column(String(120), index=True)
     source_record_id: Mapped[str | None] = mapped_column(ForeignKey("v4_source_records.id"), nullable=True, index=True)
     asset_type: Mapped[str] = mapped_column(String(40), default="POLE", index=True)
     pole_number: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
