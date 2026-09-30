@@ -1,6 +1,6 @@
-import json, os, re, uuid, pathlib
+import json, os, re, uuid, pathlib, time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -61,6 +61,18 @@ app=FastAPI(title='JSAN PLA Quality Validation API',version=APP_VERSION,lifespan
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag'])
 
+
+@app.middleware('http')
+async def security_headers(request:Request,call_next):
+    response=await call_next(request)
+    response.headers.setdefault('X-Content-Type-Options','nosniff')
+    response.headers.setdefault('X-Frame-Options','DENY')
+    response.headers.setdefault('Referrer-Policy','same-origin')
+    response.headers.setdefault('Permissions-Policy','camera=(), microphone=(), geolocation=()')
+    if APP_ENV in STRICT_ENVIRONMENTS:
+        response.headers.setdefault('Strict-Transport-Security','max-age=31536000; includeSubDomains')
+    return response
+
 class LoginIn(BaseModel): email:str; password:str
 class DecisionIn(BaseModel): decision:str; comment:str|None=None
 class CorrectionIn(BaseModel): comment:str|None=None
@@ -78,6 +90,36 @@ class SectionRequest(BaseModel):
     depth:float=Field(default=12.0,gt=1,le=200)
     resolution:float=Field(default=0.5,gt=0,le=50)
     max_points:int=Field(default=90000,ge=1000,le=300000)
+
+LOGIN_FAILURES={}
+LOGIN_WINDOW_SECONDS=int(os.getenv('LOGIN_WINDOW_SECONDS','300'))
+LOGIN_MAX_FAILURES=int(os.getenv('LOGIN_MAX_FAILURES','8'))
+MAX_WORKBOOK_BYTES=int(os.getenv('MAX_WORKBOOK_BYTES',str(50*1024*1024)))
+MAX_LIDAR_BYTES=int(os.getenv('MAX_LIDAR_BYTES',str(50*1024*1024*1024)))
+
+def _login_key(request:Request,email:str):
+    host=request.client.host if request.client else 'unknown'
+    return f'{host}|{email.strip().lower()}'
+
+def _prune_login_failures(key:str):
+    cutoff=time.time()-LOGIN_WINDOW_SECONDS
+    LOGIN_FAILURES[key]=[x for x in LOGIN_FAILURES.get(key,[]) if x>=cutoff]
+    if not LOGIN_FAILURES[key]: LOGIN_FAILURES.pop(key,None)
+
+def validate_upload_request(body:UploadRequest):
+    safe=pathlib.Path(body.filename).name
+    lower=safe.lower()
+    if safe!=body.filename and ('/' in body.filename or '\\' in body.filename):
+        raise HTTPException(400,'Filename must not contain a path')
+    if body.size_bytes is not None and body.size_bytes<0: raise HTTPException(400,'Invalid file size')
+    if body.role=='WORKBOOK':
+        if not lower.endswith('.xlsx'): raise HTTPException(400,'Workbook must be .xlsx')
+        if body.size_bytes is not None and body.size_bytes>MAX_WORKBOOK_BYTES: raise HTTPException(413,'Workbook exceeds configured size limit')
+    elif body.role=='LIDAR_SOURCE':
+        if not (lower.endswith('.las') or lower.endswith('.laz')): raise HTTPException(400,'LiDAR must be LAS/LAZ/COPC LAZ')
+        if body.size_bytes is not None and body.size_bytes>MAX_LIDAR_BYTES: raise HTTPException(413,'LiDAR exceeds configured size limit')
+    else:
+        raise HTTPException(400,'Unsupported file role')
 
 def slug(s): return re.sub(r'[^a-z0-9]+','-',s.lower()).strip('-')[:50] or 'dataset'
 
@@ -109,9 +151,13 @@ def health_ready():
     body={'status':'ready' if ready else 'not_ready','service':'pla-qc-api','version':APP_VERSION,'app_env':APP_ENV,'storage_mode':MODE,'checks':checks}
     return JSONResponse(body,status_code=200 if ready else 503)
 @app.post('/api/auth/login')
-def login(body:LoginIn,db:Session=Depends(get_db)):
+def login(body:LoginIn,request:Request,db:Session=Depends(get_db)):
+    key=_login_key(request,body.email); _prune_login_failures(key)
+    if len(LOGIN_FAILURES.get(key,[]))>=LOGIN_MAX_FAILURES: raise HTTPException(429,'Too many failed login attempts. Try again later.')
     u=db.query(User).filter(func.lower(User.email)==body.email.lower()).first()
-    if not u or not verify_password(body.password,u.password_hash): raise HTTPException(401,'Invalid email or password')
+    if not u or not verify_password(body.password,u.password_hash):
+        LOGIN_FAILURES.setdefault(key,[]).append(time.time()); raise HTTPException(401,'Invalid email or password')
+    LOGIN_FAILURES.pop(key,None)
     return {'token':create_token(u),'user':{'email':u.email,'name':u.name,'role':u.role}}
 @app.get('/api/auth/me')
 def me(u:User=Depends(current_user)): return {'email':u.email,'name':u.name,'role':u.role,'workspaces':workspaces_for(u)}
@@ -149,7 +195,7 @@ def create_project(body:ProjectIn,u:User=Depends(require_permission('project.cre
 def prepare_upload(project_id:str,body:UploadRequest,u:User=Depends(require_permission('upload.create')),db:Session=Depends(get_db)):
     p=db.query(Project).filter_by(id=project_id).first()
     if not p: raise HTTPException(404,'Project not found')
-    if body.role not in {'WORKBOOK','LIDAR_SOURCE'}: raise HTTPException(400,'Unsupported file role')
+    validate_upload_request(body)
     version=ensure_current_version(db,project_id,u.email)
     if version.status!='UPLOADING': raise HTTPException(409,'Create a new dataset revision before uploading new source files')
     fid=uuid.uuid4().hex; safe=pathlib.Path(body.filename).name; key=f'{project_id}/versions/v{version.version_no}/source/{fid}-{safe}'
@@ -240,7 +286,7 @@ def analysis_frame(project_id:str,internal_id:int,target_internal_id:int|None=No
     except ValueError as e: raise HTTPException(422,str(e))
 
 @app.post('/api/projects/{project_id}/poles/{internal_id}/sections/prepare')
-def prepare_section(project_id:str,internal_id:int,body:SectionRequest,u:User=Depends(current_user),db:Session=Depends(get_db)):
+def prepare_section(project_id:str,internal_id:int,body:SectionRequest,u:User=Depends(require_permission('analysis.run')),db:Session=Depends(get_db)):
     p=db.query(Pole).filter_by(project_id=project_id,internal_id=internal_id).first()
     if not p: raise HTTPException(404,'Pole not found')
     try: frame=build_frame(db,project_id,internal_id,body.target_internal_id)
