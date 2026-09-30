@@ -16,7 +16,7 @@ function Invoke-Checked([string]$Label, [scriptblock]$Command) {
 }
 
 try {
-    Invoke-Checked 'Python compile' { & $Python -m compileall -q api/app api/worker.py api/railway_entrypoint.py }
+    Invoke-Checked 'Python compile' { & $Python -m compileall -q api/app api/worker.py api/railway_entrypoint.py api/migrations }
 
     Push-Location api
     try {

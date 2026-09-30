@@ -69,6 +69,33 @@ def test_bucket_cors_supports_multipart_and_copc_reads(monkeypatch):
     assert {'ETag', 'Content-Range'} <= set(rule['ExposeHeaders'])
 
 
+def test_bucket_cors_derives_explicit_railway_origin(monkeypatch):
+    monkeypatch.setenv('APP_ENV', 'production')
+    monkeypatch.delenv('BUCKET_CORS_ORIGINS', raising=False)
+    monkeypatch.delenv('CORS_ORIGINS', raising=False)
+    monkeypatch.setenv('RAILWAY_PUBLIC_DOMAIN', 'qc.example.up.railway.app')
+
+    assert storage.bucket_cors_origins() == ['https://qc.example.up.railway.app']
+
+
+def test_bucket_cors_rejects_wildcard_in_strict_environment(monkeypatch):
+    monkeypatch.setenv('APP_ENV', 'staging')
+    monkeypatch.setenv('BUCKET_CORS_ORIGINS', '*')
+
+    with pytest.raises(RuntimeError, match='trusted origins'):
+        storage.bucket_cors_origins()
+
+
+def test_bucket_cors_requires_origin_in_strict_environment(monkeypatch):
+    monkeypatch.setenv('APP_ENV', 'production')
+    monkeypatch.delenv('BUCKET_CORS_ORIGINS', raising=False)
+    monkeypatch.delenv('CORS_ORIGINS', raising=False)
+    monkeypatch.delenv('RAILWAY_PUBLIC_DOMAIN', raising=False)
+
+    with pytest.raises(RuntimeError, match='RAILWAY_PUBLIC_DOMAIN'):
+        storage.bucket_cors_origins()
+
+
 def test_production_startup_rejects_incomplete_bucket_configuration(monkeypatch):
     variables = {
         'APP_ENV': 'production',

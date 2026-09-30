@@ -27,11 +27,10 @@ export default defineRailway((ctx) => {
     replicas: { "asia-southeast1-eqsg3a": 1 },
     env: {
       APP_ENV: appEnvFor(ctx.environment),
-      APP_VERSION: "3.4.0-operational",
+      APP_VERSION: "3.4.1-operational",
       AUTO_CONFIGURE_BUCKET_CORS: "true",
       BUCKET: "${{pla-files.BUCKET}}",
       BUCKET_ACCESS_KEY_ID: "${{pla-files.ACCESS_KEY_ID}}",
-      BUCKET_CORS_ORIGINS: "*",
       BUCKET_ENDPOINT: "${{pla-files.ENDPOINT}}",
       BUCKET_REGION: "${{pla-files.REGION}}",
       BUCKET_SECRET_ACCESS_KEY: "${{pla-files.SECRET_ACCESS_KEY}}",

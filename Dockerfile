@@ -13,12 +13,14 @@ RUN mamba create --yes --name pla --channel conda-forge --strict-channel-priorit
 
 COPY api/app /app/api/app
 COPY api/seed /app/api/seed
+COPY api/alembic.ini /app/api/alembic.ini
+COPY api/migrations /app/api/migrations
 COPY api/worker.py /app/api/worker.py
 COPY api/railway_entrypoint.py /app/api/railway_entrypoint.py
 COPY web /app/web
 
 ENV APP_ENV=production \
-    APP_VERSION=3.4.0-operational \
+    APP_VERSION=3.4.1-operational \
     PATH=/opt/conda/envs/pla/bin:$PATH \
     PDAL_BIN=/opt/conda/envs/pla/bin/pdal \
     PYTHONPATH=/app/api \

@@ -52,6 +52,9 @@ def validate_production_environment() -> None:
                 "Missing Railway Storage Bucket configuration: "
                 + ", ".join(missing_storage)
             )
+        if os.getenv("AUTO_CONFIGURE_BUCKET_CORS", "false").lower() == "true":
+            from app.storage import bucket_cors_origins
+            bucket_cors_origins()
 
 
 def wait_for_database() -> None:

@@ -13,6 +13,14 @@ def read(relative):
     return (ROOT / relative).read_text(encoding='utf-8')
 
 
+def test_release_identity_is_consistent():
+    version = read('VERSION.txt').strip()
+    assert version == '3.4.1-operational'
+    assert f'APP_VERSION={version}' in read('Dockerfile')
+    assert f'APP_VERSION: "{version}"' in read('.railway/railway.ts')
+    assert f"'{version}'" in read('api/app/main.py')
+
+
 def test_railway_healthcheck_uses_readiness_endpoint():
     railway = read('.railway/railway.ts')
     assert 'healthcheck: "/health/ready"' in railway
@@ -35,6 +43,11 @@ def test_railway_resources_use_per_environment_reference_variables():
         assert '${{pla-files.' + key + '}}' in railway
 
 
+def test_railway_bucket_cors_is_not_wildcarded():
+    railway = read('.railway/railway.ts')
+    assert 'BUCKET_CORS_ORIGINS: "*"' not in railway
+
+
 def test_ci_gates_pull_requests_and_deploy_branches():
     ci = read('.github/workflows/ci.yml')
     assert re.search(r'^\s*pull_request:\s*$', ci, re.MULTILINE)
@@ -55,6 +68,14 @@ def test_ci_builds_the_images_railway_deploys_on_every_pull_request():
     assert 'Unsafe production configuration' in ci
 
 
+def test_ci_reviews_dependencies_and_scans_built_images():
+    ci = read('.github/workflows/ci.yml')
+    assert 'actions/dependency-review-action@v4' in ci
+    assert ci.count('aquasecurity/trivy-action@v0.36.0') == 2
+    assert ci.count("severity: HIGH,CRITICAL") == 2
+    assert ci.count("exit-code: '1'") == 2
+
+
 def test_workflows_use_no_secrets_or_privileged_triggers():
     for workflow in (ROOT / '.github' / 'workflows').glob('*.yml'):
         text = workflow.read_text(encoding='utf-8')
@@ -73,6 +94,14 @@ def test_deployed_images_keep_pinned_native_geospatial_stack():
         text = read(dockerfile)
         assert '"pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4"' in text, dockerfile
         assert '--strict-channel-priority' in text, dockerfile
+
+
+def test_deployed_images_include_database_migrations():
+    assert 'COPY api/alembic.ini /app/api/alembic.ini' in read('Dockerfile')
+    assert 'COPY api/migrations /app/api/migrations' in read('Dockerfile')
+    assert 'COPY alembic.ini ./alembic.ini' in read('api/Dockerfile')
+    assert 'COPY migrations ./migrations' in read('api/Dockerfile')
+    assert 'alembic' in read('api/requirements.txt')
 
 
 @pytest.mark.parametrize('name,app_env', [('staging', 'staging'), ('production', 'production'), ('preview', 'preview')])

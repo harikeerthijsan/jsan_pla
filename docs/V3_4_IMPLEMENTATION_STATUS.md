@@ -14,6 +14,10 @@
 - Upload extension and size validation, login abuse throttling and security headers.
 - Atomic worker claims, leases, heartbeats, stale lease recovery and bounded retries.
 - Deterministic profile projection tests and a MicroStation/TerraScan parity acceptance checklist.
+- Alembic revision tracking with additive adoption of existing v3.4 databases.
+- Explicit bucket CORS derivation/rejection instead of a committed wildcard.
+- Machine-readable profile-parity evidence validation and tolerance comparison with no default thresholds.
+- Pull-request dependency review and high/critical vulnerability gates for both container images.
 
 ## Preserved
 - Existing dynamic COLLECTION + LAS/LAZ/COPC ingestion.
@@ -25,6 +29,10 @@
 
 ## External dependency still required
 Production identity federation (OIDC/SSO and MFA) is not enabled because an approved JSAN identity provider and tenant/application registration have not been supplied. v3.4 therefore deploys named local accounts with RBAC as the production-safe interim mode. The bootstrap administrator credential must be rotated and should not be shared between users.
+
+See `docs/OIDC_READINESS.md` for the required provider inputs. Remaining PLA SOW rule coverage also requires
+an approved rule matrix, and final profile acceptance requires trusted MicroStation/TerraScan evidence plus
+Delivery/customer-approved tolerances. These requirements are external release gates, not values to infer in code.
 
 ## Release gate
 1. GitHub CI must pass Python, JavaScript, repository hygiene, app image and worker image checks.

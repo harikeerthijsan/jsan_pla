@@ -4,10 +4,10 @@
 
 - Port the remaining Sample1-specific PLA SOW rules into the portable rule engine.
 - Add explicit span-guy, Other-connection, sidewalk-brace and run topology geometry.
-- Add role/permission enforcement to reviewer/admin endpoints.
-- Add Alembic migrations for PostgreSQL rather than relying on `create_all`.
-- Add job cancellation/retry and stale-job recovery.
-- Add virus/type validation for uploaded files and workbook size limits.
+- Extend the implemented API RBAC with OIDC/SSO after the approved JSAN identity-provider contract is supplied.
+- Add a new Alembic revision for every future schema change; never return to runtime `create_all` schema evolution.
+- Add explicit job cancellation and dead-letter visibility; bounded retry and stale-lease recovery are implemented.
+- Add malware/content scanning required by customer policy; extension/type/size validation is implemented.
 - Add storage retention policy outside the application because Railway Buckets do not currently provide lifecycle configuration.
 - Validate profile corridor defaults with Delivery (width/depth/resolution) against MicroStation/TerraScan review practice.
 - Add automated browser tests (Playwright) against a small non-confidential COPC fixture.

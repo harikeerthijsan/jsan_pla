@@ -37,7 +37,7 @@ jobs:
           cache: pip
           cache-dependency-path: api/requirements*.txt
       - run: pip install -r api/requirements-dev.txt
-      - run: python -m compileall -q api/app api/worker.py api/railway_entrypoint.py
+      - run: python -m compileall -q api/app api/worker.py api/railway_entrypoint.py api/migrations
       - name: API tests (includes production guard, health and release-config tests)
         run: python -m pytest -q
         working-directory: api
@@ -57,6 +57,17 @@ jobs:
         with:
           python-version: '3.12'
       - run: python scripts/ci/check_repo_hygiene.py
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
 
   image-app:
     # The root Dockerfile is the image Railway deploys as service pla-qc (UI + API + worker).
@@ -110,6 +121,15 @@ jobs:
           cat guard.log
           test "$code" -ne 0 -a "$code" -ne 124
           grep -q 'Unsafe production configuration' guard.log
+      - name: Scan app image for fixed high/critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: jsan-pla-app:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
 
   image-worker:
     name: Worker image (worker/Dockerfile)
@@ -131,3 +151,12 @@ jobs:
         run: |
           docker run --rm jsan-pla-worker:ci pdal --version
           docker run --rm -e DATABASE_URL=sqlite:////tmp/ci.db jsan-pla-worker:ci python -c "import app.processor, app.ingest, app.sections; print('worker imports ok')"
+      - name: Scan worker image for fixed high/critical vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: jsan-pla-worker:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL

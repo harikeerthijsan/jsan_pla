@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "dataset": {
+    "project_id": "replace-with-approved-staging-project",
+    "version": "v1",
+    "crs": "replace-with-explicit-project-crs",
+    "units": "replace-with-project-units"
+  },
+  "span": {
+    "primary_pole": "replace-with-pole-id",
+    "target_pole": "replace-with-pole-id"
+  },
+  "corridor": {
+    "width": 0,
+    "depth": 0,
+    "resolution": 0,
+    "cross_station": 0
+  },
+  "workbench": {
+    "metrics": {
+      "point_count": 0,
+      "station": {"min": 0, "max": 0},
+      "offset": {"min": 0, "max": 0},
+      "elevation": {"min": 0, "max": 0},
+      "pole_stations": {"primary": 0, "target": 0}
+    }
+  },
+  "reference": {
+    "system": "MicroStation/TerraScan",
+    "evidence_reference": "replace-with-approved-reference-location",
+    "metrics": {
+      "point_count": 0,
+      "station": {"min": 0, "max": 0},
+      "offset": {"min": 0, "max": 0},
+      "elevation": {"min": 0, "max": 0},
+      "pole_stations": {"primary": 0, "target": 0}
+    }
+  },
+  "review": {
+    "reviewer": "replace-with-reviewer",
+    "date": "YYYY-MM-DD",
+    "notes": "Record screenshots and any approved exception here."
+  },
+  "tolerances": null
+}
