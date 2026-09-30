@@ -1,9 +1,9 @@
 import os,time,uuid,threading
-from app.db import Base,engine,SessionLocal
+from app.db import SessionLocal,initialize_schema
 from app.processor import process_job
 from app.workflow import ProcessingLease, claim_next_job, heartbeat_job, finish_job_lease
 
-Base.metadata.create_all(bind=engine)
+initialize_schema()
 worker_id=os.getenv('WORKER_ID') or f"worker-{uuid.uuid4().hex[:10]}"
 lease_seconds=int(os.getenv('WORKER_LEASE_SECONDS','1800'))
 heartbeat_seconds=max(10,min(int(os.getenv('WORKER_HEARTBEAT_SECONDS','30')),max(10,lease_seconds//3)))
