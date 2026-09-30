@@ -18,6 +18,7 @@ COPY api/railway_entrypoint.py /app/api/railway_entrypoint.py
 COPY web /app/web
 
 ENV APP_ENV=production \
+    APP_VERSION=3.4.0-operational \
     PATH=/opt/conda/envs/pla/bin:$PATH \
     PDAL_BIN=/opt/conda/envs/pla/bin/pdal \
     PYTHONPATH=/app/api \
