@@ -10,7 +10,10 @@ os.environ.setdefault("ADMIN_PASSWORD", "ChangeMe123!")
 
 from fastapi.testclient import TestClient
 
-from app.db import SessionLocal
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.db import Base, SessionLocal
 from app.main import app
 from app.models import Finding, ProcessingJob, Project
 from app.workflow import DatasetVersion, ProcessingLease, claim_next_job, finish_job_lease
@@ -140,8 +143,11 @@ def test_dataset_version_and_correction_lifecycle():
 
 
 def test_worker_claim_is_exclusive_and_failed_jobs_are_bounded_retryable():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(bind=engine)
+    TestSession = sessionmaker(bind=engine)
     marker = uuid.uuid4().hex[:8]
-    db = SessionLocal()
+    db = TestSession()
     try:
         project = Project(id=f"lease-{marker}", name="Lease Test", customer="PLA", status="PROCESSING")
         job = ProcessingJob(
@@ -158,7 +164,6 @@ def test_worker_claim_is_exclusive_and_failed_jobs_are_bounded_retryable():
         db.commit()
 
         assert claim_next_job(db, "worker-a", lease_seconds=60, max_attempts=3) == job.id
-        # The first claim moved the job to RUNNING, so it cannot be claimed twice.
         assert claim_next_job(db, "worker-b", lease_seconds=60, max_attempts=3) is None
 
         job = db.query(ProcessingJob).filter_by(id=job.id).first()
