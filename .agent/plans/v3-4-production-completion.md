@@ -105,6 +105,7 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - 2026-09-30: Constrain fixed setuptools and msgpack versions in both the Conda solve and Python requirements, and assert the imported versions while building.
 - 2026-09-30: The remaining findings came from pip 26.2.1's embedded vendor SBOM, which declares pip's vendored msgpack 1.1.2 and stripped pkg_resources as setuptools 70.3.0. Run `pip check`, then remove the package installer and its vendored code from the runtime-only environment; production containers do not install packages at runtime.
 - 2026-09-30: Include Trivy `PkgPath` in CI annotations when the scanner supplies it so future language-package findings identify their exact on-image metadata source.
+- 2026-10-01: Align the root deployment guide and local production preflight with the enforced explicit bucket-CORS and Alembic startup contract; stale operator instructions are a release risk.
 
 ## Progress
 
@@ -116,7 +117,7 @@ Production OIDC activation, the remaining PLA SOW rule matrix, and final MicroSt
 - [x] Added profile-parity evidence harness.
 - [x] Updated documentation.
 - [x] Completed Python compile, 75-test pytest, JavaScript syntax, hygiene and diff checks after dependency remediation.
-- [ ] Completed Docker image builds and vulnerability scans (image build/smoke passed; targeted remediation for the reported findings is awaiting CI).
+- [x] Completed Docker image builds, native/runtime smoke checks, production-guard check, and vulnerability scans (staging CI run `36724623334`).
 - [x] Pushed feature branch and exact commit to `staging` for CI/deployment gating.
 - [ ] Staging acceptance completed.
 - [ ] Promoted to `main`.

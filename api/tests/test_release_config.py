@@ -47,6 +47,13 @@ def test_railway_bucket_cors_is_not_wildcarded():
     railway = read('.railway/railway.ts')
     assert 'BUCKET_CORS_ORIGINS: "*"' not in railway
 
+    deployment = read('DEPLOYMENT.md')
+    assert 'BUCKET_CORS_ORIGINS=*' not in deployment
+    assert '`3.4.1-operational`' in deployment
+
+    preflight = read('scripts/production_preflight.ps1')
+    assert "$problems += 'BUCKET_CORS_ORIGINS must be an explicit allowlist, not *'" in preflight
+
 
 def test_ci_gates_pull_requests_and_deploy_branches():
     ci = read('.github/workflows/ci.yml')
