@@ -38,7 +38,7 @@ if ($env:ADMIN_PASSWORD -and ($env:ADMIN_PASSWORD.Length -lt 12 -or $env:ADMIN_P
 # The Railway image serves UI + API same-origin, so CORS_ORIGINS may be unset; a wildcard never passes.
 if ($env:CORS_ORIGINS -and ($env:CORS_ORIGINS -split ',' | ForEach-Object { $_.Trim() }) -contains '*') { $problems += 'CORS_ORIGINS must be an explicit allowlist, not *' }
 if ($env:SEED_DEMO -and $env:SEED_DEMO.ToLower() -eq 'true') { $problems += 'SEED_DEMO must be false' }
-if ($env:BUCKET_CORS_ORIGINS -eq '*') { Write-Warning 'BUCKET_CORS_ORIGINS=* allows any origin to use signed URLs; prefer an explicit allowlist.' }
+if ($env:BUCKET_CORS_ORIGINS -eq '*') { $problems += 'BUCKET_CORS_ORIGINS must be an explicit allowlist, not *' }
 
 if ($problems.Count) {
     throw ("$Environment preflight failed:`n - " + ($problems -join "`n - "))

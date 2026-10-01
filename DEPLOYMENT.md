@@ -80,7 +80,7 @@ BUCKET_SECRET_ACCESS_KEY=${{pla-files.SECRET_ACCESS_KEY}}
 BUCKET_REGION=${{pla-files.REGION}}
 S3_ADDRESSING_STYLE=virtual
 AUTO_CONFIGURE_BUCKET_CORS=true
-BUCKET_CORS_ORIGINS=*
+BUCKET_CORS_ORIGINS=https://your-app.up.railway.app
 SEED_DEMO=false
 WORKER_POLL_SECONDS=3
 DB_CONNECT_TIMEOUT=120
@@ -92,9 +92,10 @@ the reference expressions to match the names on your Railway canvas.
 ## Bucket CORS
 
 At startup, the API applies a bucket CORS policy that permits browser uploads,
-multipart `ETag` access, COPC range reads, and profile downloads. The packaged
-default is `BUCKET_CORS_ORIGINS=*`; access to objects still requires a temporary
-signed URL. To restrict browser origins, replace it with a comma-separated list:
+multipart `ETag` access, COPC range reads, and profile downloads. Staging and
+production require explicit origins: the application uses `BUCKET_CORS_ORIGINS`,
+then `CORS_ORIGINS`, then `https://$RAILWAY_PUBLIC_DOMAIN`. Wildcards are rejected.
+Use a comma-separated list when the UI has additional approved domains:
 
 ```text
 BUCKET_CORS_ORIGINS=https://your-app.up.railway.app,https://qc.example.com
@@ -111,7 +112,7 @@ Invoke-RestMethod "https://your-app.up.railway.app/health/ready"
 ```
 
 Expected fields include `status: ready`, `app_env: production`, version
-`3.3.0-industry`, `storage_mode: s3` and `checks` all `ok`. Staging, CI gates and
+`3.4.1-operational`, `storage_mode: s3` and `checks` all `ok`. Staging, CI gates and
 rollback are described in `docs/RELEASE_RUNBOOK.md`. Then open the domain, sign
 in with the configured admin credentials, and run one real workbook plus
 LAS/LAZ/COPC upload.
@@ -124,6 +125,7 @@ LAS/LAZ/COPC upload.
   temporary disk for a source block and its generated COPC at the same time.
 - Uploaded and generated files are durable in the bucket; scratch files are
   deleted after each job.
-- The app creates its current schema at startup. Introduce Alembic migrations
-  before making schema changes against an established production database.
+- Startup runs `alembic upgrade head` under a PostgreSQL advisory lock before
+  API and worker processes start. Add an additive Alembic revision for every
+  future production schema change; never return to runtime `create_all` evolution.
 - Set Railway usage limits and back up PostgreSQL before a customer pilot.

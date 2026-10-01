@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.4.1-operational — 2026-09-30
+
+- Added an additive Alembic baseline that adopts existing v3.4 SQLite/PostgreSQL databases without dropping customer data.
+- Serialized production migrations with the existing PostgreSQL advisory lock before API/worker startup.
+- Removed committed wildcard bucket CORS and derive or require explicit browser origins in staging/production.
+- Added machine-readable profile-parity evidence validation and approved-tolerance comparison.
+- Added pull-request dependency review and Trivy gates for both built container images.
+- Refreshed the pinned Miniforge base to `26.7.2-0` while retaining the proven PDAL/GDAL/libsqlite pins.
+- Documented the external OIDC, PLA rule-matrix, and trusted MicroStation/TerraScan acceptance gates.
+
 ## 3.0.0-profile-dev — 2026-09-29
 
 - Replaced single-view reviewer center with synchronized Plan / Longitudinal Profile / Cross Section / 3D workspace.

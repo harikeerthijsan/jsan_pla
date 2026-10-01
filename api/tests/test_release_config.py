@@ -13,6 +13,14 @@ def read(relative):
     return (ROOT / relative).read_text(encoding='utf-8')
 
 
+def test_release_identity_is_consistent():
+    version = read('VERSION.txt').strip()
+    assert version == '3.4.1-operational'
+    assert f'APP_VERSION={version}' in read('Dockerfile')
+    assert f'APP_VERSION: "{version}"' in read('.railway/railway.ts')
+    assert f"'{version}'" in read('api/app/main.py')
+
+
 def test_railway_healthcheck_uses_readiness_endpoint():
     railway = read('.railway/railway.ts')
     assert 'healthcheck: "/health/ready"' in railway
@@ -35,10 +43,23 @@ def test_railway_resources_use_per_environment_reference_variables():
         assert '${{pla-files.' + key + '}}' in railway
 
 
+def test_railway_bucket_cors_is_not_wildcarded():
+    railway = read('.railway/railway.ts')
+    assert 'BUCKET_CORS_ORIGINS: "*"' not in railway
+
+    deployment = read('DEPLOYMENT.md')
+    assert 'BUCKET_CORS_ORIGINS=*' not in deployment
+    assert '`3.4.1-operational`' in deployment
+
+    preflight = read('scripts/production_preflight.ps1')
+    assert "$problems += 'BUCKET_CORS_ORIGINS must be an explicit allowlist, not *'" in preflight
+
+
 def test_ci_gates_pull_requests_and_deploy_branches():
     ci = read('.github/workflows/ci.yml')
     assert re.search(r'^\s*pull_request:\s*$', ci, re.MULTILINE)
     assert 'branches: [main, staging]' in ci
+    assert 'python -m pip check' in ci
     assert 'python -m compileall' in ci
     assert 'python -m pytest -q' in ci
     assert 'node --check web/assets/app.js' in ci
@@ -53,6 +74,15 @@ def test_ci_builds_the_images_railway_deploys_on_every_pull_request():
     assert 'if: github.ref' not in ci
     assert '/health/ready' in ci
     assert 'Unsafe production configuration' in ci
+
+
+def test_ci_reviews_dependencies_and_scans_built_images():
+    ci = read('.github/workflows/ci.yml')
+    assert 'actions/dependency-review-action@v4' in ci
+    assert ci.count('aquasecurity/trivy-action@v0.36.0') == 2
+    assert ci.count("severity: HIGH,CRITICAL") == 2
+    assert ci.count("exit-code: '0'") == 2
+    assert ci.count('scripts/ci/check_trivy_report.py') == 2
 
 
 def test_workflows_use_no_secrets_or_privileged_triggers():
@@ -71,8 +101,47 @@ def test_ci_never_cancels_deploy_branch_runs():
 def test_deployed_images_keep_pinned_native_geospatial_stack():
     for dockerfile in ('Dockerfile', 'worker/Dockerfile'):
         text = read(dockerfile)
+        assert 'FROM condaforge/miniforge3:26.7.2-0 AS geospatial' in text, dockerfile
+        assert 'FROM ubuntu:24.04' in text, dockerfile
+        assert 'COPY --from=geospatial /opt/conda/envs/pla /opt/conda/envs/pla' in text, dockerfile
         assert '"pdal=2.10.2" "gdal=3.13.3" "libsqlite>=3.51.0,<4"' in text, dockerfile
+        assert '"setuptools>=78.1.1" "msgpack-python>=1.2.1"' in text, dockerfile
+        assert "setuptools.__version__.split('.')[:3]" in text, dockerfile
+        assert 'assert msgpack.version >= (1, 2, 1)' in text, dockerfile
+        assert 'python -m pip check' in text, dockerfile
+        assert 'site-packages/pip-*.dist-info' in text, dockerfile
+        assert 'conda-meta/pip-*.json' in text, dockerfile
         assert '--strict-channel-priority' in text, dockerfile
+
+    worker_runtime = read('worker/Dockerfile').split('FROM ubuntu:24.04', maxsplit=1)[1]
+    assert 'WORKDIR /app' in worker_runtime
+
+
+def test_deployed_images_apply_os_security_updates():
+    for dockerfile in ('Dockerfile', 'worker/Dockerfile', 'api/Dockerfile'):
+        text = read(dockerfile)
+        assert 'apt-get update' in text, dockerfile
+        assert 'apt-get upgrade --yes' in text, dockerfile
+        assert 'rm -rf /var/lib/apt/lists/*' in text, dockerfile
+
+
+def test_runtime_dependencies_include_fixed_security_versions():
+    requirements = read('api/requirements.txt')
+    for requirement in (
+        'fastapi==0.142.2',
+        'starlette==1.7.0',
+        'setuptools>=78.1.1',
+        'msgpack>=1.2.1',
+    ):
+        assert requirement in requirements
+
+
+def test_deployed_images_include_database_migrations():
+    assert 'COPY api/alembic.ini /app/api/alembic.ini' in read('Dockerfile')
+    assert 'COPY api/migrations /app/api/migrations' in read('Dockerfile')
+    assert 'COPY alembic.ini ./alembic.ini' in read('api/Dockerfile')
+    assert 'COPY migrations ./migrations' in read('api/Dockerfile')
+    assert 'alembic' in read('api/requirements.txt')
 
 
 @pytest.mark.parametrize('name,app_env', [('staging', 'staging'), ('production', 'production'), ('preview', 'preview')])

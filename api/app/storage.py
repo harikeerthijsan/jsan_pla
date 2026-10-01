@@ -21,9 +21,27 @@ def _s3():
 def bucket_name():
     return os.getenv('BUCKET') or os.getenv('BUCKET_NAME') or os.getenv('S3_BUCKET') or os.getenv('AWS_S3_BUCKET_NAME')
 
+
+def bucket_cors_origins() -> list[str]:
+    raw = os.getenv('BUCKET_CORS_ORIGINS') or os.getenv('CORS_ORIGINS') or ''
+    origins = [x.strip().rstrip('/') for x in raw.split(',') if x.strip()]
+    if not origins:
+        railway_domain = os.getenv('RAILWAY_PUBLIC_DOMAIN','').strip().strip('/')
+        if railway_domain:
+            origins = [f'https://{railway_domain}']
+    if os.getenv('APP_ENV','development').lower() in {'staging','production'}:
+        if not origins:
+            raise RuntimeError('BUCKET_CORS_ORIGINS or RAILWAY_PUBLIC_DOMAIN is required for direct browser storage access')
+        if '*' in origins:
+            raise RuntimeError('BUCKET_CORS_ORIGINS must explicitly list trusted origins, not *')
+    return origins
+
+
 def configure_bucket_cors():
     if MODE=='local' or os.getenv('AUTO_CONFIGURE_BUCKET_CORS','false').lower()!='true': return
-    origins=[x.strip() for x in os.getenv('BUCKET_CORS_ORIGINS','*').split(',') if x.strip()]
+    origins=bucket_cors_origins()
+    if not origins:
+        raise RuntimeError('No bucket CORS origin is configured')
     _s3().put_bucket_cors(
         Bucket=bucket_name(),
         CORSConfiguration={'CORSRules':[{

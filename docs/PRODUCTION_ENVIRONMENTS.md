@@ -45,6 +45,16 @@ PR environments, if enabled, must use **staging** as their base environment.
   the API compares `APP_ENV` with Railway's `RAILWAY_ENVIRONMENT_NAME` and refuses a mismatch.
 - Store LAS/LAZ/COPC in the private S3-compatible bucket, not on ephemeral service disks.
 - Use presigned URLs for browser uploads/downloads so large LiDAR does not traverse the API process.
+- Bucket CORS must list explicit browser origins. When `BUCKET_CORS_ORIGINS` is unset, the app derives
+  `https://$RAILWAY_PUBLIC_DOMAIN`; set `BUCKET_CORS_ORIGINS` explicitly when a custom/Vercel domain is used.
+  Staging and production reject wildcard or missing origins while automatic bucket CORS is enabled.
+
+### Database migrations
+
+API and worker startup execute `alembic upgrade head` through `app.db.initialize_schema()`. A PostgreSQL
+transaction advisory lock serializes migration startup across the combined API/worker process and rolling
+replicas. The initial v3.4 revision adopts databases previously initialized with `create_all` and creates only
+missing tables; it does not drop or rewrite customer data. Future schema changes require a new Alembic revision.
 
 ### Vercel
 Use Preview for pull requests and Production for the live frontend. If the team uses Vercel Pro, create one persistent custom `staging` environment with staging-only API configuration. Protect non-production deployments and keep production variables separate.

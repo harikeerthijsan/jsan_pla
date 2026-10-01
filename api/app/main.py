@@ -18,7 +18,7 @@ from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, obj
 from .sections import vector_analysis, build_frame, section_result_key
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
-APP_VERSION=os.getenv('APP_VERSION','3.4.0-operational')
+APP_VERSION=os.getenv('APP_VERSION','3.4.1-operational')
 # Staging is production-like: it gets the same startup guard so misconfiguration is caught before promotion.
 STRICT_ENVIRONMENTS={'production','staging'}
 DEFAULT_JWT_SECRETS={'dev-only-change-me','replace-with-a-long-random-secret','replace-with-at-least-32-random-characters'}
