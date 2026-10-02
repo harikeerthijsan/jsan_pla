@@ -1,4 +1,5 @@
 import json, os, re, uuid, pathlib, time
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, Request
 from fastapi.responses import FileResponse
@@ -9,13 +10,14 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 from .db import Base, engine, get_db, SessionLocal, initialize_schema
-from .models import User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,Finding,SceneFeature,ReviewDecision,AuditLog
+from .models import User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,Finding,SceneFeature,ReviewDecision,AuditLog
 from .auth import current_user, verify_password, create_token, hash_password
 from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for
 from .workflow import DatasetVersion, CorrectionRequest, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
 from .seed import seed_database, seed_admin
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
+from .production import catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
 APP_VERSION=os.getenv('APP_VERSION','3.4.1-operational')
@@ -90,6 +92,17 @@ class SectionRequest(BaseModel):
     depth:float=Field(default=12.0,gt=1,le=200)
     resolution:float=Field(default=0.5,gt=0,le=50)
     max_points:int=Field(default=90000,ge=1000,le=300000)
+class ProductionAnnotationIn(BaseModel):
+    block_name:str=Field(min_length=1,max_length=160)
+    family:str=Field(min_length=1,max_length=160)
+    feature_type:str=Field(min_length=1,max_length=160)
+    x:float; y:float; z:float
+    pole_internal_id:int|None=None
+    reference_annotation_id:str|None=Field(default=None,max_length=120)
+    attributes:dict=Field(default_factory=dict)
+    status:str='IN_PROGRESS'
+class CoordinateTransformIn(BaseModel):
+    x:float; y:float; z:float|None=None
 
 LOGIN_FAILURES={}
 LOGIN_WINDOW_SECONDS=int(os.getenv('LOGIN_WINDOW_SECONDS','300'))
@@ -127,7 +140,7 @@ def project_dict(p): return {'id':p.id,'name':p.name,'customer':p.customer,'stat
 def user_dict(u): return {'id':u.id,'email':u.email,'name':u.name,'role':u.role,'created_at':u.created_at.isoformat() if u.created_at else None}
 def finding_dict(f): return {'id':f.id,'rule_id':f.rule_id,'severity':f.severity,'internal_id':f.internal_id,'pole_number':f.pole_number,'sheet':f.sheet,'field':f.field,'message':f.message,'actual':f.actual,'expected':f.expected,'related_poles':json.loads(f.related_poles_json or '[]'),'status':f.status}
 def pole_dict(p):
-    d=json.loads(p.manifest_json or '{}'); d.update({'internal_id':p.internal_id,'pole_number':p.pole_number,'block_name':p.block_name,'qc_status':p.qc_status,'qc_fail':p.qc_fail,'qc_review':p.qc_review,'qc_unverifiable':p.qc_unverifiable,'remarks':p.remarks,'bottom_elev_ft':p.bottom_elev_ft,'top_elev_ft':p.top_elev_ft}); return d
+    d=json.loads(p.manifest_json or '{}'); d.update({'internal_id':p.internal_id,'pole_number':p.pole_number,'block_name':p.block_name,'source_latitude':p.corrected_lat,'source_longitude':p.corrected_lon,'verified_latitude':p.verified_lat,'verified_longitude':p.verified_lon,'verified_x':p.verified_x,'verified_y':p.verified_y,'verified_z':p.verified_z,'verified_bottom_elevation':p.verified_bottom_elevation,'verified_top_elevation':p.verified_top_elevation,'verified_height':p.verified_height,'verified_block_name':p.verified_block_name,'verified_annotation_id':p.verified_annotation_id,'verified_bottom_annotation_id':p.verified_bottom_annotation_id,'verified_top_annotation_id':p.verified_top_annotation_id,'location_verified_by':p.location_verified_by,'location_verified_at':p.location_verified_at.isoformat() if p.location_verified_at else None,'qc_status':p.qc_status,'qc_fail':p.qc_fail,'qc_review':p.qc_review,'qc_unverifiable':p.qc_unverifiable,'remarks':p.remarks,'bottom_elev_ft':p.bottom_elev_ft,'top_elev_ft':p.top_elev_ft}); return d
 
 @app.get('/health')
 def health(): return {'status':'ok','service':'pla-qc-api','version':APP_VERSION,'storage_mode':MODE}
@@ -241,7 +254,124 @@ def complete_upload(project_id:str,file_id:str,u:User=Depends(require_permission
 
 @app.get('/api/projects/{project_id}/files')
 def project_files(project_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
+    if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
     return [{'id':f.id,'filename':f.filename,'role':f.role,'size_bytes':f.size_bytes,'status':f.status} for f in db.query(DatasetFile).filter_by(project_id=project_id).order_by(DatasetFile.created_at).all()]
+
+@app.get('/api/projects/{project_id}/lidar-blocks')
+def project_lidar_blocks(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
+    files={f.object_key:f.filename for f in db.query(DatasetFile).filter_by(project_id=project_id,role='LIDAR_SOURCE').all()}
+    return [{'id':b.id,'name':b.name,'source_filename':files.get(b.source_object_key),'point_count':b.point_count,
+             'bounds':{'x_min':b.x_min,'y_min':b.y_min,'z_min':b.zmin,'x_max':b.x_max,'y_max':b.y_max,'z_max':b.zmax},
+             'copc_url':block_url(b.object_key)}
+            for b in db.query(LidarBlock).filter_by(project_id=project_id).order_by(LidarBlock.name).all()]
+
+@app.get('/api/production/catalogue')
+def get_production_catalogue(u:User=Depends(require_permission('project.read'))):
+    return production_catalogue()
+
+@app.post('/api/projects/{project_id}/coordinates/to-wgs84')
+def coordinates_to_wgs84(project_id:str,body:CoordinateTransformIn,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    project=db.query(Project).filter_by(id=project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    validate_coordinates(body.x,body.y,body.z or 0.0)
+    latitude,longitude=project_to_wgs84(project.crs,body.x,body.y)
+    return {'project_crs':project.crs,'x':body.x,'y':body.y,'z':body.z,'latitude':latitude,'longitude':longitude}
+
+@app.get('/api/projects/{project_id}/production-annotations')
+def list_production_annotations(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
+    rows=db.query(ProductionAnnotation).filter_by(project_id=project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
+    return [annotation_dict(row) for row in rows]
+
+def _apply_production_annotation(row:ProductionAnnotation,body:ProductionAnnotationIn,actor:str,db:Session):
+    validate_annotation_values(body.family,body.feature_type,body.status,body.attributes)
+    validate_coordinates(body.x,body.y,body.z)
+    project=db.query(Project).filter_by(id=row.project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    if not db.query(LidarBlock).filter_by(project_id=row.project_id,name=body.block_name).first(): raise HTTPException(422,'LiDAR block does not belong to this project')
+    pole=None
+    if body.pole_internal_id is not None:
+        pole=db.query(Pole).filter_by(project_id=row.project_id,internal_id=body.pole_internal_id).first()
+        if not pole: raise HTTPException(422,'Selected pole does not belong to this project workbook')
+    vertical,horizontal,distance=measurement_values(db,row.project_id,body.x,body.y,body.z,body.reference_annotation_id)
+    latitude,longitude=project_to_wgs84(project.crs,body.x,body.y)
+    row.block_name=body.block_name; row.family=body.family; row.feature_type=body.feature_type
+    row.x=body.x; row.y=body.y; row.z=body.z; row.latitude=latitude; row.longitude=longitude; row.pole_internal_id=body.pole_internal_id; row.reference_annotation_id=body.reference_annotation_id
+    row.vertical_delta=vertical; row.horizontal_offset=horizontal; row.distance_3d=distance
+    row.attributes_json=json.dumps(body.attributes,default=str); row.status=body.status
+    if pole and body.family=='Pole Points' and body.feature_type=='Pole Base / Ground Point':
+        pole.verified_lat=latitude; pole.verified_lon=longitude
+        pole.verified_x=body.x; pole.verified_y=body.y; pole.verified_z=body.z
+        pole.verified_bottom_elevation=body.z; pole.verified_bottom_annotation_id=row.id
+        pole.verified_block_name=body.block_name; pole.verified_annotation_id=row.id
+        pole.location_verified_by=actor; pole.location_verified_at=datetime.now(timezone.utc)
+    elif pole and body.family=='Pole Points' and body.feature_type=='Pole Top Point':
+        pole.verified_top_elevation=body.z; pole.verified_top_annotation_id=row.id
+        pole.location_verified_by=actor; pole.location_verified_at=datetime.now(timezone.utc)
+    if pole and body.family=='Pole Points' and body.feature_type in {'Pole Base / Ground Point','Pole Top Point'}:
+        pole.verified_height=pole.verified_top_elevation-pole.verified_bottom_elevation if pole.verified_top_elevation is not None and pole.verified_bottom_elevation is not None else None
+        action='VERIFY_POLE_LOCATION' if body.feature_type=='Pole Base / Ground Point' else 'VERIFY_POLE_ELEVATION'
+        db.add(AuditLog(actor=actor,action=action,entity_type='pole',entity_id=f'{row.project_id}:{pole.internal_id}',detail_json=json.dumps({'annotation_id':row.id,'feature_type':body.feature_type,'block_name':body.block_name,'project_crs':project.crs,'x':body.x,'y':body.y,'z':body.z,'latitude':latitude,'longitude':longitude,'verified_height':pole.verified_height})))
+
+def _clear_pole_verification_for_annotation(db:Session,project_id:str,annotation_id:str,pole_internal_id:int|None=None):
+    query=db.query(Pole).filter_by(project_id=project_id)
+    if pole_internal_id is not None: query=query.filter(Pole.internal_id==pole_internal_id)
+    for pole in query.all():
+        changed=False
+        if pole.verified_annotation_id==annotation_id or pole.verified_bottom_annotation_id==annotation_id:
+            pole.verified_lat=pole.verified_lon=pole.verified_x=pole.verified_y=pole.verified_z=None
+            pole.verified_bottom_elevation=None; pole.verified_bottom_annotation_id=None
+            pole.verified_block_name=pole.verified_annotation_id=None
+            changed=True
+        if pole.verified_top_annotation_id==annotation_id:
+            pole.verified_top_elevation=None; pole.verified_top_annotation_id=None
+            changed=True
+        if changed:
+            pole.verified_height=pole.verified_top_elevation-pole.verified_bottom_elevation if pole.verified_top_elevation is not None and pole.verified_bottom_elevation is not None else None
+            pole.location_verified_by=pole.location_verified_at=None
+
+@app.post('/api/projects/{project_id}/production-annotations')
+def create_production_annotation(project_id:str,body:ProductionAnnotationIn,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+    if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
+    row=ProductionAnnotation(id=uuid.uuid4().hex,project_id=project_id,block_name=body.block_name,family=body.family,feature_type=body.feature_type,x=body.x,y=body.y,z=body.z,created_by=u.email,modified_by=u.email)
+    _apply_production_annotation(row,body,u.email,db); db.add(row); db.flush()
+    db.add(AuditLog(actor=u.email,action='CREATE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps({'project_id':project_id,'block_name':row.block_name,'feature_type':row.feature_type})))
+    db.commit(); db.refresh(row); return annotation_dict(row)
+
+@app.put('/api/projects/{project_id}/production-annotations/{annotation_id}')
+def update_production_annotation(project_id:str,annotation_id:str,body:ProductionAnnotationIn,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+    row=db.query(ProductionAnnotation).filter_by(id=annotation_id,project_id=project_id).first()
+    if not row: raise HTTPException(404,'Production annotation not found')
+    if body.reference_annotation_id==row.id: raise HTTPException(422,'An annotation cannot reference itself')
+    before=annotation_dict(row); previous_pole_id=row.pole_internal_id
+    _clear_pole_verification_for_annotation(db,project_id,row.id,previous_pole_id)
+    _apply_production_annotation(row,body,u.email,db); row.modified_by=u.email
+    db.add(AuditLog(actor=u.email,action='UPDATE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps({'before':before,'feature_type':row.feature_type},default=str)))
+    db.commit(); db.refresh(row); return annotation_dict(row)
+
+@app.delete('/api/projects/{project_id}/production-annotations/{annotation_id}')
+def delete_production_annotation(project_id:str,annotation_id:str,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+    row=db.query(ProductionAnnotation).filter_by(id=annotation_id,project_id=project_id).first()
+    if not row: raise HTTPException(404,'Production annotation not found')
+    if db.query(ProductionAnnotation).filter_by(project_id=project_id,reference_annotation_id=row.id).first(): raise HTTPException(409,'Remove dependent measurement references before deleting this annotation')
+    snapshot=annotation_dict(row); _clear_pole_verification_for_annotation(db,project_id,row.id); db.delete(row)
+    db.add(AuditLog(actor=u.email,action='DELETE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps(snapshot,default=str)))
+    db.commit(); return {'ok':True,'id':annotation_id}
+
+@app.post('/api/projects/{project_id}/process-lidar')
+def queue_lidar_process(project_id:str,u:User=Depends(require_permission('processing.run')),db:Session=Depends(get_db)):
+    p=db.query(Project).filter_by(id=project_id).first()
+    if not p: raise HTTPException(404,'Project not found')
+    version=ensure_current_version(db,project_id,u.email)
+    files=[f for f in version_files(db,version.id) if f.status=='UPLOADED']
+    if not any(f.role=='LIDAR_SOURCE' for f in files): raise HTTPException(400,'Upload at least one LAS/LAZ/COPC file first')
+    jid=uuid.uuid4().hex
+    job=ProcessingJob(id=jid,project_id=project_id,job_type='LIDAR_INGEST',payload_json=json.dumps({'version_id':version.id}),status='QUEUED',progress=0,stage='Queued LiDAR conversion')
+    db.add(job); p.status='PROCESSING'
+    db.add(AuditLog(actor=u.email,action='QUEUE_LIDAR_PROCESSING',entity_type='project',entity_id=project_id,detail_json=json.dumps({'job_id':jid,'version_id':version.id})))
+    db.commit()
+    return {'job_id':jid,'status':'QUEUED','version_id':version.id}
 
 @app.post('/api/projects/{project_id}/process')
 def queue_process(project_id:str,u:User=Depends(require_permission('processing.run')),db:Session=Depends(get_db)):

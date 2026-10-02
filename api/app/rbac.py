@@ -10,21 +10,21 @@ from .models import User
 
 ROLE_PERMISSIONS = {
     "ADMIN": {
-        "workspace.delivery", "workspace.qc", "project.read", "project.create",
-        "upload.create", "processing.run", "analysis.run", "finding.review", "correction.create",
+        "workspace.production", "workspace.delivery", "workspace.qc", "project.read", "project.create",
+        "upload.create", "processing.run", "production.annotate", "analysis.run", "finding.review", "correction.create",
         "correction.resolve", "version.create", "version.approve", "user.manage",
     },
     "PROGRAM_MANAGER": {
-        "workspace.delivery", "workspace.qc", "project.read", "project.create",
-        "upload.create", "processing.run", "analysis.run", "finding.review", "correction.create",
+        "workspace.production", "workspace.delivery", "workspace.qc", "project.read", "project.create",
+        "upload.create", "processing.run", "production.annotate", "analysis.run", "finding.review", "correction.create",
         "correction.resolve", "version.create", "version.approve",
     },
     "DELIVERY_MANAGER": {
-        "workspace.delivery", "project.read", "project.create", "upload.create",
-        "processing.run", "correction.resolve", "version.create",
+        "workspace.production", "workspace.delivery", "project.read", "project.create", "upload.create",
+        "processing.run", "production.annotate", "correction.resolve", "version.create",
     },
     "DELIVERY_USER": {
-        "workspace.delivery", "project.read", "upload.create", "processing.run",
+        "workspace.production", "workspace.delivery", "project.read", "upload.create", "processing.run", "production.annotate",
         "correction.resolve", "version.create",
     },
     "QC_LEAD": {
@@ -62,6 +62,8 @@ def require_permission(permission: str) -> Callable:
 
 def workspaces_for(user: User) -> list[str]:
     out = []
+    if has_permission(user, "workspace.production"):
+        out.append("PRODUCTION")
     if has_permission(user, "workspace.delivery"):
         out.append("DELIVERY")
     if has_permission(user, "workspace.qc"):

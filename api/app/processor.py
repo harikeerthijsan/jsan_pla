@@ -41,6 +41,7 @@ def process_job(job_id:str):
     db=SessionLocal(); job=db.query(ProcessingJob).filter_by(id=job_id).first()
     if not job: db.close(); return
     project=db.query(Project).filter_by(id=job.project_id).first()
+    lidar_only=job.job_type=='LIDAR_INGEST'
     payload=json.loads(job.payload_json or '{}')
     version_id=payload.get('version_id'); qc_run_id=payload.get('qc_run_id')
     if qc_run_id:
@@ -52,13 +53,13 @@ def process_job(job_id:str):
         files=version_files(db,version_id) if version_id else db.query(DatasetFile).filter_by(project_id=project.id).all()
         workbook=next((f for f in reversed(files) if f.role=='WORKBOOK' and f.status=='UPLOADED'),None)
         lidar=[f for f in files if f.role=='LIDAR_SOURCE' and f.status=='UPLOADED']
-        if not workbook: raise RuntimeError('No uploaded workbook is available')
+        if not workbook and not lidar_only: raise RuntimeError('No uploaded workbook is available')
         if not lidar: raise RuntimeError('No LAS/LAZ/COPC LiDAR files are uploaded')
 
         setjob(db,job,5,'Preparing source files')
         # In local mode read the uploaded workbook/LiDAR in-place to avoid duplicating multi-GB files.
-        wbpath = local_path(workbook.object_key) if MODE == 'local' else (tmp/workbook.filename)
-        if MODE != 'local':
+        wbpath = local_path(workbook.object_key) if workbook and MODE == 'local' else (tmp/workbook.filename if workbook else None)
+        if workbook and MODE != 'local':
             download_to(workbook.object_key,str(wbpath))
 
         version=db.query(DatasetVersion).filter_by(id=version_id).first() if version_id else None
@@ -90,6 +91,40 @@ def process_job(job_id:str):
             summ=pdal_summary(out); b=summ['bounds']
             blocks.append({'name':stem,'source_object_key':f.object_key,'object_key':key,'point_count':summ.get('num_points'),
                 'x_min':b['minx'],'y_min':b['miny'],'x_max':b['maxx'],'y_max':b['maxy'],'zmin':b.get('minz'),'zmax':b.get('maxz')})
+
+        if lidar_only:
+            setjob(db,job,85,'Publishing LiDAR catalogue')
+            db.query(LidarBlock).filter_by(project_id=project.id).delete(); db.flush()
+            for block in blocks: db.add(LidarBlock(project_id=project.id,poles_json='[]',**block))
+            imported_poles=0
+            if workbook:
+                setjob(db,job,90,'Importing Production pole catalogue')
+                parsed=parse_workbook(str(wbpath),project.crs)
+                tf=Transformer.from_crs('EPSG:4326',project.crs,always_xy=True)
+                existing={p.internal_id:p for p in db.query(Pole).filter_by(project_id=project.id).all()}
+                poles_by_block={b['name']:[] for b in blocks}
+                for source in parsed['poles']:
+                    block_name=None
+                    if source.get('corrected_lat') is not None and source.get('corrected_lon') is not None:
+                        x,y=tf.transform(float(source['corrected_lon']),float(source['corrected_lat']))
+                        candidate=next((b for b in blocks if b['x_min']<=x<=b['x_max'] and b['y_min']<=y<=b['y_max']),None)
+                        if candidate:
+                            block_name=candidate['name']; poles_by_block[block_name].append(source['internal_id'])
+                    pole=existing.get(source['internal_id'])
+                    if not pole:
+                        pole=Pole(project_id=project.id,internal_id=source['internal_id']); db.add(pole)
+                    pole.pole_number=source['pole_number']; pole.block_name=block_name
+                    pole.corrected_lat=source['corrected_lat']; pole.corrected_lon=source['corrected_lon']
+                    pole.bottom_elev_ft=source['bottom_elev_ft']; pole.top_elev_ft=source['top_elev_ft']
+                    pole.remarks=source['remarks']; pole.manifest_json=json.dumps(source['manifest'],default=str)
+                    imported_poles+=1
+                for row in db.query(LidarBlock).filter_by(project_id=project.id).all(): row.poles_json=json.dumps(poles_by_block.get(row.name,[]))
+                project.source_workbook_key=workbook.object_key
+            if version: version.status='LIDAR_READY'
+            project.status='LIDAR_READY'
+            job.status='SUCCEEDED'; job.progress=100; job.stage='LiDAR ready'; job.finished_at=utcnow()
+            db.add(AuditLog(actor='worker',action='PROCESS_LIDAR',entity_type='project',entity_id=project.id,detail_json=json.dumps({'blocks':len(blocks),'poles':imported_poles,'version_id':version_id})))
+            db.commit(); return
 
         setjob(db,job,60,'Parsing workbook and building 3D delivery geometry')
         parsed=parse_workbook(str(wbpath),project.crs)

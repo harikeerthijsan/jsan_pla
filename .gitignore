@@ -11,3 +11,5 @@ api/test-storage/
 backup-*/
 hotfix-backup-*/
 .railway/config.json
+JSAN_PLA_Production_Attributes.xlsx
+PLA_Contractor_Scope_of_Work_v.0.3.pdf

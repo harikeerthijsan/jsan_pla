@@ -53,7 +53,7 @@ def test_v34_runtime_identity_and_named_role_workspaces():
 
         dw = client.get("/api/workspaces", headers=delivery)
         assert dw.status_code == 200
-        assert dw.json()["workspaces"] == ["DELIVERY"]
+        assert dw.json()["workspaces"] == ["PRODUCTION", "DELIVERY"]
         assert "upload.create" in dw.json()["permissions"]
 
         qw = client.get("/api/workspaces", headers=qc)
