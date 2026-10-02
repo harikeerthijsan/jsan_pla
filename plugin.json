@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "jsan-pla-engineering",
+  "version": "1.0.0",
+  "description": "Reusable JSAN PLA engineering workflows for release readiness and LiDAR regression validation."
+}
