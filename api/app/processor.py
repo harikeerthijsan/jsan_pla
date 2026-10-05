@@ -2,11 +2,12 @@ import json, os, pathlib, shutil, subprocess, tempfile, traceback
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from .db import SessionLocal
-from .models import Project,DatasetFile,ProcessingJob,LidarBlock,Pole,Finding,SceneFeature,AuditLog
+from .models import Project,DatasetFile,ProcessingJob,LidarBlock,Pole,Finding,SceneFeature,AuditLog,ProductionAnnotation
 from .workflow import DatasetVersion, QCRun, version_files, record_findings_for_run, complete_qc_run, archive_review_decisions
-from .storage import MODE, local_path, download_to, upload_from
+from .storage import MODE, local_path, download_to, upload_from, read_bytes, object_exists
 from pyproj import Transformer
 from .ingest import parse_workbook
+from .geojson_import import GeoJSONError, import_project_geojson, summary_message
 from .sections import generate_lidar_section
 
 
@@ -53,6 +54,7 @@ def process_job(job_id:str):
         files=version_files(db,version_id) if version_id else db.query(DatasetFile).filter_by(project_id=project.id).all()
         workbook=next((f for f in reversed(files) if f.role=='WORKBOOK' and f.status=='UPLOADED'),None)
         lidar=[f for f in files if f.role=='LIDAR_SOURCE' and f.status=='UPLOADED']
+        geojson=next((f for f in reversed(files) if f.role=='GEOJSON' and f.status=='UPLOADED'),None)
         if not workbook and not lidar_only: raise RuntimeError('No uploaded workbook is available')
         if not lidar: raise RuntimeError('No LAS/LAZ/COPC LiDAR files are uploaded')
 
@@ -65,7 +67,16 @@ def process_job(job_id:str):
         version=db.query(DatasetVersion).filter_by(id=version_id).first() if version_id else None
         lidar_prefix=f'{project.id}/versions/v{version.version_no}/lidar' if version else f'{project.id}/lidar'
         blocks=[]
+        # Reuse COPC already converted for the same source file (e.g. by Production) instead of converting again.
+        # Plain column rows, not ORM objects: the old blocks are bulk-deleted and re-inserted below.
+        converted={b.source_object_key:b for b in db.query(LidarBlock.source_object_key,LidarBlock.name,LidarBlock.object_key,LidarBlock.point_count,LidarBlock.x_min,LidarBlock.y_min,LidarBlock.x_max,LidarBlock.y_max,LidarBlock.zmin,LidarBlock.zmax).filter(LidarBlock.project_id==project.id).all() if b.source_object_key}
         for idx,f in enumerate(lidar,1):
+            previous=converted.get(f.object_key)
+            if previous and object_exists(previous.object_key):
+                setjob(db,job,5+int(50*(idx-1)/max(1,len(lidar))),f'Reusing converted LiDAR {idx}/{len(lidar)}: {f.filename}')
+                blocks.append({'name':previous.name,'source_object_key':f.object_key,'object_key':previous.object_key,'point_count':previous.point_count,
+                    'x_min':previous.x_min,'y_min':previous.y_min,'x_max':previous.x_max,'y_max':previous.y_max,'zmin':previous.zmin,'zmax':previous.zmax})
+                continue
             setjob(db,job,5+int(50*(idx-1)/max(1,len(lidar))),f'Converting LiDAR {idx}/{len(lidar)}: {f.filename}')
             stem=f.filename[:-9] if f.filename.lower().endswith('.copc.laz') else pathlib.Path(f.filename).stem
 
@@ -96,7 +107,7 @@ def process_job(job_id:str):
             setjob(db,job,85,'Publishing LiDAR catalogue')
             db.query(LidarBlock).filter_by(project_id=project.id).delete(); db.flush()
             for block in blocks: db.add(LidarBlock(project_id=project.id,poles_json='[]',**block))
-            imported_poles=0
+            imported_poles=0; pole_changes=None
             if workbook:
                 setjob(db,job,90,'Importing Production pole catalogue')
                 parsed=parse_workbook(str(wbpath),project.crs)
@@ -118,12 +129,35 @@ def process_job(job_id:str):
                     pole.bottom_elev_ft=source['bottom_elev_ft']; pole.top_elev_ft=source['top_elev_ft']
                     pole.remarks=source['remarks']; pole.manifest_json=json.dumps(source['manifest'],default=str)
                     imported_poles+=1
+                # After a workbook replacement, poles only in the previous workbook are removed unless Production work references them.
+                current_ids={source['internal_id'] for source in parsed['poles']}
+                stale=[pole for internal_id,pole in existing.items() if internal_id not in current_ids]
+                if stale:
+                    annotated={row[0] for row in db.query(ProductionAnnotation.pole_internal_id).filter(ProductionAnnotation.project_id==project.id,ProductionAnnotation.pole_internal_id.in_([p.internal_id for p in stale])).all()}
+                    kept=[p for p in stale if p.internal_id in annotated or p.verified_annotation_id or p.verified_bottom_annotation_id or p.verified_top_annotation_id]
+                    for pole in stale:
+                        if pole not in kept: db.delete(pole)
+                    pole_changes={'removed':len(stale)-len(kept),'kept_with_production_work':[p.pole_number or str(p.internal_id) for p in kept]}
                 for row in db.query(LidarBlock).filter_by(project_id=project.id).all(): row.poles_json=json.dumps(poles_by_block.get(row.name,[]))
                 project.source_workbook_key=workbook.object_key
+            geo_summary=None
+            if geojson:
+                setjob(db,job,95,'Importing client GeoJSON')
+                db.flush()
+                # A rejected GeoJSON is reported, not fatal: the converted LiDAR and workbook poles stay usable.
+                try:
+                    geo_summary=import_project_geojson(db,project,geojson.id,read_bytes(geojson.object_key))
+                    job.message=summary_message(geo_summary)
+                except GeoJSONError as exc:
+                    geo_summary={'error':str(exc)}; job.message=f'GeoJSON rejected: {exc}'
+            if pole_changes:
+                kept=pole_changes['kept_with_production_work']
+                note=f"Workbook replaced: {imported_poles} poles imported, {pole_changes['removed']} removed"+(f", {len(kept)} kept because they have saved points or verification ({', '.join(kept[:10])})" if kept else "")
+                job.message=f'{note} · {job.message}' if job.message else note
             if version: version.status='LIDAR_READY'
             project.status='LIDAR_READY'
             job.status='SUCCEEDED'; job.progress=100; job.stage='LiDAR ready'; job.finished_at=utcnow()
-            db.add(AuditLog(actor='worker',action='PROCESS_LIDAR',entity_type='project',entity_id=project.id,detail_json=json.dumps({'blocks':len(blocks),'poles':imported_poles,'version_id':version_id})))
+            db.add(AuditLog(actor='worker',action='PROCESS_LIDAR',entity_type='project',entity_id=project.id,detail_json=json.dumps({'blocks':len(blocks),'poles':imported_poles,'version_id':version_id,'geojson':geo_summary,'workbook_replacement':pole_changes})))
             db.commit(); return
 
         setjob(db,job,60,'Parsing workbook and building 3D delivery geometry')
@@ -131,7 +165,9 @@ def process_job(job_id:str):
 
         # Preserve reviewer history, then replace project-derived state atomically.
         archived_decisions=archive_review_decisions(db,project.id)
-        db.query(SceneFeature).filter_by(project_id=project.id).delete(); db.query(Finding).filter_by(project_id=project.id).delete(); db.query(Pole).filter_by(project_id=project.id).delete(); db.query(LidarBlock).filter_by(project_id=project.id).delete(); db.flush()
+        db.query(SceneFeature).filter_by(project_id=project.id).delete(); db.query(Finding).filter_by(project_id=project.id).delete(); db.query(LidarBlock).filter_by(project_id=project.id).delete(); db.flush()
+        # Poles are updated in place, not recreated, so LiDAR verification captured in Production survives QC processing.
+        existing_poles={p.internal_id:p for p in db.query(Pole).filter_by(project_id=project.id).all()}
         for b in blocks: db.add(LidarBlock(project_id=project.id,poles_json='[]',**b))
         db.flush()
 
@@ -152,10 +188,26 @@ def process_job(job_id:str):
                 candidates=[b for b in blocks if b['x_min']<=x<=b['x_max'] and b['y_min']<=y<=b['y_max']]
                 if candidates:
                     block=candidates[0]['name']; poles_by_block[block].append(p['internal_id'])
-            db.add(Pole(project_id=project.id,internal_id=p['internal_id'],pole_number=p['pole_number'],block_name=block,
-                corrected_lat=p['corrected_lat'],corrected_lon=p['corrected_lon'],bottom_elev_ft=p['bottom_elev_ft'],top_elev_ft=p['top_elev_ft'],remarks=p['remarks'],manifest_json=json.dumps(p['manifest'],default=str)))
+            pole=existing_poles.pop(p['internal_id'],None)
+            if not pole:
+                pole=Pole(project_id=project.id,internal_id=p['internal_id']); db.add(pole)
+            pole.pole_number=p['pole_number']; pole.block_name=block
+            pole.corrected_lat=p['corrected_lat']; pole.corrected_lon=p['corrected_lon']
+            pole.bottom_elev_ft=p['bottom_elev_ft']; pole.top_elev_ft=p['top_elev_ft']
+            pole.remarks=p['remarks']; pole.manifest_json=json.dumps(p['manifest'],default=str)
+        for stale in existing_poles.values():
+            # A pole removed from the workbook is dropped unless Production already verified it in the LiDAR.
+            if not (stale.verified_annotation_id or stale.verified_bottom_annotation_id or stale.verified_top_annotation_id): db.delete(stale)
         for b in db.query(LidarBlock).filter_by(project_id=project.id).all(): b.poles_json=json.dumps(poles_by_block.get(b.name,[]))
         db.flush()
+        geo_summary=None
+        if geojson:
+            # Optional GeoJSON attached to a QC dataset is matched to the QC workbook poles; a bad file is reported, not fatal.
+            try:
+                geo_summary=import_project_geojson(db,project,geojson.id,read_bytes(geojson.object_key)); job.message=summary_message(geo_summary)
+            except GeoJSONError as exc:
+                geo_summary={'error':str(exc)}; job.message=f'GeoJSON rejected: {exc}'
+            db.flush()
 
         # Findings and per-pole status
         for f in parsed['findings']:

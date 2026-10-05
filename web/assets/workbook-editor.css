@@ -1,0 +1,32 @@
+.annotation-tabs{position:sticky;top:0;z-index:6;display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 -11px 8px;padding:5px 7px;background:#eaf3fb;border-bottom:1px solid var(--line)}
+.annotation-tab{padding:7px 6px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--brand-mid);font-size:10px;font-weight:800}
+.annotation-tab:hover{background:linear-gradient(180deg,#174e76,#123a58);border-color:#7eaed6;color:#edf8ff}
+.annotation-tab.active{background:linear-gradient(180deg,#1f648f,#184b6f);border-color:#6ca9d6;color:#fff}
+.pole-workbook-view{position:relative;min-width:0}
+.pole-workbook-view.hidden{display:none!important}
+.pole-workbook-busy{position:sticky;top:43px;z-index:7;display:flex;align-items:center;gap:8px;margin:7px 0;padding:8px 10px;border:1px solid #8ebddd;border-radius:7px;background:rgba(234,244,251,.97);color:var(--brand-deep);box-shadow:0 7px 18px rgba(15,44,65,.1);font-size:10px}
+.pole-workbook-spinner{width:14px;height:14px;flex:0 0 auto;border:2px solid #b8d8ed;border-top-color:var(--accent);border-radius:50%;animation:poleWorkbookSpin .75s linear infinite}
+@keyframes poleWorkbookSpin{to{transform:rotate(360deg)}}
+.workbook-pole-label{margin:8px 0;color:var(--text);font-size:9px}
+.workbook-pole-label select,.workbook-pole-label input{padding:6px 7px;font-size:10px}
+.workbook-pole-search-status{display:block;margin-top:-4px;color:var(--muted);font-size:9px}
+.pole-workbook-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}
+.pole-workbook-match{min-width:0;font-size:9px;line-height:1.4;color:var(--muted)}
+.pole-workbook-match.matched{color:var(--pass)}
+.pole-workbook-match.unmatched{color:var(--fail)}
+.pole-workbook-error{color:var(--fail);font-size:10px;line-height:1.4}
+.pole-workbook-sheets{display:grid;gap:8px}
+.workbook-sheet{padding-top:6px;border-top:1px solid var(--line)}
+.workbook-sheet h3{margin:4px 0 8px;color:var(--brand-mid);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.workbook-row{min-width:0;margin:0 0 9px;padding:7px;border:1px solid var(--line);border-radius:7px;background:#fff}
+.workbook-row legend{padding:0 4px;color:var(--muted);font-size:9px}
+.workbook-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:3px 8px}
+.workbook-field{min-width:0;margin:4px 0;color:var(--muted);font-size:9px}
+.workbook-field span{overflow-wrap:anywhere}
+.workbook-field input{min-width:0;padding:6px 7px;font-size:10px}
+.workbook-field input[readonly]{background:#edf4fa;color:var(--brand-mid);font-weight:800}
+.workbook-field input:disabled:not([readonly]){opacity:.78;background:#f4f7fa}
+.pole-workbook-footer{position:sticky;bottom:-12px;display:flex;justify-content:flex-end;padding:8px 0 12px;background:linear-gradient(180deg,rgba(249,251,253,0),#f9fbfd 30%)}
+.pole-workbook-footer .primary{min-width:120px}
+.pole-workbook-footer .primary:disabled{opacity:.52}
+@media(min-width:1500px){.workbook-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}

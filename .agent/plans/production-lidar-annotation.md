@@ -10,6 +10,8 @@ Capture separate LiDAR-picked pole base and pole top elevations and calculate th
 
 Display every converted LAS/LAZ/COPC block together as one combined streaming 3D scene. Keep source and derived objects separate in storage and infer the owning source block from a picked coordinate when an annotation is saved.
 
+Replace the generic Section 3 annotation inspector with the client workbook variable catalogue: crossarms `arm_1..arm_8`; communication attachments `comm_1..comm_9`; utility attachments `util_1..util_13`; anchors `anc_1..anc_6`; guys `guy_1..guy_6`; sidewalk braces `swb_1..swb_3`; equipment `eq_1..eq_8`; span guys `sgy_1..sgy_6`; poles `Pole_Base` / `Pole_Top`; and other poles `other_1..other_9`. The visible form keeps only coordinates, verified latitude/longitude, Pole Number, annotation group, and variable.
+
 ## Current behavior
 
 - The Production page imports LAS/LAZ/COPC without a workbook and lists converted blocks.
@@ -93,6 +95,10 @@ Display every converted LAS/LAZ/COPC block together as one combined streaming 3D
 - 2026-10-02: Replace Potree's `ScreenBoxSelectTool` in Production. It picks one point cloud only and throws on the combined model, which left the camera stuck in orthographic mode and blocked navigation. The replacement draws the box in plan view and always restores the camera on finish, cancel, or Esc.
 - 2026-10-02: Add a MicroStation/TerraScan-style vertical section (Profile) to Production. It is frontend-only: a two-click section line plus depth defines an oriented clip box viewed orthographically from its side, with rotation locked, step/rotate/depth controls, an elevation ruler, station band, cursor elevation, and saved points labelled with height above the pole base. Coordinates stay in the native project CRS and units; no data is reprojected or stored differently.
 - 2026-10-02: Production picks honour the active clip (`pickClipped`), so a profile pick cannot snap to a hidden point outside the slab. A pick that hits no LiDAR point is rejected instead of saving a draft at the origin.
+- 2026-10-05: Indexed workbook variables are assigned automatically per pole and group. The API serializes allocation through the selected pole row and assigns the next prefix/count (`anc_1`, then `anc_2`, and so on); `Pole_Base` and `Pole_Top` remain explicit semantic choices.
+- 2026-10-05: Saved-point lists and 3D annotation markers are scoped to the currently selected Pole Number so points from other poles do not leak into the active editing context.
+- 2026-10-05: Export all saved Production annotation points across all poles as one generated WGS84 GeoJSON FeatureCollection. Preserve native project X/Y/Z, project CRS, pole number, group, variable, measurements, status, and audit fields as feature properties.
+- 2026-10-05: Allow the producer to open a picked or saved point's verified WGS84 coordinate in Google Street View without adding a Maps API key or sending native project coordinates.
 
 ## Progress
 
@@ -108,4 +114,10 @@ Display every converted LAS/LAZ/COPC block together as one combined streaming 3D
 - [x] Combine all Production LiDAR blocks in one viewer without physically rewriting source files.
 - [x] Restore combined-model navigation (multi-cloud bounding box, Esc cancel, display-only markers, middle-drag pan, Top/Front/Side/3D views, orbit/pan modes).
 - [x] Add Production vertical-section profile with pole base/top/attachment picking and height-above-base readouts.
+- [x] Replace generic point-attribute fields with the approved workbook annotation groups and variables while preserving automatic XYZ, verified latitude/longitude, pole base/top elevation, and pole height behavior.
+- [x] Assign indexed point-variable numbers automatically per pole/group instead of asking the producer to choose a hard-coded numbered option.
+- [x] Filter saved points and annotation markers by the selected Pole Number.
+- [x] Add a combined saved-point GeoJSON download to the Point Attributes panel.
+- [x] Add a verified-coordinate Google Street View action to the Point Attributes panel.
+- [x] Simplify the Production page around a pole-by-pole workflow: searchable pole list with To do / In progress / Done status and base/top chips; one pole selection (#annotationPoleId) driving the list, a ◀ ▶ pole header, the Points checklist, the Workbook tab and a fly-to in 3D; pick checklist built from the annotation-group catalogue; single 3D toolbar; compact page header; LiDAR sources collapsed. Element IDs preserved; `/poles` additionally returns workbook X/Y in the project CRS for navigation.
 - [ ] Compare one profile's pole base/top elevations with MicroStation/TerraScan.

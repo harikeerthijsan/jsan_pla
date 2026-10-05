@@ -7,7 +7,7 @@ from app.db import Base, initialize_schema
 from app.models import Project
 
 
-HEAD = '20261002_0004'
+HEAD = '20261005_0006'
 
 
 def revision(engine) -> str | None:
@@ -21,7 +21,7 @@ def test_fresh_database_upgrades_to_head(tmp_path: Path):
     initialize_schema(engine)
 
     tables = set(inspect(engine).get_table_names())
-    assert {'projects', 'dataset_versions', 'processing_leases', 'production_annotations', 'alembic_version'} <= tables
+    assert {'projects', 'dataset_versions', 'processing_leases', 'production_annotations', 'production_geo_features', 'alembic_version'} <= tables
     assert {'latitude', 'longitude', 'pole_internal_id'} <= {column['name'] for column in inspect(engine).get_columns('production_annotations')}
     assert {'verified_lat', 'verified_lon', 'verified_x', 'verified_y', 'verified_z'} <= {column['name'] for column in inspect(engine).get_columns('poles')}
     assert {'verified_bottom_elevation', 'verified_top_elevation', 'verified_height'} <= {column['name'] for column in inspect(engine).get_columns('poles')}

@@ -76,19 +76,126 @@ def test_production_workbook_poles_and_verified_coordinates_are_wired():
     assert 'id="annotationPoleId"' in html
     assert 'id="annotationLat"' in html
     assert 'id="annotationLon"' in html
+    assert 'id="annotationStreetView"' in html
     assert "/coordinates/to-wgs84" in javascript
-    assert 'i===0?"WORKBOOK":"LIDAR_SOURCE"' in javascript
-    assert "pole_internal_id:poleId?Number(poleId):null" in javascript
+    assert "map_action=pano&viewpoint=" in javascript
+    assert 'window.open(`https://www.google.com/maps/' in javascript
+    assert '{file:workbook,role:"WORKBOOK"}' in javascript
+    assert 'lidar.map(file=>({file,role:"LIDAR_SOURCE"}))' in javascript
+    assert "pole_internal_id:Number(poleId)" in javascript
+    assert 'id="annotationFamily"' in html
+    assert 'id="annotationFeature"' in html
+    assert 'id="annotationItemNo"' not in html
+    assert 'id="annotationOwner"' not in html
+    assert 'id="annotationReference"' not in html
+    assert 'id="annotationStatus"' not in html
+    assert 'id="annotationRemarks"' not in html
+    assert 'function productionAnnotationGroups()' in javascript
+    assert 'function nextProductionFeature(group)' in javascript
+    assert 'assigned automatically' in javascript
+    assert 'family:"poles",feature:"Pole_Base"' in javascript
+    assert 'family:"poles",feature:"Pole_Top"' in javascript
     assert "verified_bottom_elevation" in javascript
     assert "verified_top_elevation" in javascript
     assert "verified_height" in javascript
 
 
-def test_all_production_lidar_blocks_share_one_combined_viewer():
+def test_production_geojson_upload_overlay_and_details_are_wired():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
     javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
 
+    assert 'id="productionGeojsonFile"' in html
+    assert 'GeoJSON is not required' not in html
+    assert 'id="productionGeoToggleBtn"' in html
+    assert 'id="productionGeoCard"' in html
+    assert '{file:geojson,role:"GEOJSON"}' in javascript
+    assert "async function checkGeojsonFile(file)" in javascript
+    assert "/production-geo-features" in javascript
+    assert 'id="productionAnnotationsDownload"' in html
+    assert "/production-annotations.geojson" in javascript
+    assert "async function downloadProductionAnnotations()" in javascript
+    assert "function renderProductionGeoOverlay()" in javascript
+    assert "function selectProductionGeoAt(px,py)" in javascript
+    # GeoJSON properties are untrusted and must be rendered escaped.
+    assert "<dt>${esc(k)}</dt><dd>${esc(" in javascript
+    # A click that ends a pick, box or profile line must not also open the details card.
+    assert "busy:Boolean(state.productionPicking||state.productionBoxTool||state.productionProfileLine)" in javascript
+    # A missing verified latitude/longitude must show "—", not 0.00000000.
+    assert "function coordinateText(latitude,longitude){return latitude!=null&&longitude!=null&&" in javascript
+
+
+def test_production_pole_workflow_is_wired():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+
+    for element in ("productionPoleList", "productionPoleSearch", "productionPoleProgress", "productionPolePrev",
+                    "productionPoleNext", "productionPoleTitle", "productionChecklist", "productionContextMeta"):
+        assert f'id="{element}"' in html
+    for pole_filter in ("all", "todo", "done"):
+        assert f'data-pole-filter="{pole_filter}"' in html
+    # One pole selection drives everything: the Points form's own picker is hidden, not duplicated.
+    assert '<label class="hidden">Pole Number<select id="annotationPoleId"' in html
+    assert 'id="annotationForm" class="annotation-form" novalidate' in html
+    assert "production-nav-tools" not in html  # view buttons live in the single top toolbar
+    assert "function selectProductionPole(id" in javascript
+    assert "function renderProductionChecklist()" in javascript
+    assert "function flyToProductionPole(pole)" in javascript
+    assert "renderProductionPoleWorkflow();" in javascript
+    assert ".production-side .workbook-pole-label" in css
+    # The QC workspace owns .pole-row; Production must not restyle it.
+    assert "production-pole-row status-" in javascript
+    assert ".production-pole-row{" in css
+    # A "Full LiDAR model" entry returns to the whole model and shows every saved point in 3D.
+    assert "function showFullProductionModel()" in javascript
+    assert "root.appendChild(productionFullModelRow(!selected))" in javascript
+    assert 'rows=$("annotationPoleId").value?selectedPoleAnnotations():state.productionAnnotations' in javascript
+
+
+def test_qc_banner_runs_qc_on_production_lidar():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+
+    assert 'id="qcProductionBanner"' in html
+    assert "function renderQcProductionBanner()" in javascript
+    assert "renderQcProductionBanner();" in javascript
+    # Run QC asks for a QC Excel and creates a linked QC dataset that shares the Production LiDAR.
+    for element in ("qcRunDialog", "qcRunExcel", "qcRunGeojson", "replaceExcelDialog", "replaceExcelFile", "productionReplaceExcelBtn"):
+        assert f'id="{element}"' in html
+    assert "/qc-dataset`,{method:\"POST\",body:JSON.stringify({include_geojson:" in javascript
+    assert 'await sendFile(qcId,file,"WORKBOOK",0,1,report)' in javascript
+    assert "/production-workbook/prepare`" in javascript
+    assert "/production-workbook/${fileId}/apply`" in javascript
+    assert "canRun=can(\"processing.run\")" in javascript
+    # The banner floats over the QC evidence area so the four-view grid rows are untouched.
+    assert ".qc-production-banner{position:absolute" in css
+
+
+def test_all_production_lidar_blocks_share_one_combined_viewer():
+    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    workbook_editor = (ROOT / "web" / "assets" / "workbook-editor.js").read_text(encoding="utf-8")
+
+    assert 'import "./workbook-editor.js?v=' in javascript
+    assert 'data-annotation-tab="workbook"' in workbook_editor
+    assert 'id="workbookPoleSearch"' in workbook_editor
+    assert 'poleSearch.addEventListener("input",syncPoleOptions)' in workbook_editor
+    assert 'id="poleWorkbookBusy"' in workbook_editor
+    assert 'setBusy("Loading workbook data…")' in workbook_editor
+    assert 'setBusy("Saving workbook changes…")' in workbook_editor
+    assert 'loadedContext===key' in workbook_editor
+    assert 'const selected=poleSelect.value||workbookPole.value' in workbook_editor
+    assert 'id="workbookPoleSelect"' in workbook_editor
+    assert '/workbook-download' in workbook_editor
+    assert 'snapshot_file_id:snapshot.snapshot_file_id' in workbook_editor
+    assert 'column===sheet.pole_number_column' in workbook_editor
+    assert 'productionWorkbookPoleForGeoFeature(feature)' in javascript
+    assert 'if(exactWorkbookPole)chooseProductionPole(exactWorkbookPole)' in javascript
+    assert 'function selectedPoleAnnotations()' in javascript
+    assert 'rows=selectedPoleAnnotations()' in javascript
+    assert 'Select a Pole Number to view its saved points.' in javascript
     assert 'textContent="Combined LiDAR model"' in javascript
     assert "Promise.allSettled(blocks.map" in javascript
     assert "loadProductionPointCloud(block,generation,projectId)" in javascript
     assert "productionBlockForCoordinates(state.productionDraft)" in javascript
-    assert "No points attached for this combined LiDAR model" in javascript
+    assert "No points saved for this pole." in javascript

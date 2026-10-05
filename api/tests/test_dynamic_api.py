@@ -86,6 +86,7 @@ def test_production_annotations_are_typed_measured_audited_and_role_protected():
         db.add(Project(id=project_id,name='Annotation Test',customer='PLA',crs='EPSG:4326',units='degree',status='LIDAR_READY'))
         db.add(LidarBlock(project_id=project_id,name='tile-01',source_object_key=f'{project_id}/source.laz',object_key=f'{project_id}/tile-01.copc.laz',point_count=100,x_min=0,y_min=0,x_max=100,y_max=100,zmin=90,zmax=140,poles_json='[]'))
         db.add(Pole(project_id=project_id,internal_id=1,pole_number='P-001',corrected_lat=20.001,corrected_lon=10.001,manifest_json='{}'))
+        db.add(Pole(project_id=project_id,internal_id=2,pole_number='P-002',corrected_lat=20.002,corrected_lon=10.002,manifest_json='{}'))
         db.add(User(email=qc_email,name='QC annotation test',role='QC_REVIEWER',password_hash=hash_password('Unique-Test-Password-123!')))
         db.commit()
     finally:
@@ -93,15 +94,66 @@ def test_production_annotations_are_typed_measured_audited_and_role_protected():
 
     with TestClient(app) as client:
         assert client.get(f'/api/projects/{project_id}/production-annotations').status_code==401
+        assert client.get(f'/api/projects/{project_id}/production-annotations.geojson').status_code==401
         admin_token=client.post('/api/auth/login',json={'email':'admin@jsan.local','password':'ChangeMe123!'}).json()['token']
         admin={'Authorization':f'Bearer {admin_token}'}
         catalogue=client.get('/api/production/catalogue',headers=admin)
         assert catalogue.status_code==200
         assert any('Pole Base / Ground Point' in family['point_types'] for family in catalogue.json()['families'])
+        groups={group['id']:group for group in catalogue.json()['annotation_groups']}
+        # Numbered groups have no upper limit, so they publish a prefix instead of a fixed list.
+        for family,prefix in (('crossarms','arm'),('attachments_comm','comm'),('attachments_util','util'),('anchors','anc'),('other_poles','other')):
+            assert groups[family]['automatic_numbering'] is True
+            assert groups[family]['prefix']==prefix and groups[family]['point_types']==[]
+            assert 'max_count' not in groups[family]
+        assert groups['poles']['point_types']==['Pole_Base','Pole_Top']
+        assert groups['poles']['automatic_numbering'] is False
+
+        first_anchor=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
+            'block_name':'tile-01','family':'anchors','feature_type':'client-preview',
+            'x':11,'y':21,'z':101,'pole_internal_id':1,
+        })
+        second_anchor=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
+            'block_name':'tile-01','family':'anchors','feature_type':'client-preview',
+            'x':12,'y':22,'z':102,'pole_internal_id':1,
+        })
+        other_pole_anchor=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
+            'block_name':'tile-01','family':'anchors','feature_type':'client-preview',
+            'x':13,'y':23,'z':103,'pole_internal_id':2,
+        })
+        assert first_anchor.status_code==second_anchor.status_code==other_pole_anchor.status_code==200
+        assert first_anchor.json()['feature_type']=='anc_1'
+        assert second_anchor.json()['feature_type']=='anc_2'
+        assert other_pole_anchor.json()['feature_type']=='anc_1'
+
+        preserved_anchor=client.put(f"/api/projects/{project_id}/production-annotations/{first_anchor.json()['id']}",headers=admin,json={
+            'block_name':'tile-01','family':'anchors','feature_type':'anc_99',
+            'x':11.5,'y':21.5,'z':101.5,'pole_internal_id':1,
+        })
+        assert preserved_anchor.status_code==200
+        assert preserved_anchor.json()['feature_type']=='anc_1'
+
+        # No per-pole cap: keep adding past the former limit of six anchors.
+        extra_anchor_ids=[]
+        for index in range(3,10):
+            extra=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
+                'block_name':'tile-01','family':'anchors','feature_type':'client-preview',
+                'x':11+index,'y':21,'z':101,'pole_internal_id':1,
+            })
+            assert extra.status_code==200,extra.text
+            assert extra.json()['feature_type']==f'anc_{index}'
+            extra_anchor_ids.append(extra.json()['id'])
+        for annotation_id in extra_anchor_ids:
+            assert client.delete(f'/api/projects/{project_id}/production-annotations/{annotation_id}',headers=admin).status_code==200
+        invalid_number=client.put(f"/api/projects/{project_id}/production-annotations/{second_anchor.json()['id']}",headers=admin,json={
+            'block_name':'tile-01','family':'crossarms','feature_type':'arm_0',
+            'x':12,'y':22,'z':102,'pole_internal_id':1,
+        })
+        assert invalid_number.status_code==200 and invalid_number.json()['feature_type']=='arm_1'  # server assigns the number
 
         base=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
-            'block_name':'tile-01','family':'Pole Points','feature_type':'Pole Base / Ground Point',
-            'x':10,'y':20,'z':100,'pole_internal_id':1,'status':'IN_PROGRESS',
+            'block_name':'tile-01','family':'poles','feature_type':'Pole_Base',
+            'x':10,'y':20,'z':100,'pole_internal_id':1,'attributes':{},'status':'IN_PROGRESS',
         })
         assert base.status_code==200,base.text
         assert base.json()['geographic_coordinates']=={'latitude':20.0,'longitude':10.0}
@@ -114,7 +166,7 @@ def test_production_annotations_are_typed_measured_audited_and_role_protected():
         assert transformed.json()['longitude']==10.0
 
         top=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
-            'block_name':'tile-01','family':'Pole Points','feature_type':'Pole Top Point',
+            'block_name':'tile-01','family':'poles','feature_type':'Pole_Top',
             'x':10.1,'y':20.1,'z':130,'pole_internal_id':1,'status':'COMPLETED',
         })
         assert top.status_code==200,top.text
@@ -125,12 +177,26 @@ def test_production_annotations_are_typed_measured_audited_and_role_protected():
 
         attachment=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
             'block_name':'tile-01','family':'Electrical / Communication Attachment Points','feature_type':'Communication Attachment Points',
-            'x':13,'y':24,'z':112,'reference_annotation_id':base_id,
+            'x':13,'y':24,'z':112,'reference_annotation_id':base_id,'pole_internal_id':1,
             'attributes':{'pole_internal_id':'1','owner':'TEST COMM','support':'J-Hook'},'status':'COMPLETED',
         })
         assert attachment.status_code==200,attachment.text
         measured=attachment.json()['measurements']
         assert measured=={'vertical_delta':12.0,'horizontal_offset':5.0,'distance_3d':13.0}
+
+        exported=client.get(f'/api/projects/{project_id}/production-annotations.geojson',headers=admin)
+        assert exported.status_code==200,exported.text
+        assert exported.headers['content-type'].startswith('application/geo+json')
+        assert exported.headers['content-disposition'].endswith('-annotation-points.geojson"')
+        collection=exported.json()
+        assert collection['type']=='FeatureCollection'
+        assert collection['feature_count']==6
+        assert len(collection['features'])==6
+        base_feature=next(feature for feature in collection['features'] if feature['id']==base_id)
+        assert base_feature['geometry']=={'type':'Point','coordinates':[10.0,20.0,100.0]}
+        assert base_feature['properties']['pole_number']=='P-001'
+        assert base_feature['properties']['point_name']=='Pole_Base'
+        assert base_feature['properties']['project_crs']=='EPSG:4326'
 
         invalid=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
             'block_name':'tile-01','family':'Pole Points','feature_type':'Anchor Point','x':1,'y':2,'z':3,
@@ -139,7 +205,7 @@ def test_production_annotations_are_typed_measured_audited_and_role_protected():
 
         qc_token=client.post('/api/auth/login',json={'email':qc_email,'password':'Unique-Test-Password-123!'}).json()['token']
         denied=client.post(f'/api/projects/{project_id}/production-annotations',headers={'Authorization':f'Bearer {qc_token}'},json={
-            'block_name':'tile-01','family':'Pole Points','feature_type':'Pole Top Point','x':10,'y':20,'z':130,
+            'block_name':'tile-01','family':'poles','feature_type':'Pole_Top','x':10,'y':20,'z':130,
         })
         assert denied.status_code==403
 

@@ -64,6 +64,13 @@ def put_local(src:str,key:str):
 def save_local_bytes(data:bytes,key:str):
     dst=local_path(key); dst.parent.mkdir(parents=True,exist_ok=True); dst.write_bytes(data); return str(dst)
 
+def upload_bytes(data:bytes,key:str,content_type:str|None=None):
+    if MODE=='local': return save_local_bytes(data,key)
+    args={'Bucket':bucket_name(),'Key':key,'Body':data}
+    if content_type: args['ContentType']=content_type
+    _s3().put_object(**args)
+    return key
+
 def download_to(key:str,dst:str):
     pathlib.Path(dst).parent.mkdir(parents=True,exist_ok=True)
     if MODE=='local': shutil.copy2(local_path(key),dst)

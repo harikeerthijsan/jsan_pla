@@ -2,12 +2,32 @@ from __future__ import annotations
 
 import json
 import math
+import re
 
 from fastapi import HTTPException
 from pyproj import Transformer
 from sqlalchemy.orm import Session
 
 from .models import ProductionAnnotation
+
+
+# Automatically numbered per pole (arm_1, arm_2, …) with no upper limit.
+SEQUENCED_ANNOTATION_GROUPS = {
+    "crossarms": {"prefix": "arm"},
+    "attachments_comm": {"prefix": "comm"},
+    "attachments_util": {"prefix": "util"},
+    "anchors": {"prefix": "anc"},
+    "guys": {"prefix": "guy"},
+    "sidewalk_braces": {"prefix": "swb"},
+    "equipment": {"prefix": "eq"},
+    "span_guys": {"prefix": "sgy"},
+    "other_poles": {"prefix": "other"},
+}
+
+
+def is_sequenced_feature_type(family: str, feature_type: str) -> bool:
+    specification = SEQUENCED_ANNOTATION_GROUPS[family]
+    return re.fullmatch(rf"{re.escape(specification['prefix'])}_[1-9]\d*", feature_type or "", re.IGNORECASE) is not None
 
 
 PRODUCTION_FAMILIES = {
@@ -29,7 +49,23 @@ PRODUCTION_FAMILIES = {
         "Clearance Measurement Point", "Lowest Attachment Point", "Highest Attachment Point",
         "Ground Clearance Point", "Vegetation Clearance Point", "Road / Surface Reference Point",
     ],
+    # Numbered groups have no fixed list; their point types are validated by is_sequenced_feature_type.
+    **{family: [] for family in SEQUENCED_ANNOTATION_GROUPS},
+    "poles": ["Pole_Base", "Pole_Top"],
 }
+
+PRODUCTION_ANNOTATION_GROUPS = [
+    {"id": "crossarms", "label": "crossarms", "relationship": "Parent"},
+    {"id": "attachments_comm", "label": "Attachments — communication", "relationship": "Child"},
+    {"id": "attachments_util", "label": "Attachments — utility", "relationship": "Child"},
+    {"id": "anchors", "label": "anchors", "relationship": "Parent"},
+    {"id": "guys", "label": "guys", "relationship": "Child"},
+    {"id": "sidewalk_braces", "label": "sidewalk_braces", "relationship": "Child"},
+    {"id": "equipment", "label": "equipment", "relationship": None},
+    {"id": "span_guys", "label": "span_guys", "relationship": None},
+    {"id": "poles", "label": "Poles", "relationship": None},
+    {"id": "other_poles", "label": "Other_Poles", "relationship": None},
+]
 
 PRODUCTION_STATUSES = {"NOT_STARTED", "IN_PROGRESS", "COMPLETED", "REWORK", "ON_HOLD", "SUBMITTED_FOR_QC"}
 
@@ -37,22 +73,55 @@ SECTION3_ATTRIBUTE_FIELDS = [
     "feature_id", "parent_feature_id", "pole_internal_id", "item_number", "asset_sub_type",
     "catalog_key", "owner", "arm_no", "usage", "support", "voltage", "anchor_no",
     "guy_nos", "runs_to", "end_type", "environment", "construction_grade", "remarks",
+    "relationship",
 ]
 
 
 def catalogue() -> dict:
     return {
         "families": [{"name": family, "point_types": points} for family, points in PRODUCTION_FAMILIES.items()],
+        "annotation_groups": [
+            {**group, **SEQUENCED_ANNOTATION_GROUPS.get(group["id"], {}),
+             "automatic_numbering": group["id"] in SEQUENCED_ANNOTATION_GROUPS,
+             "point_types": PRODUCTION_FAMILIES[group["id"]]}
+            for group in PRODUCTION_ANNOTATION_GROUPS
+        ],
         "statuses": sorted(PRODUCTION_STATUSES),
         "attribute_fields": SECTION3_ATTRIBUTE_FIELDS,
         "measurement_fields": ["vertical_delta", "horizontal_offset", "distance_3d"],
     }
 
 
+def next_annotation_feature_type(
+    db: Session,
+    project_id: str,
+    pole_internal_id: int,
+    family: str,
+    exclude_annotation_id: str | None = None,
+) -> str:
+    specification = SEQUENCED_ANNOTATION_GROUPS.get(family)
+    if not specification:
+        raise HTTPException(422, "The selected annotation group is not automatically numbered")
+    query = db.query(ProductionAnnotation).filter_by(
+        project_id=project_id, pole_internal_id=pole_internal_id, family=family
+    )
+    if exclude_annotation_id:
+        query = query.filter(ProductionAnnotation.id != exclude_annotation_id)
+    pattern = re.compile(rf"^{re.escape(specification['prefix'])}_(\d+)$", re.IGNORECASE)
+    numbers = []
+    for (feature_type,) in query.with_entities(ProductionAnnotation.feature_type).all():
+        match = pattern.fullmatch(feature_type or "")
+        if match:
+            numbers.append(int(match.group(1)))
+    return f"{specification['prefix']}_{max(numbers, default=0) + 1}"
+
+
 def validate_annotation_values(family: str, feature_type: str, status: str, attributes: dict) -> None:
     if family not in PRODUCTION_FAMILIES:
         raise HTTPException(422, "Unsupported production family")
-    if feature_type not in PRODUCTION_FAMILIES[family]:
+    valid_type = (is_sequenced_feature_type(family, feature_type) if family in SEQUENCED_ANNOTATION_GROUPS
+                  else feature_type in PRODUCTION_FAMILIES[family])
+    if not valid_type:
         raise HTTPException(422, "Point type does not belong to the selected production family")
     if status not in PRODUCTION_STATUSES:
         raise HTTPException(422, "Unsupported production status")

@@ -25,6 +25,8 @@ class Project(Base):
     units: Mapped[str]=mapped_column(String(80), default='US survey foot')
     status: Mapped[str]=mapped_column(String(40), default='UPLOADING')
     source_workbook_key: Mapped[str|None]=mapped_column(Text, nullable=True)
+    # Set on a QC dataset created from a Production dataset; it shares that dataset's converted LiDAR.
+    source_project_id: Mapped[str|None]=mapped_column(String(80), nullable=True, index=True)
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
     updated_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
 
@@ -96,6 +98,25 @@ class ProductionAnnotation(Base):
     modified_by: Mapped[str]=mapped_column(String(255))
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
     updated_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
+
+class ProductionGeoFeature(Base):
+    __tablename__='production_geo_features'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    source_file_id: Mapped[str]=mapped_column(String(120), index=True)
+    feature_index: Mapped[int]=mapped_column(Integer)
+    geometry_type: Mapped[str]=mapped_column(String(40), index=True)
+    source_crs: Mapped[str]=mapped_column(String(80))
+    source_geometry_json: Mapped[str]=mapped_column(Text)
+    geometry_json: Mapped[str]=mapped_column(Text)  # transformed to the project CRS
+    x: Mapped[float|None]=mapped_column(Float, nullable=True)
+    y: Mapped[float|None]=mapped_column(Float, nullable=True)
+    properties_json: Mapped[str]=mapped_column(Text, default='{}')
+    pole_internal_id: Mapped[int|None]=mapped_column(Integer, nullable=True, index=True)
+    match_method: Mapped[str|None]=mapped_column(String(20), nullable=True)  # ID, NEAREST
+    match_property: Mapped[str|None]=mapped_column(String(160), nullable=True)
+    match_distance: Mapped[float|None]=mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
 
 class Pole(Base):
     __tablename__='poles'
