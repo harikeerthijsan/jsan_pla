@@ -99,6 +99,7 @@ Replace the generic Section 3 annotation inspector with the client workbook vari
 - 2026-10-05: Saved-point lists and 3D annotation markers are scoped to the currently selected Pole Number so points from other poles do not leak into the active editing context.
 - 2026-10-05: Export all saved Production annotation points across all poles as one generated WGS84 GeoJSON FeatureCollection. Preserve native project X/Y/Z, project CRS, pole number, group, variable, measurements, status, and audit fields as feature properties.
 - 2026-10-05: Allow the producer to open a picked or saved point's verified WGS84 coordinate in Google Street View without adding a Maps API key or sending native project coordinates.
+- 2026-10-05: Keep the verified-coordinate and Street View panel visible above the card-based point checklist. Point selection populates it; clearing a point resets the values and disables Street View without hiding the control.
 
 ## Progress
 

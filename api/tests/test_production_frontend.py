@@ -77,9 +77,12 @@ def test_production_workbook_poles_and_verified_coordinates_are_wired():
     assert 'id="annotationLat"' in html
     assert 'id="annotationLon"' in html
     assert 'id="annotationStreetView"' in html
+    assert 'class="geographic-readout" aria-live="polite"' in html
+    assert html.index('class="geographic-readout"') < html.index('id="productionChecklist"')
     assert "/coordinates/to-wgs84" in javascript
     assert "map_action=pano&viewpoint=" in javascript
     assert 'window.open(`https://www.google.com/maps/' in javascript
+    assert 'document.querySelector("#annotationForm .coordinate-readout")?.classList.add("hidden")' in javascript
     assert '{file:workbook,role:"WORKBOOK"}' in javascript
     assert 'lidar.map(file=>({file,role:"LIDAR_SOURCE"}))' in javascript
     assert "pole_internal_id:Number(poleId)" in javascript
