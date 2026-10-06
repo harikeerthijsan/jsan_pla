@@ -141,6 +141,42 @@ def test_admin_password_reset_is_temporary_and_users_cannot_manage_accounts():
         assert client.get("/api/projects", headers=again).status_code == 403
 
 
+def test_only_admin_can_create_user_and_admin_accounts():
+    initialize_schema()
+    regular_email = _user("USER")
+    marker = uuid.uuid4().hex[:8]
+    temporary_password = "Temporary-Account-2026!"
+    with TestClient(app) as client:
+        admin, _ = _login(client, "admin@jsan.local", "ChangeMe123!")
+        regular, _ = _login(client, regular_email, OWN)
+        user_body = {
+            "username": f"JSAN-{marker}",
+            "email": f"new-user-{marker}@example.invalid",
+            "name": "New Production User",
+            "role": "USER",
+            "password": temporary_password,
+        }
+        assert client.post("/api/users", json=user_body).status_code == 401
+        assert client.post("/api/users", headers=regular, json=user_body).status_code == 403
+
+        created_user = client.post("/api/users", headers=admin, json=user_body)
+        assert created_user.status_code == 200, created_user.text
+        assert created_user.json()["role"] == "USER"
+        assert created_user.json()["must_change_password"] is True
+
+        admin_body = {
+            "username": f"ADMIN-{marker}",
+            "email": f"new-admin-{marker}@example.invalid",
+            "name": "New Administrator",
+            "role": "ADMIN",
+            "password": temporary_password,
+        }
+        created_admin = client.post("/api/users", headers=admin, json=admin_body)
+        assert created_admin.status_code == 200, created_admin.text
+        assert created_admin.json()["role"] == "ADMIN"
+        assert created_admin.json()["must_change_password"] is True
+
+
 def test_users_cannot_upload_or_create_datasets():
     initialize_schema()
     user_email = _user("USER")

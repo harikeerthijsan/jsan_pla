@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="potree/libs/openlayers3/ol.css" />
   <link rel="stylesheet" href="potree/libs/spectrum/spectrum.css" />
   <link rel="stylesheet" href="potree/libs/jstree/themes/mixed/style.css" />
-  <link rel="stylesheet" href="assets/app.css?v=20261006-jsan-logo-image" />
+  <link rel="stylesheet" href="assets/app.css?v=20261006-admin-create-user" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -38,7 +38,20 @@
           <form id="profileNameForm" class="profile-form"><label>Display name<input id="profileName" required minlength="2" maxlength="255" autocomplete="name" /></label><div class="profile-actions"><button class="primary" type="submit">Save name</button><small id="profileNameStatus" role="status"></small></div></form></article>
         <article class="profile-card"><h3>Change password</h3>
           <form id="passwordForm" class="profile-form"><input id="passwordFormUser" type="text" autocomplete="username" hidden /><label>Current password<input id="currentPassword" type="password" required autocomplete="current-password" /></label><label>New password<input id="newPassword" type="password" required minlength="12" maxlength="256" autocomplete="new-password" /></label><label>Confirm new password<input id="confirmPassword" type="password" required minlength="12" maxlength="256" autocomplete="new-password" /></label><small class="profile-hint">At least 12 characters, different from the current one.</small><div class="profile-actions"><button class="primary" type="submit">Change password</button><small id="passwordStatus" role="status"></small></div></form></article>
-        <article id="profileUsersCard" class="profile-card wide hidden"><h3>Users</h3><p class="profile-hint">Give someone a temporary password; they choose their own at their next sign-in.</p><div id="profileUsers" class="profile-users"></div></article>
+        <article id="profileUsersCard" class="profile-card wide hidden"><h3>User administration</h3><p class="profile-hint">Create a user or administrator with a temporary password. They must choose their own password at their next sign-in.</p>
+          <form id="profileCreateUserForm" class="profile-form profile-create-user">
+            <div class="profile-create-grid">
+              <label>Username<input id="profileCreateUsername" required minlength="2" maxlength="80" pattern="[A-Za-z0-9._-]+" autocomplete="off" placeholder="JSAN021" /></label>
+              <label>Display name<input id="profileCreateName" required minlength="2" maxlength="255" autocomplete="off" placeholder="Employee name" /></label>
+              <label>Email<input id="profileCreateEmail" type="email" required maxlength="255" autocomplete="off" placeholder="name@example.com" /></label>
+              <label>Role<select id="profileCreateRole" required><option value="USER">User</option><option value="ADMIN">Admin</option></select></label>
+              <label>Temporary password<input id="profileCreatePassword" type="password" required minlength="12" maxlength="256" autocomplete="new-password" placeholder="At least 12 characters" /></label>
+              <label>Confirm temporary password<input id="profileCreateConfirmPassword" type="password" required minlength="12" maxlength="256" autocomplete="new-password" /></label>
+            </div>
+            <div class="profile-actions"><button id="profileCreateUserBtn" class="primary" type="submit">Create account</button><small id="profileCreateUserStatus" role="status" aria-live="polite"></small></div>
+          </form>
+          <h4 class="profile-users-title">Existing users</h4><div id="profileUsers" class="profile-users"></div>
+        </article>
       </div>
     </section>
 
@@ -155,7 +168,7 @@
   <dialog id="decisionDialog"><form method="dialog" id="decisionForm"><h3 id="decisionTitle">Review finding</h3><input type="hidden" id="decisionFindingId" /><label>Decision<select id="decisionValue"><option value="CONFIRMED_FAIL">Confirm fail</option><option value="ACCEPTED_EXCEPTION">Accept exception</option><option value="NEEDS_FIELD_REVIEW">Needs field review</option><option value="CORRECTED">Corrected</option><option value="OPEN">Re-open</option></select></label><label>Reviewer comment<textarea id="decisionComment" rows="4" placeholder="Evidence / correction note"></textarea></label><div class="dialog-actions"><button value="cancel">Cancel</button><button id="saveDecision" value="default" class="primary">Save decision</button></div></form></dialog>
 
   <script src="potree/libs/jquery/jquery-3.1.1.min.js"></script><script src="potree/libs/spectrum/spectrum.js"></script><script src="potree/libs/jquery-ui/jquery-ui.min.js"></script><script src="potree/libs/other/BinaryHeap.js"></script><script src="potree/libs/tween/tween.min.js"></script><script src="potree/libs/d3/d3.js"></script><script src="potree/libs/proj4/proj4.js"></script><script src="potree/libs/openlayers3/ol.js"></script><script src="potree/libs/i18next/i18next.js"></script><script src="potree/libs/jstree/jstree.js"></script><script src="potree/libs/copc/index.js"></script><script src="potree/build/potree/potree.js"></script><script src="potree/libs/plasio/js/laslaz.js"></script>
-  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261006-jsan-logo-image"></script>
+  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261006-admin-create-user"></script>
 <div id="toastStack" class="toast-stack" aria-live="polite"></div>
 </body>
 </html>
