@@ -56,8 +56,13 @@ def test_production_profile_view_is_wired():
         assert f'id="{element}"' in html
     for preset in ("base", "top", "attachment"):
         assert f'data-profile-pick="{preset}"' in html
+    assert "function productionPointAt(px,py)" in javascript
+    assert "function startProductionProfileLine()" in javascript
+    assert 'toast("Now click the end of the section line."' in javascript
     assert "function enterProductionProfile(a,b)" in javascript
     assert "p.volume.scale.set(p.len,p.depth" in javascript
+    assert "startProductionProfileBox" not in javascript
+    assert "production-profile-rect" not in javascript
     assert "v.orbitControls.rotationSpeed=0" in javascript
     assert "v.orbitControls.rotationSpeed=5" in javascript
     assert "function drawProductionProfileOverlay()" in javascript
@@ -65,7 +70,23 @@ def test_production_profile_view_is_wired():
     # Picks in the production viewer honour the clip so profile picks stay inside the slab.
     assert "pickClipped:true" in javascript
     # A click that hits no LiDAR point must not create a draft at the origin.
-    assert "p.x===0&&p.y===0&&p.z===0" in javascript
+    assert 'if(!hit){toast("No LiDAR point under the cursor' in javascript
+
+
+def test_production_pick_lets_the_user_navigate_and_geojson_markers_are_large():
+    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+
+    # Pick mode places a point only on a click; a drag rotates or pans the view.
+    assert "Math.hypot(e.clientX-start.x,e.clientY-start.y)>4)return" in javascript
+    assert "measuringTool.startInsertion" not in javascript
+    assert "drag to move the view · Esc to cancel" in javascript
+    assert "cancelProductionPick();resetAnnotationForm({poleId:$(\"annotationPoleId\").value})" in javascript
+    # GeoJSON poles are drawn as large screen-space pins with labels in every view.
+    assert "function drawProductionGeoMarkers()" in javascript
+    assert "startProductionGeoMarkerLoop()" in javascript
+    assert ".production-geo-markers{" in css
+    assert "canvas.production-picking{cursor:crosshair}" in css
 
 
 def test_production_workbook_poles_and_verified_coordinates_are_wired():
@@ -121,7 +142,7 @@ def test_production_geojson_upload_overlay_and_details_are_wired():
     assert "function selectProductionGeoAt(px,py)" in javascript
     # GeoJSON properties are untrusted and must be rendered escaped.
     assert "<dt>${esc(k)}</dt><dd>${esc(" in javascript
-    # A click that ends a pick, box or profile line must not also open the details card.
+    # A click that ends a pick, bounding box or profile rectangle must not also open the details card.
     assert "busy:Boolean(state.productionPicking||state.productionBoxTool||state.productionProfileLine)" in javascript
     # A missing verified latitude/longitude must show "—", not 0.00000000.
     assert "function coordinateText(latitude,longitude){return latitude!=null&&longitude!=null&&" in javascript
@@ -170,9 +191,26 @@ def test_qc_banner_runs_qc_on_production_lidar():
     assert 'await sendFile(qcId,file,"WORKBOOK",0,1,report)' in javascript
     assert "/production-workbook/prepare`" in javascript
     assert "/production-workbook/${fileId}/apply`" in javascript
-    assert "canRun=can(\"processing.run\")" in javascript
+    # Running QC uploads a QC Excel, so only roles that may upload see the button.
+    assert "canRun=can(\"upload.create\")&&can(\"processing.run\")" in javascript
     # The banner floats over the QC evidence area so the four-view grid rows are untouched.
     assert ".qc-production-banner{position:absolute" in css
+
+
+def test_delivery_pipeline_connects_production_and_qc():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+
+    assert 'id="deliveryPipeline"' in html
+    assert "function renderDeliveryPipeline()" in javascript
+    assert "/pipeline`" in javascript
+    # Delivery acts on the QC dataset of the pair; corrections open the Production pole to fix.
+    assert "state.deliveryProjectId=state.pipeline.delivery?.project_id||state.projectId" in javascript
+    assert "openInProduction(production.id,Number(b.dataset.pole))" in javascript
+    assert "versions/${v.id}/approve" in javascript and "state.deliveryProjectId||state.projectId" in javascript
+    # Production lists Production datasets only; QC never shows unchecked Production poles as PASS.
+    assert 'state.workspace==="PRODUCTION"?state.projects.filter(p=>p.production_dataset)' in javascript
+    assert "if(summary.production_dataset){poles=[];" in javascript
 
 
 def test_all_production_lidar_blocks_share_one_combined_viewer():

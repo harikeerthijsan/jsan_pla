@@ -21,7 +21,7 @@ from app.auth import hash_password
 from app.db import SessionLocal, initialize_schema
 from app.main import app
 from app.models import DatasetFile, Finding, LidarBlock, Pole, ProcessingJob, ProductionAnnotation, ProductionGeoFeature, Project, User
-from app.workflow import DatasetVersion, QCRun, VersionFile
+from app.workflow import DatasetVersion, QCRun, VersionFile, version_files
 
 XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
@@ -179,6 +179,30 @@ def test_replacing_the_production_excel_reimports_poles_and_keeps_production_wor
         db.close()
 
 
+def test_unreadable_replacement_excel_is_rejected_and_the_current_excel_is_kept(production_project):
+    project_id, ids = production_project['project_id'], production_project['ids']
+    workbook = Workbook()
+    workbook.active.title = 'ZoneName'
+    workbook.active.append(['internal_id', 'Pole Number', 'Latitude', 'Longitude'])
+    stream = BytesIO()
+    workbook.save(stream)
+    with TestClient(app) as client:
+        admin = admin_headers(client)
+        file_id = upload(client, admin, f'/api/projects/{project_id}/production-workbook/prepare', 'wrong-layout.xlsx', stream.getvalue())
+        rejected = client.post(f'/api/projects/{project_id}/production-workbook/{file_id}/apply', headers=admin)
+        assert rejected.status_code == 400
+        assert 'poles sheet' in rejected.json()['detail'] and 'The current Excel was kept' in rejected.json()['detail']
+    db = SessionLocal()
+    try:
+        statuses = {f.id: f.status for f in db.query(DatasetFile).filter_by(project_id=project_id).all()}
+        assert statuses[ids['WORKBOOK']] == 'UPLOADED' and statuses[ids['WORKBOOK_EDITED']] == 'UPLOADED'  # nothing retired
+        assert statuses[file_id] == 'REJECTED'
+        assert db.query(ProcessingJob).filter_by(project_id=project_id, status='QUEUED').count() == 0
+        assert db.query(Project).filter_by(id=project_id).first().status == 'LIDAR_READY'
+    finally:
+        db.close()
+
+
 def test_qc_dataset_shares_lidar_and_uses_only_its_own_excel(production_project):
     project_id, copc_key, keys = production_project['project_id'], production_project['copc_key'], production_project['keys']
     with TestClient(app) as client:
@@ -226,6 +250,61 @@ def test_qc_dataset_shares_lidar_and_uses_only_its_own_excel(production_project)
         production_poles = {p.internal_id: p.pole_number for p in db.query(Pole).filter_by(project_id=project_id).all()}
         assert production_poles == {1: 'P-100', 2: 'P-200', 3: 'P-300'}  # Production untouched
         assert db.query(QCRun).filter_by(project_id=project_id).count() == 0
+    finally:
+        db.close()
+
+
+def test_pipeline_connects_production_qc_and_delivery(production_project):
+    project_id, keys = production_project['project_id'], production_project['keys']
+    with TestClient(app) as client:
+        assert client.get(f'/api/projects/{project_id}/pipeline').status_code == 401
+        admin = admin_headers(client)
+        listed = {p['id']: p for p in client.get('/api/projects', headers=admin).json()}
+        assert listed[project_id]['production_dataset'] is True
+
+        before = client.get(f'/api/projects/{project_id}/pipeline', headers=admin).json()
+        assert before['production']['poles'] == 3 and before['production']['points'] == 1 and before['production']['excel'] == 'COLLECTION.xlsx'
+        assert before['production']['has_geojson'] is True
+        assert before['qc'] is None and before['delivery']['project_id'] == project_id and before['corrections'] == []
+
+        qc_id = client.post(f'/api/projects/{project_id}/qc-dataset', headers=admin, json={'include_geojson': True}).json()['id']
+        assert listed.get(qc_id) is None or listed[qc_id]['production_dataset'] is False
+        # Duplicate pole numbers in the QC Excel produce findings for P-100.
+        upload(client, admin, f'/api/projects/{qc_id}/uploads/prepare', 'QC.xlsx', collection_workbook([(1, 'P-100'), (2, 'P-100'), (3, 'P-300')]), role='WORKBOOK')
+        job_id = client.post(f'/api/projects/{qc_id}/process', headers=admin).json()['job_id']
+    processor.process_job(job_id)
+
+    with TestClient(app) as client:
+        admin = admin_headers(client)
+        findings = client.get(f'/api/projects/{qc_id}/findings', headers=admin).json()
+        target = next(f for f in findings if f['pole_number'] == 'P-100')
+        assert client.post(f"/api/findings/{target['id']}/correction", headers=admin, json={'comment': 'Fix the pole number'}).status_code == 200
+
+        from_production = client.get(f'/api/projects/{project_id}/pipeline', headers=admin).json()
+        from_qc = client.get(f'/api/projects/{qc_id}/pipeline', headers=admin).json()
+        for pipe in (from_production, from_qc):
+            assert pipe['production']['id'] == project_id and pipe['qc']['id'] == qc_id
+            assert pipe['delivery']['project_id'] == qc_id and pipe['delivery']['open_corrections'] == 1
+            assert pipe['qc']['latest_run']['status'] == 'SUCCEEDED' and pipe['qc']['findings']['open'] >= 1
+        [correction] = from_production['corrections']
+        assert correction['pole_number'] == 'P-100' and correction['production_pole_internal_id'] == 1  # opens the Production pole
+        assert correction['comment'] == 'Fix the pole number' and correction['message']
+
+        version_id = from_production['delivery']['version_id']
+        assert client.post(f'/api/projects/{qc_id}/versions/{version_id}/approve', headers=admin).status_code == 409  # open correction
+        assert client.post(f"/api/corrections/{correction['id']}/resolve", headers=admin).status_code == 200
+        assert client.post(f'/api/projects/{qc_id}/versions/{version_id}/approve', headers=admin).status_code == 200
+        approved = client.get(f'/api/projects/{project_id}/pipeline', headers=admin).json()
+        assert approved['delivery']['approved'] is True and approved['delivery']['open_corrections'] == 0
+
+        # Re-check: a new QC revision keeps the shared LiDAR and the GeoJSON, ready for a corrected QC Excel.
+        revision = client.post(f'/api/projects/{qc_id}/versions', headers=admin)
+        assert revision.status_code == 200, revision.text
+    db = SessionLocal()
+    try:
+        roles = sorted(f.role for f in version_files(db, revision.json()['id']))
+        assert roles == ['GEOJSON', 'LIDAR_SOURCE']
+        assert db.query(DatasetFile).filter_by(project_id=qc_id, role='GEOJSON').first().object_key == keys['GEOJSON']
     finally:
         db.close()
 

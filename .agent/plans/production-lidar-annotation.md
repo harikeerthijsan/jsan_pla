@@ -100,6 +100,9 @@ Replace the generic Section 3 annotation inspector with the client workbook vari
 - 2026-10-05: Export all saved Production annotation points across all poles as one generated WGS84 GeoJSON FeatureCollection. Preserve native project X/Y/Z, project CRS, pole number, group, variable, measurements, status, and audit fields as feature properties.
 - 2026-10-05: Allow the producer to open a picked or saved point's verified WGS84 coordinate in Google Street View without adding a Maps API key or sending native project coordinates.
 - 2026-10-05: Keep the verified-coordinate and Street View panel visible above the card-based point checklist. Point selection populates it; clearing a point resets the values and disables Street View without hiding the control.
+- 2026-10-05: Replace the Production profile's two-click line with a plan-view drag rectangle. The long edge defines station/profile direction, the short edge defines clip depth, and Rotate 90° swaps those dimensions while preserving the selected footprint.
+- 2026-10-05: Fit the full LiDAR when entering the rectangle's Top view and temporarily use fixed-size points to prevent a congested plan display. Fit the resulting profile using both section length and vertical LiDAR extent adjusted for viewer aspect ratio, then restore the original point style and camera on exit.
+- 2026-10-06: Revert the rectangle experiment at the user's request. Production Profile again uses the established two-click section line plus editable depth; the bounding-box tool remains separate.
 
 ## Progress
 
@@ -115,6 +118,7 @@ Replace the generic Section 3 annotation inspector with the client workbook vari
 - [x] Combine all Production LiDAR blocks in one viewer without physically rewriting source files.
 - [x] Restore combined-model navigation (multi-cloud bounding box, Esc cancel, display-only markers, middle-drag pan, Top/Front/Side/3D views, orbit/pan modes).
 - [x] Add Production vertical-section profile with pole base/top/attachment picking and height-above-base readouts.
+- [x] Restore the two-click profile section-line picker after evaluating the rectangle interaction.
 - [x] Replace generic point-attribute fields with the approved workbook annotation groups and variables while preserving automatic XYZ, verified latitude/longitude, pole base/top elevation, and pole height behavior.
 - [x] Assign indexed point-variable numbers automatically per pole/group instead of asking the producer to choose a hard-coded numbered option.
 - [x] Filter saved points and annotation markers by the selected Pole Number.

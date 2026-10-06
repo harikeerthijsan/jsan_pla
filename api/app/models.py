@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey, UniqueConstraint, BigInteger
+from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey, UniqueConstraint, BigInteger, Boolean, false
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 
@@ -11,9 +11,11 @@ class User(Base):
     __tablename__='users'
     id: Mapped[int]=mapped_column(Integer, primary_key=True)
     email: Mapped[str]=mapped_column(String(255), unique=True, index=True)
+    username: Mapped[str|None]=mapped_column(String(80), unique=True, index=True, nullable=True)
     name: Mapped[str]=mapped_column(String(255), default='Reviewer')
     role: Mapped[str]=mapped_column(String(40), default='QC_REVIEWER')
     password_hash: Mapped[str]=mapped_column(Text)
+    must_change_password: Mapped[bool]=mapped_column(Boolean, default=False, server_default=false())
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
 
 class Project(Base):

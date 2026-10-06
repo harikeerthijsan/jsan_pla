@@ -1,5 +1,5 @@
 import os, hmac, hashlib, secrets, base64, json, time
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException, Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from .db import get_db
@@ -51,10 +51,15 @@ def decode_token(token: str) -> dict:
     except Exception:
         raise HTTPException(status_code=401, detail='Invalid or expired token')
 
-def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)) -> User:
+# Routes a user may call while still holding the shared initial password.
+PASSWORD_CHANGE_ROUTES = {'/api/auth/me', '/api/auth/change-password', '/api/auth/profile', '/api/workspaces', '/api/system/info'}
+
+def current_user(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)) -> User:
     if not credentials:
         raise HTTPException(status_code=401, detail='Authentication required')
     payload = decode_token(credentials.credentials)
     user = db.query(User).filter(User.email == payload['sub']).first()
     if not user: raise HTTPException(status_code=401, detail='User not found')
+    if user.must_change_password and request.url.path not in PASSWORD_CHANGE_ROUTES:
+        raise HTTPException(status_code=403, detail='password_change_required')
     return user

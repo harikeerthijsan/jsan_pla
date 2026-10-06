@@ -1,4 +1,4 @@
-import json, os, re, uuid, pathlib, time
+import json, os, re, uuid, pathlib, time, tempfile
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, Request
@@ -9,14 +9,16 @@ from pydantic import BaseModel, Field
 from typing import Any
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, text
+from sqlalchemy import func, or_, text
 from .db import Base, engine, get_db, SessionLocal, initialize_schema
 from .models import User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog
 from .geojson_import import geo_feature_dict, pole_locations
 from .auth import current_user, verify_password, create_token, hash_password
 from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission
 from .workflow import DatasetVersion, VersionFile, CorrectionRequest, QCRun, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
-from .seed import seed_database, seed_admin
+from .seed import seed_database, seed_admin, seed_staff_accounts
+from .ingest import parse_workbook
+from .pipeline import pipeline as pipeline_snapshot, production_project_ids
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
 from .production import catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
@@ -40,6 +42,8 @@ def validate_runtime_environment():
     if len(jwt_secret)<32 or jwt_secret in DEFAULT_JWT_SECRETS: errors.append('JWT_SECRET must be a unique value of at least 32 characters')
     admin_password=os.getenv('ADMIN_PASSWORD','')
     if len(admin_password)<12 or admin_password in DEFAULT_ADMIN_PASSWORDS: errors.append('ADMIN_PASSWORD must be a unique value of at least 12 characters')
+    staff_password=os.getenv('STAFF_INITIAL_PASSWORD','')
+    if staff_password and (len(staff_password)<12 or staff_password in DEFAULT_ADMIN_PASSWORDS): errors.append('STAFF_INITIAL_PASSWORD must be a unique value of at least 12 characters')
     # The Railway image serves the UI same-origin, so an unset allowlist is valid; a wildcard never is.
     if any(x.strip()=='*' for x in os.getenv('CORS_ORIGINS','').split(',')): errors.append('CORS_ORIGINS must be an explicit allowlist, not *')
     if os.getenv('SEED_DEMO','false').lower()=='true': errors.append('SEED_DEMO must be false')
@@ -58,6 +62,7 @@ async def lifespan(app:FastAPI):
     try:
         configure_bucket_cors()
         seed_admin(db)
+        seed_staff_accounts(db)
         if os.getenv('SEED_DEMO','false').lower()=='true': seed_database(db)
     finally: db.close()
     yield
@@ -83,8 +88,12 @@ class DecisionIn(BaseModel): decision:str; comment:str|None=None
 class CorrectionIn(BaseModel): comment:str|None=None
 class UserCreateIn(BaseModel):
     email:str; name:str=Field(min_length=2,max_length=255); role:str='QC_REVIEWER'; password:str=Field(min_length=12,max_length=256)
+    username:str|None=Field(default=None,max_length=80,pattern=r'^[A-Za-z0-9._-]*$')
 class UserUpdateIn(BaseModel):
     name:str|None=None; role:str|None=None; password:str|None=Field(default=None,min_length=12,max_length=256)
+class PasswordChangeIn(BaseModel):
+    current_password:str=Field(min_length=1,max_length=256); new_password:str=Field(min_length=12,max_length=256)
+class ProfileIn(BaseModel): name:str=Field(min_length=2,max_length=255)
 class ProjectIn(BaseModel):
     name:str=Field(min_length=2,max_length=255); customer:str='PLA'; crs:str='EPSG:6424'; units:str='US survey foot'
 class UploadRequest(BaseModel): filename:str; role:str; size_bytes:int|None=None; content_type:str|None=None
@@ -157,10 +166,38 @@ def project_dict(p): return {'id':p.id,'name':p.name,'customer':p.customer,'stat
 def is_production_dataset(db:Session,project_id:str)->bool:
     # Datasets imported in Production run LIDAR_INGEST; they are QC-checked through a linked QC dataset with its own Excel.
     return db.query(ProcessingJob.id).filter_by(project_id=project_id,job_type='LIDAR_INGEST').first() is not None
-def user_dict(u): return {'id':u.id,'email':u.email,'name':u.name,'role':u.role,'created_at':u.created_at.isoformat() if u.created_at else None}
+def user_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password),'created_at':u.created_at.isoformat() if u.created_at else None}
+def account_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password)}
 def finding_dict(f): return {'id':f.id,'rule_id':f.rule_id,'severity':f.severity,'internal_id':f.internal_id,'pole_number':f.pole_number,'sheet':f.sheet,'field':f.field,'message':f.message,'actual':f.actual,'expected':f.expected,'related_poles':json.loads(f.related_poles_json or '[]'),'status':f.status}
 def pole_dict(p):
     d=json.loads(p.manifest_json or '{}'); d.update({'internal_id':p.internal_id,'pole_number':p.pole_number,'block_name':p.block_name,'source_latitude':p.corrected_lat,'source_longitude':p.corrected_lon,'verified_latitude':p.verified_lat,'verified_longitude':p.verified_lon,'verified_x':p.verified_x,'verified_y':p.verified_y,'verified_z':p.verified_z,'verified_bottom_elevation':p.verified_bottom_elevation,'verified_top_elevation':p.verified_top_elevation,'verified_height':p.verified_height,'verified_block_name':p.verified_block_name,'verified_annotation_id':p.verified_annotation_id,'verified_bottom_annotation_id':p.verified_bottom_annotation_id,'verified_top_annotation_id':p.verified_top_annotation_id,'location_verified_by':p.location_verified_by,'location_verified_at':p.location_verified_at.isoformat() if p.location_verified_at else None,'qc_status':p.qc_status,'qc_fail':p.qc_fail,'qc_review':p.qc_review,'qc_unverifiable':p.qc_unverifiable,'remarks':p.remarks,'bottom_elev_ft':p.bottom_elev_ft,'top_elev_ft':p.top_elev_ft}); return d
+
+def hidden_authors(db:Session,u:User)->set[str]:
+    # Users see every user's Production work but never an admin's; admins see everything.
+    if has_permission(u,'work.view_all'): return set()
+    return {email for (email,) in db.query(User.email).filter(func.upper(User.role)=='ADMIN').all()}
+def visible_annotations(db:Session,u:User,project_id:str):
+    query=db.query(ProductionAnnotation).filter_by(project_id=project_id)
+    hidden=hidden_authors(db,u)
+    return query.filter(ProductionAnnotation.created_by.notin_(hidden)) if hidden else query
+def hidden_annotation_ids(db:Session,u:User,project_id:str)->set[str]:
+    hidden=hidden_authors(db,u)
+    if not hidden: return set()
+    return {row_id for (row_id,) in db.query(ProductionAnnotation.id).filter(ProductionAnnotation.project_id==project_id,ProductionAnnotation.created_by.in_(hidden)).all()}
+def visible_annotation(db:Session,u:User,project_id:str,annotation_id:str):
+    row=visible_annotations(db,u,project_id).filter(ProductionAnnotation.id==annotation_id).first()
+    if not row: raise HTTPException(404,'Production annotation not found')
+    return row
+def visible_pole_dict(p,hidden_ids:set[str]):
+    d=pole_dict(p)
+    if not hidden_ids: return d
+    if p.verified_bottom_annotation_id in hidden_ids or p.verified_annotation_id in hidden_ids:
+        for key in ('verified_latitude','verified_longitude','verified_x','verified_y','verified_z','verified_bottom_elevation','verified_block_name','verified_annotation_id','verified_bottom_annotation_id'): d[key]=None
+    if p.verified_top_annotation_id in hidden_ids:
+        d['verified_top_elevation']=None; d['verified_top_annotation_id']=None
+    if d['verified_bottom_elevation'] is None or d['verified_top_elevation'] is None: d['verified_height']=None
+    if d['verified_latitude'] is None and d['verified_top_elevation'] is None: d['location_verified_by']=d['location_verified_at']=None
+    return d
 
 @app.get('/health')
 def health(): return {'status':'ok','service':'pla-qc-api','version':APP_VERSION,'storage_mode':MODE}
@@ -187,13 +224,27 @@ def health_ready():
 def login(body:LoginIn,request:Request,db:Session=Depends(get_db)):
     key=_login_key(request,body.email); _prune_login_failures(key)
     if len(LOGIN_FAILURES.get(key,[]))>=LOGIN_MAX_FAILURES: raise HTTPException(429,'Too many failed login attempts. Try again later.')
-    u=db.query(User).filter(func.lower(User.email)==body.email.lower()).first()
+    # The sign-in field accepts a username (JSAN001, Admin001) or an email address.
+    login_name=body.email.strip().lower()
+    u=db.query(User).filter(or_(func.lower(User.email)==login_name,func.lower(User.username)==login_name)).first()
     if not u or not verify_password(body.password,u.password_hash):
-        LOGIN_FAILURES.setdefault(key,[]).append(time.time()); raise HTTPException(401,'Invalid email or password')
+        LOGIN_FAILURES.setdefault(key,[]).append(time.time()); raise HTTPException(401,'Invalid username or password')
     LOGIN_FAILURES.pop(key,None)
-    return {'token':create_token(u),'user':{'email':u.email,'name':u.name,'role':u.role}}
+    return {'token':create_token(u),'user':account_dict(u)}
 @app.get('/api/auth/me')
-def me(u:User=Depends(current_user)): return {'email':u.email,'name':u.name,'role':u.role,'workspaces':workspaces_for(u)}
+def me(u:User=Depends(current_user)): return {**account_dict(u),'workspaces':workspaces_for(u)}
+@app.post('/api/auth/change-password')
+def change_password(body:PasswordChangeIn,u:User=Depends(current_user),db:Session=Depends(get_db)):
+    if not verify_password(body.current_password,u.password_hash): raise HTTPException(400,'Current password is incorrect')
+    if body.new_password==body.current_password: raise HTTPException(400,'Choose a new password that differs from the current one')
+    u.password_hash=hash_password(body.new_password); u.must_change_password=False
+    db.add(AuditLog(actor=u.email,action='CHANGE_OWN_PASSWORD',entity_type='user',entity_id=str(u.id),detail_json='{}')); db.commit()
+    return {'ok':True,'user':account_dict(u)}
+@app.put('/api/auth/profile')
+def update_profile(body:ProfileIn,u:User=Depends(current_user),db:Session=Depends(get_db)):
+    before=u.name; u.name=body.name.strip()
+    db.add(AuditLog(actor=u.email,action='UPDATE_OWN_PROFILE',entity_type='user',entity_id=str(u.id),detail_json=json.dumps({'name_before':before,'name':u.name}))); db.commit()
+    return account_dict(u)
 @app.get('/api/workspaces')
 def workspaces(u:User=Depends(current_user)): return {'workspaces':workspaces_for(u),'permissions':sorted(ROLE_PERMISSIONS.get((u.role or '').upper(),set()))}
 
@@ -205,7 +256,9 @@ def create_user(body:UserCreateIn,u:User=Depends(require_permission('user.manage
     role=body.role.upper()
     if role not in ROLE_PERMISSIONS: raise HTTPException(400,'Unsupported role')
     if db.query(User).filter(func.lower(User.email)==body.email.lower()).first(): raise HTTPException(409,'User already exists')
-    row=User(email=body.email.lower(),name=body.name,role=role,password_hash=hash_password(body.password)); db.add(row); db.add(AuditLog(actor=u.email,action='CREATE_USER',entity_type='user',entity_id=body.email.lower(),detail_json=json.dumps({'role':role,'name':body.name}))); db.commit(); return user_dict(row)
+    username=(body.username or '').strip() or None
+    if username and db.query(User.id).filter(func.lower(User.username)==username.lower()).first(): raise HTTPException(409,'Username already exists')
+    row=User(email=body.email.lower(),username=username,name=body.name,role=role,password_hash=hash_password(body.password),must_change_password=True); db.add(row); db.add(AuditLog(actor=u.email,action='CREATE_USER',entity_type='user',entity_id=body.email.lower(),detail_json=json.dumps({'role':role,'name':body.name}))); db.commit(); return user_dict(row)
 @app.put('/api/users/{user_id}')
 def update_user(user_id:int,body:UserUpdateIn,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
     row=db.query(User).filter_by(id=user_id).first()
@@ -215,11 +268,20 @@ def update_user(user_id:int,body:UserUpdateIn,u:User=Depends(require_permission(
         role=body.role.upper()
         if role not in ROLE_PERMISSIONS: raise HTTPException(400,'Unsupported role')
         row.role=role
-    if body.password is not None: row.password_hash=hash_password(body.password)
+    # An admin-set password is temporary: the person replaces it at their next sign-in.
+    if body.password is not None: row.password_hash=hash_password(body.password); row.must_change_password=row.id!=u.id
     db.add(AuditLog(actor=u.email,action='UPDATE_USER',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'role':row.role,'name':row.name,'password_changed':body.password is not None}))); db.commit(); return user_dict(row)
 
 @app.get('/api/projects')
-def projects(u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)): return [project_dict(p) for p in db.query(Project).order_by(Project.created_at.desc()).all()]
+def projects(u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    production_ids=production_project_ids(db)
+    return [{**project_dict(p),'production_dataset':p.id in production_ids} for p in db.query(Project).order_by(Project.created_at.desc()).all()]
+
+@app.get('/api/projects/{project_id}/pipeline')
+def project_pipeline(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    project=db.query(Project).filter_by(id=project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    return pipeline_snapshot(db,project)
 @app.post('/api/projects')
 def create_project(body:ProjectIn,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
     pid=f"{slug(body.name)}-{uuid.uuid4().hex[:8]}"; p=Project(id=pid,name=body.name,customer=body.customer,crs=body.crs,units=body.units,status='UPLOADING'); db.add(p); db.flush(); ensure_current_version(db,pid,u.email); db.add(AuditLog(actor=u.email,action='CREATE_PROJECT',entity_type='project',entity_id=pid,detail_json=body.model_dump_json())); db.commit(); return project_dict(p)
@@ -350,6 +412,7 @@ def get_pole_workbook(project_id:str,internal_id:int,u:User=Depends(require_perm
         'geojson_match':geojson_match,
         'download_available':workbook_file.role=='WORKBOOK_EDITED',
         'editable':geojson_match['status']=='MATCHED' and version.status not in {'APPROVED','ARCHIVED'} and has_permission(u,'production.annotate'),
+        'internal_id_editable':has_permission(u,'workbook.edit_internal_id'),
     })
     return result
 
@@ -365,7 +428,7 @@ def save_pole_workbook(project_id:str,internal_id:int,body:PoleWorkbookSaveIn,u:
     if geojson_match['status']!='MATCHED': raise HTTPException(422,'Workbook editing requires one exact GeoJSON Pole Number match')
     updates=[cell.model_dump() for cell in body.updates]
     try:
-        updated=apply_workbook_updates(contents,pole.pole_number,updates)
+        updated=apply_workbook_updates(contents,pole.pole_number,updates,allow_internal_id=has_permission(u,'workbook.edit_internal_id'))
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
     if len(updated)>MAX_WORKBOOK_BYTES: raise HTTPException(413,'Updated workbook exceeds configured size limit')
@@ -397,7 +460,8 @@ def save_pole_workbook(project_id:str,internal_id:int,body:PoleWorkbookSaveIn,u:
     except ValueError as exc:
         raise HTTPException(500,'Saved workbook could not be reopened') from exc
     result.update({'project_id':project_id,'version_id':version.id,'snapshot_file_id':file_id,
-                   'geojson_match':geojson_match,'download_available':True,'editable':True})
+                   'geojson_match':geojson_match,'download_available':True,'editable':True,
+                   'internal_id_editable':has_permission(u,'workbook.edit_internal_id')})
     return result
 
 @app.get('/api/projects/{project_id}/poles/{internal_id}/workbook-download')
@@ -416,14 +480,14 @@ def download_pole_workbook(project_id:str,internal_id:int,u:User=Depends(require
 @app.get('/api/projects/{project_id}/production-annotations')
 def list_production_annotations(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
     if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
-    rows=db.query(ProductionAnnotation).filter_by(project_id=project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
+    rows=visible_annotations(db,u,project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
     return [annotation_dict(row) for row in rows]
 
 @app.get('/api/projects/{project_id}/production-annotations.geojson')
 def download_production_annotations_geojson(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
     project=db.query(Project).filter_by(id=project_id).first()
     if not project: raise HTTPException(404,'Project not found')
-    rows=db.query(ProductionAnnotation).filter_by(project_id=project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
+    rows=visible_annotations(db,u,project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
     pole_numbers={pole.internal_id:pole.pole_number for pole in db.query(Pole).filter_by(project_id=project_id).all()}
     features=[]
     for row in rows:
@@ -514,6 +578,7 @@ def _clear_pole_verification_for_annotation(db:Session,project_id:str,annotation
 @app.post('/api/projects/{project_id}/production-annotations')
 def create_production_annotation(project_id:str,body:ProductionAnnotationIn,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
     if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
+    if body.reference_annotation_id: visible_annotation(db,u,project_id,body.reference_annotation_id)
     if body.family in SEQUENCED_ANNOTATION_GROUPS:
         if body.pole_internal_id is None: raise HTTPException(422,'Select a Pole Number before saving this annotation group')
         pole_lock=db.query(Pole).filter_by(project_id=project_id,internal_id=body.pole_internal_id).with_for_update().first()
@@ -526,9 +591,9 @@ def create_production_annotation(project_id:str,body:ProductionAnnotationIn,u:Us
 
 @app.put('/api/projects/{project_id}/production-annotations/{annotation_id}')
 def update_production_annotation(project_id:str,annotation_id:str,body:ProductionAnnotationIn,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
-    row=db.query(ProductionAnnotation).filter_by(id=annotation_id,project_id=project_id).first()
-    if not row: raise HTTPException(404,'Production annotation not found')
+    row=visible_annotation(db,u,project_id,annotation_id)
     if body.reference_annotation_id==row.id: raise HTTPException(422,'An annotation cannot reference itself')
+    if body.reference_annotation_id: visible_annotation(db,u,project_id,body.reference_annotation_id)
     if body.family in SEQUENCED_ANNOTATION_GROUPS:
         if body.pole_internal_id is None: raise HTTPException(422,'Select a Pole Number before saving this annotation group')
         pole_lock=db.query(Pole).filter_by(project_id=project_id,internal_id=body.pole_internal_id).with_for_update().first()
@@ -544,8 +609,7 @@ def update_production_annotation(project_id:str,annotation_id:str,body:Productio
 
 @app.delete('/api/projects/{project_id}/production-annotations/{annotation_id}')
 def delete_production_annotation(project_id:str,annotation_id:str,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
-    row=db.query(ProductionAnnotation).filter_by(id=annotation_id,project_id=project_id).first()
-    if not row: raise HTTPException(404,'Production annotation not found')
+    row=visible_annotation(db,u,project_id,annotation_id)
     if db.query(ProductionAnnotation).filter_by(project_id=project_id,reference_annotation_id=row.id).first(): raise HTTPException(409,'Remove dependent measurement references before deleting this annotation')
     snapshot=annotation_dict(row); _clear_pole_verification_for_annotation(db,project_id,row.id); db.delete(row)
     db.add(AuditLog(actor=u.email,action='DELETE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps(snapshot,default=str)))
@@ -599,6 +663,17 @@ def apply_workbook_replacement(project_id:str,file_id:str,u:User=Depends(require
     if not rec: raise HTTPException(404,'Replacement Excel not found')
     if rec.status!='UPLOADED' and not object_exists(rec.object_key): raise HTTPException(400,'The new Excel has not finished uploading')
     if _active_processing(db,project_id): raise HTTPException(409,'Processing is already running for this dataset; try again when it finishes')
+    # Validate before retiring anything: an Excel the Production import cannot read must not replace the working one.
+    try:
+        # ignore_cleanup_errors: on Windows the workbook reader can still hold the file when the folder is removed.
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
+            candidate=pathlib.Path(folder)/'replacement.xlsx'; candidate.write_bytes(read_bytes(rec.object_key))
+            parse_workbook(str(candidate),p.crs)
+    except Exception as exc:
+        rec.status='REJECTED'
+        db.add(AuditLog(actor=u.email,action='REJECT_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps({'file_id':rec.id,'filename':rec.filename,'reason':str(exc)[:500]})))
+        db.commit()
+        raise HTTPException(400,f'This Excel cannot be imported: {str(exc).splitlines()[0][:300]}. The current Excel was kept.')
     rec.status='UPLOADED'
     version=ensure_current_version(db,project_id,u.email)
     replaced=[]
@@ -669,7 +744,8 @@ def poles(project_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)
     # Workbook lat/lon expressed in the project CRS so the viewer can navigate to poles not yet verified in LiDAR.
     try: locations={location['internal_id']:location for location in pole_locations(project,rows)} if project and rows else {}
     except Exception: locations={}
-    return [{**pole_dict(p),'workbook_x':locations.get(p.internal_id,{}).get('workbook_x'),'workbook_y':locations.get(p.internal_id,{}).get('workbook_y')} for p in rows]
+    hidden=hidden_annotation_ids(db,u,project_id)
+    return [{**visible_pole_dict(p,hidden),'workbook_x':locations.get(p.internal_id,{}).get('workbook_x'),'workbook_y':locations.get(p.internal_id,{}).get('workbook_y')} for p in rows]
 @app.get('/api/projects/{project_id}/findings')
 def findings(project_id:str,severity:str|None=None,internal_id:int|None=None,status:str|None=None,u:User=Depends(current_user),db:Session=Depends(get_db)):
     q=db.query(Finding).filter_by(project_id=project_id)
@@ -684,7 +760,7 @@ def scene(project_id:str,internal_id:int,include_related:bool=Query(True),u:User
     fs=db.query(Finding).filter_by(project_id=project_id,internal_id=internal_id).all(); related=sorted(set(x for f in fs for x in json.loads(f.related_poles_json or '[]'))); ids=[internal_id]+(related if include_related else [])
     feats=db.query(SceneFeature).filter(SceneFeature.project_id==project_id,SceneFeature.internal_id.in_(ids)).all(); selected=db.query(Pole).filter(Pole.project_id==project_id,Pole.internal_id.in_(ids)).all(); names=sorted(set(x.block_name for x in selected if x.block_name)); blocks=[]
     for b in db.query(LidarBlock).filter(LidarBlock.project_id==project_id,LidarBlock.name.in_(names)).all(): blocks.append({'name':b.name,'bbox':[b.x_min,b.y_min,b.x_max,b.y_max],'copc_url':block_url(b.object_key),'object_key':b.object_key,'point_count':b.point_count})
-    return {'project_id':project_id,'pole':pole_dict(p),'related_poles':related,'block':next((b for b in blocks if b['name']==p.block_name),None),'blocks':blocks,'features':[json.loads(x.payload_json) for x in feats],'findings':[finding_dict(f) for f in fs]}
+    return {'project_id':project_id,'pole':visible_pole_dict(p,hidden_annotation_ids(db,u,project_id)),'related_poles':related,'block':next((b for b in blocks if b['name']==p.block_name),None),'blocks':blocks,'features':[json.loads(x.payload_json) for x in feats],'findings':[finding_dict(f) for f in fs]}
 
 @app.get('/api/projects/{project_id}/poles/{internal_id}/analysis-frame')
 def analysis_frame(project_id:str,internal_id:int,target_internal_id:int|None=None,u:User=Depends(current_user),db:Session=Depends(get_db)):

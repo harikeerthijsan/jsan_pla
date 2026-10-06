@@ -1,7 +1,7 @@
 import json, os
 from pathlib import Path
 from sqlalchemy.orm import Session
-from .models import Project, Pole, LidarBlock, Finding, SceneFeature, User
+from .models import Project, Pole, LidarBlock, Finding, SceneFeature, User, AuditLog
 from .auth import hash_password
 
 SEED_PATH = Path(__file__).resolve().parent.parent / 'seed' / 'sample1.json'
@@ -33,6 +33,38 @@ def seed_database(db: Session):
         if iid is None: continue
         db.add(SceneFeature(project_id='sample1', internal_id=int(iid), feature_type=feat['properties'].get('feature_type','unknown'), payload_json=json.dumps(feat)))
     db.commit()
+
+STAFF_ACCOUNTS = [('Admin001', 'ADMIN'), ('Admin002', 'ADMIN')] + [(f'JSAN{n:03d}', 'USER') for n in range(1, 21)]
+STAFF_EMAIL_DOMAIN = 'polegrid.jsan.local'
+
+
+def staff_email(username: str) -> str:
+    return f'{username.lower()}@{STAFF_EMAIL_DOMAIN}'
+
+
+def seed_staff_accounts(db: Session) -> list[str]:
+    """Create any missing staff account with the shared STAFF_INITIAL_PASSWORD.
+
+    Runs on every start so a fresh production database gets the accounts on deploy. Existing
+    accounts are never touched, so a password a person has already changed is kept. Everyone
+    must replace the shared password at first sign-in.
+    """
+    password = os.getenv('STAFF_INITIAL_PASSWORD', '')
+    if not password:
+        return []
+    existing = {name.lower() for (name,) in db.query(User.username).filter(User.username.isnot(None)).all()}
+    created = []
+    for username, role in STAFF_ACCOUNTS:
+        if username.lower() in existing or db.query(User.id).filter(User.email == staff_email(username)).first():
+            continue
+        db.add(User(email=staff_email(username), username=username, name=username, role=role,
+                    password_hash=hash_password(password), must_change_password=True))
+        db.add(AuditLog(actor='system', action='SEED_STAFF_ACCOUNT', entity_type='user', entity_id=username,
+                        detail_json=json.dumps({'role': role})))
+        created.append(username)
+    db.commit()
+    return created
+
 
 def seed_admin(db: Session):
     if db.query(User).count() > 0:

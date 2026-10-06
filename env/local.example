@@ -10,3 +10,4 @@ SEED_DEMO=false
 JWT_SECRET=<local-random-value>
 ADMIN_EMAIL=admin@jsan.local
 ADMIN_PASSWORD=<local-password>
+STAFF_INITIAL_PASSWORD=<local-staff-password-of-12+-chars>

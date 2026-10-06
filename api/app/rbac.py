@@ -8,23 +8,30 @@ from .auth import current_user
 from .models import User
 
 
+# Uploading LiDAR/Excel/GeoJSON and creating datasets is reserved for ADMIN. ADMIN also sees every
+# user's Production work and is the only role that may edit a workbook internal_id.
 ROLE_PERMISSIONS = {
     "ADMIN": {
         "workspace.production", "workspace.delivery", "workspace.qc", "project.read", "project.create",
         "upload.create", "processing.run", "production.annotate", "analysis.run", "finding.review", "correction.create",
-        "correction.resolve", "version.create", "version.approve", "user.manage",
+        "correction.resolve", "version.create", "version.approve", "user.manage", "work.view_all",
+        "workbook.edit_internal_id",
+    },
+    "USER": {
+        "workspace.production", "workspace.delivery", "workspace.qc", "project.read", "production.annotate",
+        "analysis.run", "finding.review", "correction.create", "correction.resolve",
     },
     "PROGRAM_MANAGER": {
-        "workspace.production", "workspace.delivery", "workspace.qc", "project.read", "project.create",
-        "upload.create", "processing.run", "production.annotate", "analysis.run", "finding.review", "correction.create",
+        "workspace.production", "workspace.delivery", "workspace.qc", "project.read",
+        "processing.run", "production.annotate", "analysis.run", "finding.review", "correction.create",
         "correction.resolve", "version.create", "version.approve",
     },
     "DELIVERY_MANAGER": {
-        "workspace.production", "workspace.delivery", "project.read", "project.create", "upload.create",
+        "workspace.production", "workspace.delivery", "project.read",
         "processing.run", "production.annotate", "correction.resolve", "version.create",
     },
     "DELIVERY_USER": {
-        "workspace.production", "workspace.delivery", "project.read", "upload.create", "processing.run", "production.annotate",
+        "workspace.production", "workspace.delivery", "project.read", "processing.run", "production.annotate",
         "correction.resolve", "version.create",
     },
     "QC_LEAD": {

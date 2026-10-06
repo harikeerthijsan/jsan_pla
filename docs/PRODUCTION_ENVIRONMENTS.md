@@ -80,6 +80,15 @@ environment. `railway_entrypoint.py` additionally requires the bucket variables.
 allowed because the Railway image serves UI and API from one origin; set an explicit list only for a
 cross-origin frontend. Do not disable these guards; correct the environment instead.
 
+## Staff accounts
+When `STAFF_INITIAL_PASSWORD` is set, every API start creates any missing account among `Admin001`–`Admin002`
+(role ADMIN) and `JSAN001`–`JSAN020` (role USER) with that password. Existing accounts are never changed, so
+rotating the variable only affects accounts created later. Each account must choose its own password at first
+sign-in; until then every API except the profile endpoints returns 403 `password_change_required`. The guard
+rejects a configured value shorter than 12 characters or equal to a known default. Use a different value in each
+environment. Only ADMIN uploads LiDAR/Excel/GeoJSON or creates datasets, sees every user's Production work, and
+edits a workbook `internal_id`. USER accounts share Production work with each other but never see an admin's.
+
 ## CI isolation
 GitHub Actions uses no repository secrets and no `pull_request_target`. CI runs with SQLite and local
 storage only, so a PR can never reach staging or production databases/buckets. Deployment is performed

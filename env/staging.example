@@ -19,5 +19,6 @@ DB_CONNECT_TIMEOUT=120
 JWT_SECRET=<staging-only-random-value-of-32+-chars>
 ADMIN_EMAIL=<staging-admin-email>
 ADMIN_PASSWORD=<staging-only-password-of-12+-chars>
+STAFF_INITIAL_PASSWORD=<staging-only-staff-password-of-12+-chars>
 # Optional; only needed if a separate (e.g. Vercel) frontend calls this API cross-origin. Never *.
 # CORS_ORIGINS=https://staging-qc.example.com

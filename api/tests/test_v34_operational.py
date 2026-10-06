@@ -35,7 +35,15 @@ def _create_user(client, headers, role):
         json={"email": email, "name": f"{role} Test", "role": role, "password": password},
     )
     assert r.status_code == 200, r.text
-    return email, password
+    # An admin-set password is temporary; replace it so role checks, not the change gate, are tested.
+    new_password = "Own-Test-Password-456!"
+    changed = client.post(
+        "/api/auth/change-password",
+        headers=_login(client, email, password),
+        json={"current_password": password, "new_password": new_password},
+    )
+    assert changed.status_code == 200, changed.text
+    return email, new_password
 
 
 def test_v34_runtime_identity_and_named_role_workspaces():
@@ -54,7 +62,8 @@ def test_v34_runtime_identity_and_named_role_workspaces():
         dw = client.get("/api/workspaces", headers=delivery)
         assert dw.status_code == 200
         assert dw.json()["workspaces"] == ["PRODUCTION", "DELIVERY"]
-        assert "upload.create" in dw.json()["permissions"]
+        # Uploads are admin-only.
+        assert "upload.create" not in dw.json()["permissions"]
 
         qw = client.get("/api/workspaces", headers=qc)
         assert qw.status_code == 200

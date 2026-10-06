@@ -195,11 +195,11 @@ def create_revision(db: Session, project_id: str, actor: str) -> DatasetVersion:
     )
     db.add(v)
     db.flush()
-    # Reuse immutable LiDAR sources unless Delivery uploads replacements for the revision.
+    # Reuse immutable LiDAR sources (and an attached GeoJSON) unless Delivery uploads replacements for the revision.
     parent_files = (
         db.query(VersionFile, DatasetFile)
         .join(DatasetFile, DatasetFile.id == VersionFile.file_id)
-        .filter(VersionFile.version_id == parent.id, DatasetFile.role == "LIDAR_SOURCE")
+        .filter(VersionFile.version_id == parent.id, DatasetFile.role.in_(["LIDAR_SOURCE", "GEOJSON"]), DatasetFile.status == "UPLOADED")
         .all()
     )
     for vf, f in parent_files:

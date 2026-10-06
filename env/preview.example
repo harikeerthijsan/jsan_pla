@@ -15,3 +15,4 @@ SEED_DEMO=false
 JWT_SECRET=<preview-only-random-value>
 ADMIN_EMAIL=<preview-admin-email>
 ADMIN_PASSWORD=<preview-only-password>
+STAFF_INITIAL_PASSWORD=<preview-only-staff-password-of-12+-chars>

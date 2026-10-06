@@ -71,6 +71,7 @@ APP_ENV=production
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 ADMIN_EMAIL=<company administrator email>
 ADMIN_PASSWORD=<unique password, at least 12 characters>
+STAFF_INITIAL_PASSWORD=<shared first-sign-in password for Admin001-002 and JSAN001-020, at least 12 characters>
 JWT_SECRET=<random secret, at least 32 characters>
 STORAGE_MODE=s3
 BUCKET=${{pla-files.BUCKET}}

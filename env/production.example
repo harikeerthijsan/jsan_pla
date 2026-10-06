@@ -17,6 +17,7 @@ DB_CONNECT_TIMEOUT=120
 JWT_SECRET=<production-only-random-value-of-32+-chars>
 ADMIN_EMAIL=<named-production-administrator>
 ADMIN_PASSWORD=<production-only-password-of-12+-chars>
+STAFF_INITIAL_PASSWORD=<production-only-staff-password-of-12+-chars>
 # Only if the production Railway environment is not named "production":
 # PRODUCTION_RAILWAY_ENVIRONMENT=<railway-environment-name>
 # Optional; only for a cross-origin frontend. Never *.

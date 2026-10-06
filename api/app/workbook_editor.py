@@ -8,6 +8,9 @@ from io import BytesIO
 from openpyxl import load_workbook
 
 
+INTERNAL_ID_HEADER = "internal id"
+
+
 def normalize_header(value) -> str:
     return re.sub(r"\s+", " ", str(value or "").replace("_", " ").strip()).casefold()
 
@@ -108,6 +111,7 @@ def inspect_workbook(contents: bytes, pole_number) -> dict:
             "headers": [label for _, label in headers],
             "columns": [column for column, _ in headers],
             "pole_number_column": pole_column,
+            "internal_id_columns": [column for column, label in headers if normalize_header(label) == INTERNAL_ID_HEADER],
             "rows": [
                 {
                     "row": row,
@@ -166,7 +170,7 @@ def _coerce_value(value, existing):
     return value
 
 
-def apply_workbook_updates(contents: bytes, pole_number, updates: list[dict]) -> bytes:
+def apply_workbook_updates(contents: bytes, pole_number, updates: list[dict], *, allow_internal_id: bool = False) -> bytes:
     if not updates:
         raise ValueError("No workbook changes were submitted")
     inspected = inspect_workbook(contents, pole_number)
@@ -177,6 +181,9 @@ def apply_workbook_updates(contents: bytes, pole_number, updates: list[dict]) ->
         }
         for sheet in inspected["worksheets"]
         for row in sheet["rows"]
+    }
+    internal_id_columns = {
+        (sheet["name"], column) for sheet in inspected["worksheets"] for column in sheet["internal_id_columns"]
     }
     workbook = load_workbook(BytesIO(contents), data_only=False, read_only=False)
     touched = set()
@@ -193,6 +200,8 @@ def apply_workbook_updates(contents: bytes, pole_number, updates: list[dict]) ->
         _, pole_number_column = column_info
         if column_number == pole_number_column:
             raise ValueError("Pole Number is read-only")
+        if not allow_internal_id and (sheet_name, column_number) in internal_id_columns:
+            raise ValueError("internal_id can only be changed by an admin")
         marker = (sheet_name, row_number, column_number)
         if marker in touched:
             raise ValueError("A workbook cell was submitted more than once")
