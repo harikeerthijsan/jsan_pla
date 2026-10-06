@@ -240,3 +240,23 @@ def test_all_production_lidar_blocks_share_one_combined_viewer():
     assert "loadProductionPointCloud(block,generation,projectId)" in javascript
     assert "productionBlockForCoordinates(state.productionDraft)" in javascript
     assert "No points saved for this pole." in javascript
+
+
+def test_login_page_has_brand_and_animated_background_without_api_url():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    background = (ROOT / "web" / "assets" / "login-background.js").read_text(encoding="utf-8")
+
+    assert "<h1>JSAN PoleGrid</h1>" in html and "<p>LiDAR Utility Engineering Platform</p>" in html
+    assert '<div class="login-page-brand"><img src="assets/logo.jpg" width="174" height="56" alt="JSAN" /></div>' in html
+    assert (ROOT / "web" / "assets" / "logo.jpg").read_bytes()[:3] == b"\xff\xd8\xff"
+    assert '<div class="brand-mark">J</div>' not in html
+    assert "JSAN CONSULTING" not in html
+    assert 'id="apiUrl"' not in html and "API URL" not in html
+    assert '<canvas id="loginBackground" class="login-background" aria-hidden="true"></canvas>' in html
+    # The animation runs only while the sign-in page is shown and honours reduced motion.
+    assert "stopLoginBackground=startLoginBackground($(\"loginBackground\"))" in javascript
+    assert "if(stopLoginBackground){stopLoginBackground();stopLoginBackground=null}" in javascript
+    assert "export function startLoginBackground(canvas)" in background
+    assert "(prefers-reduced-motion: reduce)" in background
+    assert "return function stop()" in background

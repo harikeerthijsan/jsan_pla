@@ -29,7 +29,7 @@ def test_railway_image_serves_frontend_and_api_from_one_app():
         docs = client.get('/docs')
 
     assert root.status_code == 200
-    assert 'PLA Quality Validation Workbench' in root.text
+    assert 'JSAN PoleGrid' in root.text
     assert health.status_code == 200
     assert health.json()['status'] == 'ok'
     assert docs.status_code == 200
