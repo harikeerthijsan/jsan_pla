@@ -1,8 +1,8 @@
 // Saved-point history and restore.
-import { $, api, esc, state, toast } from "./core.js?v=20261007-no-new-dataset";
-import { renderProductionAnnotations } from "./production-annotations.js?v=20261007-no-new-dataset";
-import { editProductionAnnotation, reloadProductionAnnotationsAfterConflict } from "./production-pick.js?v=20261007-no-new-dataset";
-import { can } from "./workspace.js?v=20261007-no-new-dataset";
+import { $, api, esc, state, toast } from "./core.js?v=20261007-tab-order";
+import { renderProductionAnnotations } from "./production-annotations.js?v=20261007-tab-order";
+import { editProductionAnnotation, reloadProductionAnnotationsAfterConflict } from "./production-pick.js?v=20261007-tab-order";
+import { can } from "./workspace.js?v=20261007-tab-order";
 
 export async function showAnnotationHistory(){const id=$("annotationId").value,panel=$("annotationHistory");if(!id)return;panel.classList.remove("hidden");panel.innerHTML='<div class="empty-workflow">Loading history…</div>';try{const data=await api(`/api/projects/${state.projectId}/production-annotations/${encodeURIComponent(id)}/history`),labels={CREATE_PRODUCTION_ANNOTATION:"Created",UPDATE_PRODUCTION_ANNOTATION:"Edited",RESTORE_PRODUCTION_ANNOTATION:"Restored"},when=v=>v?new Date(v).toLocaleString():"—",describe=v=>`${esc(v.feature_type||"")} · Z ${v.coordinates?Number(v.coordinates.z).toFixed(3):"—"} · ${esc(String(v.status||"").replace(/_/g," ").toLowerCase())}`,current=data.annotation,items=data.entries.map(e=>`<div class="history-item"><span>${labels[e.action]||e.action} by ${esc(e.by)} · ${when(e.at)}</span>${e.previous?`<small>Before this: ${describe(e.previous)}</small>${can("production.annotate")&&e.by!=="an admin"&&e.previous.saved_by!=="an admin"?`<button type="button" class="compact-btn" data-restore="${esc(e.audit_id)}">Restore this earlier version</button>`:""}`:""}</div>`).join("");panel.innerHTML=`<div class="history-head"><b>Point history</b><button type="button" class="compact-btn" data-history-close aria-label="Close history">×</button></div><div class="history-item current"><span>Current version · by ${esc(data.current_by)}</span><small>${describe(current)} · ${when(current.updated_at)}</small></div>${items||'<div class="empty-workflow">No changes recorded yet.</div>'}`}catch(e){panel.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 

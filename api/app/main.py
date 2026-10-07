@@ -24,7 +24,7 @@ from .notifications import router as notifications_router, safely, notify_correc
 from .deliverables import build_package, ensure_package
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
-from .production import annotations_feature_collection, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
+from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
@@ -519,12 +519,14 @@ def _apply_production_annotation(row:ProductionAnnotation,body:ProductionAnnotat
     if body.pole_internal_id is not None:
         pole=db.query(Pole).filter_by(project_id=row.project_id,internal_id=body.pole_internal_id).first()
         if not pole: raise HTTPException(422,'Selected pole does not belong to this project workbook')
+    # Children (attachments/equipment on a crossarm, guys on an anchor) record their parent; everything else hangs from the pole.
+    parent=resolve_parent(db,row.project_id,body.family,body.pole_internal_id,body.reference_annotation_id)
     vertical,horizontal,distance=measurement_values(db,row.project_id,body.x,body.y,body.z,body.reference_annotation_id)
     latitude,longitude=project_to_wgs84(project.crs,body.x,body.y)
     row.block_name=body.block_name; row.family=body.family; row.feature_type=body.feature_type
     row.x=body.x; row.y=body.y; row.z=body.z; row.latitude=latitude; row.longitude=longitude; row.pole_internal_id=body.pole_internal_id; row.reference_annotation_id=body.reference_annotation_id
     row.vertical_delta=vertical; row.horizontal_offset=horizontal; row.distance_3d=distance
-    row.attributes_json=json.dumps(body.attributes,default=str); row.status=body.status
+    row.attributes_json=json.dumps({**body.attributes,**parent_attributes(body.family,parent)},default=str); row.status=body.status
     is_pole_base=(body.family=='Pole Points' and body.feature_type=='Pole Base / Ground Point') or (body.family=='poles' and body.feature_type=='Pole_Base')
     is_pole_top=(body.family=='Pole Points' and body.feature_type=='Pole Top Point') or (body.family=='poles' and body.feature_type=='Pole_Top')
     if pole and is_pole_base:
@@ -649,7 +651,8 @@ def _claim_annotation_revision(db:Session,u:User,row:ProductionAnnotation,expect
 @app.delete('/api/projects/{project_id}/production-annotations/{annotation_id}')
 def delete_production_annotation(project_id:str,annotation_id:str,expected_revision:int|None=Query(None,ge=1),u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
     row=visible_annotation(db,u,project_id,annotation_id)
-    if db.query(ProductionAnnotation).filter_by(project_id=project_id,reference_annotation_id=row.id).first(): raise HTTPException(409,'Remove dependent measurement references before deleting this annotation')
+    dependents=[d.feature_type for d in db.query(ProductionAnnotation).filter_by(project_id=project_id,reference_annotation_id=row.id).order_by(ProductionAnnotation.feature_type).all()]
+    if dependents: raise HTTPException(409,f"{row.feature_type} is the parent of {', '.join(dependents)}. Move or delete those points first.")
     _claim_annotation_revision(db,u,row,expected_revision)
     snapshot=annotation_dict(row); _clear_pole_verification_for_annotation(db,project_id,row.id); db.delete(row)
     db.add(AuditLog(actor=u.email,action='DELETE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps(snapshot,default=str)))

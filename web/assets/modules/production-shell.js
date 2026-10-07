@@ -1,12 +1,12 @@
 // Production full screen, profile/pick buttons, import and Replace Excel dialogs.
-import { $, api, state, toast } from "./core.js?v=20261007-no-new-dataset";
-import { loadProduction, productionProgress } from "./production-data.js?v=20261007-no-new-dataset";
-import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261007-no-new-dataset";
-import { startProductionPick } from "./production-pick.js?v=20261007-no-new-dataset";
-import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261007-no-new-dataset";
-import { setDialogProgress } from "./qc-run.js?v=20261007-no-new-dataset";
-import { sendFile } from "./uploads.js?v=20261007-no-new-dataset";
-import { bootstrap, currentProject } from "./workspace.js?v=20261007-no-new-dataset";
+import { $, api, state, toast } from "./core.js?v=20261007-tab-order";
+import { loadProduction, productionProgress } from "./production-data.js?v=20261007-tab-order";
+import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261007-tab-order";
+import { startProductionPick } from "./production-pick.js?v=20261007-tab-order";
+import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261007-tab-order";
+import { setDialogProgress } from "./qc-run.js?v=20261007-tab-order";
+import { sendFile } from "./uploads.js?v=20261007-tab-order";
+import { bootstrap, currentProject } from "./workspace.js?v=20261007-tab-order";
 
 export function toggleProductionFullscreen(){const layout=document.querySelector(".production-layout");if(document.fullscreenElement)document.exitFullscreen?.();else layout.requestFullscreen?.().catch(e=>toast(`Full screen is not available: ${e.message}`,"error",4200))}
 export const productionPickPresets={base:{label:"Pole base",family:"poles",feature:"Pole_Base"},top:{label:"Pole top",family:"poles",feature:"Pole_Top"},attachment:{label:"Attachment",family:"attachments_comm"}};

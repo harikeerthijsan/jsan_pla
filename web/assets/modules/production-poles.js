@@ -1,14 +1,14 @@
 // Production pole list, status, header, checklist and pole navigation.
-import { $, esc, state } from "./core.js?v=20261007-no-new-dataset";
-import { fillProductionPoles, isPoleBase, isPoleTop, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261007-no-new-dataset";
-import { clearProductionClip } from "./production-data.js?v=20261007-no-new-dataset";
-import { chooseProductionPole, closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261007-no-new-dataset";
-import { editProductionAnnotation, productionBlockForCoordinates, startProductionPick } from "./production-pick.js?v=20261007-no-new-dataset";
-import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261007-no-new-dataset";
-import { productionPickPresets } from "./production-shell.js?v=20261007-no-new-dataset";
-import { cancelProductionBox, productionUnitLabel, setProductionView } from "./production-view.js?v=20261007-no-new-dataset";
-import { poleAssignee, poleTeamChips, renderPoleTeamInfo } from "./team.js?v=20261007-no-new-dataset";
-import { can } from "./workspace.js?v=20261007-no-new-dataset";
+import { $, esc, state } from "./core.js?v=20261007-tab-order";
+import { fillProductionPoles, isPoleBase, isPoleTop, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261007-tab-order";
+import { clearProductionClip } from "./production-data.js?v=20261007-tab-order";
+import { chooseProductionPole, closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261007-tab-order";
+import { editProductionAnnotation, productionBlockForCoordinates, startProductionPick } from "./production-pick.js?v=20261007-tab-order";
+import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261007-tab-order";
+import { productionPickPresets } from "./production-shell.js?v=20261007-tab-order";
+import { cancelProductionBox, productionUnitLabel, setProductionView } from "./production-view.js?v=20261007-tab-order";
+import { poleAssignee, poleTeamChips, renderPoleTeamInfo } from "./team.js?v=20261007-tab-order";
+import { can } from "./workspace.js?v=20261007-tab-order";
 
 export function productionPoleStatus(pole){const rows=state.productionAnnotations.filter(row=>String(row.pole_internal_id??row.attributes?.pole_internal_id)===String(pole.internal_id)),base=rows.find(isPoleBase),top=rows.find(isPoleTop);return {rows,base,top,state:base&&top?"done":rows.length?"progress":"todo"}}
 export function productionGeoForPole(pole){return state.productionGeoFeatures.find(f=>f.geometry_type==="Point"&&f.pole_internal_id===pole.internal_id)}

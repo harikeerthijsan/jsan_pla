@@ -62,11 +62,21 @@ PRODUCTION_ANNOTATION_GROUPS = [
     {"id": "anchors", "label": "anchors", "relationship": "Parent"},
     {"id": "guys", "label": "guys", "relationship": "Child"},
     {"id": "sidewalk_braces", "label": "sidewalk_braces", "relationship": "Child"},
-    {"id": "equipment", "label": "equipment", "relationship": None},
+    {"id": "equipment", "label": "equipment", "relationship": "Child"},
     {"id": "span_guys", "label": "span_guys", "relationship": None},
     {"id": "poles", "label": "Poles", "relationship": None},
     {"id": "other_poles", "label": "Other_Poles", "relationship": None},
 ]
+
+# Which saved points a point may hang from (same pole). Points of other groups, or with no parent chosen, belong
+# to the pole itself.
+PARENT_FAMILIES = {
+    "attachments_comm": ("crossarms",),
+    "attachments_util": ("crossarms",),
+    "equipment": ("crossarms",),
+    "guys": ("anchors",),
+}
+POLE_PARENT = "pole"
 
 PRODUCTION_STATUSES = {"NOT_STARTED", "IN_PROGRESS", "COMPLETED", "REWORK", "ON_HOLD", "SUBMITTED_FOR_QC"}
 
@@ -84,7 +94,8 @@ def catalogue() -> dict:
         "annotation_groups": [
             {**group, **SEQUENCED_ANNOTATION_GROUPS.get(group["id"], {}),
              "automatic_numbering": group["id"] in SEQUENCED_ANNOTATION_GROUPS,
-             "point_types": PRODUCTION_FAMILIES[group["id"]]}
+             "point_types": PRODUCTION_FAMILIES[group["id"]],
+             "parent_families": list(PARENT_FAMILIES.get(group["id"], ()))}
             for group in PRODUCTION_ANNOTATION_GROUPS
         ],
         "statuses": sorted(PRODUCTION_STATUSES),
@@ -131,6 +142,27 @@ def validate_annotation_values(family: str, feature_type: str, status: str, attr
         raise HTTPException(422, f"Unsupported production attribute(s): {', '.join(unknown)}")
     if len(json.dumps(attributes, default=str)) > 20000:
         raise HTTPException(413, "Production attributes exceed the allowed size")
+
+
+def resolve_parent(db: Session, project_id: str, family: str, pole_internal_id: int | None, reference_id: str | None):
+    """The parent point a child hangs from, validated; None means the pole. Other groups keep free references."""
+    allowed = PARENT_FAMILIES.get(family)
+    if allowed is None or not reference_id:
+        return None
+    parent = db.query(ProductionAnnotation).filter_by(id=reference_id, project_id=project_id).first()
+    if not parent or parent.family not in allowed:
+        names = " or ".join(group["label"] for group in PRODUCTION_ANNOTATION_GROUPS if group["id"] in allowed)
+        raise HTTPException(422, f"This point can only hang from a {names} point, or from the pole")
+    if parent.pole_internal_id != pole_internal_id:
+        raise HTTPException(422, "The parent point must be on the same pole")
+    return parent
+
+
+def parent_attributes(family: str, parent: ProductionAnnotation | None) -> dict:
+    """parent_feature_id recorded with every numbered point: the parent's name (arm_1, anc_2) or "pole"."""
+    if family not in SEQUENCED_ANNOTATION_GROUPS:
+        return {}
+    return {"parent_feature_id": parent.feature_type if parent else POLE_PARENT}
 
 
 def validate_coordinates(x: float, y: float, z: float) -> None:

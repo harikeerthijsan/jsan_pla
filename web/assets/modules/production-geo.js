@@ -1,12 +1,12 @@
 // GeoJSON overlay, pole markers and the GeoJSON pole card.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, esc, state, toast } from "./core.js?v=20261007-no-new-dataset";
-import { fillProductionPoles } from "./production-annotations.js?v=20261007-no-new-dataset";
-import { productionBlockForCoordinates } from "./production-pick.js?v=20261007-no-new-dataset";
-import { productionProfileFrame } from "./production-profile.js?v=20261007-no-new-dataset";
-import { productionUnitLabel } from "./production-view.js?v=20261007-no-new-dataset";
-import { clearThreeGroup } from "./qc-scene.js?v=20261007-no-new-dataset";
-import { can } from "./workspace.js?v=20261007-no-new-dataset";
+import { $, esc, state, toast } from "./core.js?v=20261007-tab-order";
+import { fillProductionPoles } from "./production-annotations.js?v=20261007-tab-order";
+import { productionBlockForCoordinates } from "./production-pick.js?v=20261007-tab-order";
+import { productionProfileFrame } from "./production-profile.js?v=20261007-tab-order";
+import { productionUnitLabel } from "./production-view.js?v=20261007-tab-order";
+import { clearThreeGroup } from "./qc-scene.js?v=20261007-tab-order";
+import { can } from "./workspace.js?v=20261007-tab-order";
 
 export const productionGeoColors={ID:0x53d9ff,NEAREST:0xffb347,NONE:0xff5fd2};
 export function productionGeoPoleRange(feature){const pole=state.productionPoles.find(p=>p.internal_id===feature.pole_internal_id),feet=productionUnitLabel()==="ft";if(pole?.verified_bottom_elevation!=null&&pole?.verified_top_elevation!=null)return [Number(pole.verified_bottom_elevation),Number(pole.verified_top_elevation),"LiDAR-verified base/top"];if(feet&&pole?.bottom_elev_ft!=null&&pole?.top_elev_ft!=null)return [Number(pole.bottom_elev_ft),Number(pole.top_elev_ft),"workbook bottom/top"];const block=productionBlockForCoordinates({x:feature.x,y:feature.y,z:NaN});if(block?.bounds?.z_min!=null&&block?.bounds?.z_max!=null)return [Number(block.bounds.z_min),Number(block.bounds.z_max),"LiDAR file height range"];const mins=state.productionBlocks.map(b=>b.bounds?.z_min).filter(v=>v!=null),maxs=state.productionBlocks.map(b=>b.bounds?.z_max).filter(v=>v!=null);return mins.length&&maxs.length?[Math.min(...mins),Math.max(...maxs),"LiDAR height range"]:[0,40,"default height"]}

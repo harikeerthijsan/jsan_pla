@@ -441,3 +441,5 @@ body.layout-lock{overflow:hidden}.view-card.maximized .view-action[data-action=m
 .production-head-actions>#productionReplaceExcelBtn:disabled{opacity:.55;cursor:not-allowed}
 .production-head-actions>#productionUploadBtn{width:auto;margin:0;font-weight:800;background:linear-gradient(180deg,#2b6f9b,#1d5f86);border:1px solid #1d5f86;color:#fff;box-shadow:0 8px 18px rgba(29,92,133,.22)}
 .production-head-actions>#productionUploadBtn:hover{background:linear-gradient(180deg,#174e76,#123a58);color:#fff}
+/* Parent picker in More fields. */
+.annotation-parent-hint{display:block;margin-top:4px;font-size:10.5px;font-weight:600;color:var(--muted);line-height:1.35}

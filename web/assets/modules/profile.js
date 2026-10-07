@@ -1,7 +1,7 @@
 // Profile page: account, password, identity banner and user administration.
-import { $, api, esc, showApp, state, toast } from "./core.js?v=20261007-no-new-dataset";
-import { teamAvatar, teamHue, teamInitials } from "./team-progress.js?v=20261007-no-new-dataset";
-import { applyWorkspace, bootstrap, can } from "./workspace.js?v=20261007-no-new-dataset";
+import { $, api, esc, showApp, state, toast } from "./core.js?v=20261007-tab-order";
+import { teamAvatar, teamHue, teamInitials } from "./team-progress.js?v=20261007-tab-order";
+import { applyWorkspace, bootstrap, can } from "./workspace.js?v=20261007-tab-order";
 
 export const ROLE_LABELS={ADMIN:"Admin",USER:"User"};
 export function roleLabel(role){const key=String(role||"").toUpperCase();return ROLE_LABELS[key]||key.toLowerCase().replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase())}

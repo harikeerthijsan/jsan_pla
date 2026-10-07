@@ -1,8 +1,8 @@
 // Pole assignments, live presence and the Assign dialog.
-import { $, api, esc, state, toast } from "./core.js?v=20261007-no-new-dataset";
-import { renderProductionPoleHeader, renderProductionPoleList, visibleProductionPoles } from "./production-poles.js?v=20261007-no-new-dataset";
-import { range } from "./qc-analysis.js?v=20261007-no-new-dataset";
-import { loadTeamProgress } from "./team-progress.js?v=20261007-no-new-dataset";
+import { $, api, esc, state, toast } from "./core.js?v=20261007-tab-order";
+import { renderProductionPoleHeader, renderProductionPoleList, visibleProductionPoles } from "./production-poles.js?v=20261007-tab-order";
+import { range } from "./qc-analysis.js?v=20261007-tab-order";
+import { loadTeamProgress } from "./team-progress.js?v=20261007-tab-order";
 
 export function setPoleAssignments(rows){state.poleAssignments=new Map((rows||[]).map(row=>[String(row.pole_internal_id),row]))}
 export function poleAssignee(pole){return state.poleAssignments.get(String(pole?.internal_id))||null}

@@ -1,7 +1,7 @@
 // Configuration, shared state, DOM/API helpers and sign-in/sign-out.
-import { startLoginBackground } from "../login-background.js?v=20261007-no-new-dataset";
-import { openProfilePage, roleLabel } from "./profile.js?v=20261007-no-new-dataset";
-import { bootstrap } from "./workspace.js?v=20261007-no-new-dataset";
+import { startLoginBackground } from "../login-background.js?v=20261007-tab-order";
+import { openProfilePage, roleLabel } from "./profile.js?v=20261007-tab-order";
+import { bootstrap } from "./workspace.js?v=20261007-tab-order";
 
 export const cfg=window.PLA_CONFIG||{};
 export const defaultApiBase=cfg.API_BASE||(["5500","3000"].includes(window.location.port)?"http://localhost:8000":window.location.origin);
