@@ -28,7 +28,7 @@ try {
         Pop-Location
     }
 
-    Invoke-Checked 'Browser JavaScript syntax' { node --check web/assets/app.js; if ($LASTEXITCODE -eq 0) { node --check web/config.js } }
+    Invoke-Checked 'Browser JavaScript syntax' { node --check web/assets/app.js; if ($LASTEXITCODE -eq 0) { Get-ChildItem web/assets/modules/*.js | ForEach-Object { if ($LASTEXITCODE -eq 0) { node --check $_.FullName } } }; if ($LASTEXITCODE -eq 0) { node --check web/config.js } }
     Invoke-Checked 'Repository hygiene' { & $Python scripts/ci/check_repo_hygiene.py }
 
     if ($SkipImages) {

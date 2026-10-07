@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from .db import SessionLocal
 from .models import Project,DatasetFile,ProcessingJob,LidarBlock,Pole,Finding,SceneFeature,AuditLog,ProductionAnnotation
+from .notifications import notify_qc_finished, safely
 from .workflow import DatasetVersion, QCRun, version_files, record_findings_for_run, complete_qc_run, archive_review_decisions
 from .storage import MODE, local_path, download_to, upload_from, read_bytes, object_exists
 from pyproj import Transformer
@@ -229,6 +230,9 @@ def process_job(job_id:str):
         job.status='SUCCEEDED'; job.progress=100; job.stage='Ready for QC'; job.finished_at=utcnow();
         db.add(AuditLog(actor='worker',action='PROCESS_DATASET',entity_type='project',entity_id=project.id,detail_json=json.dumps({'blocks':len(blocks),'poles':len(parsed['poles']),'findings':len(parsed['findings']),'version_id':version_id,'qc_run_id':qc_run_id,'comparison':comparison,'archived_decisions':archived_decisions})))
         db.commit()
+        if qc_run_id:
+            run=db.query(QCRun).filter_by(id=qc_run_id).first()
+            safely(notify_qc_finished,db,project,run.created_by if run else None,True)
     except Exception as e:
         db.rollback(); job=db.query(ProcessingJob).filter_by(id=job_id).first(); project=db.query(Project).filter_by(id=job.project_id).first() if job else None
         if job:
@@ -236,6 +240,9 @@ def process_job(job_id:str):
         if project: project.status='FAILED'
         if qc_run_id: complete_qc_run(db,qc_run_id,False,{'error':str(e)[:1000]})
         db.commit()
+        if qc_run_id and project:
+            run=db.query(QCRun).filter_by(id=qc_run_id).first()
+            safely(notify_qc_finished,db,project,run.created_by if run else None,False,str(e)[:500])
     finally:
         shutil.rmtree(tmp,ignore_errors=True); db.close()
 

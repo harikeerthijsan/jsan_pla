@@ -33,7 +33,7 @@ def _unb64url(text: str) -> bytes:
 def create_token(user: User, ttl_seconds: int = 8 * 3600) -> str:
     secret = os.getenv('JWT_SECRET', 'dev-only-change-me')
     header = {'alg':'HS256','typ':'JWT'}
-    payload = {'sub':user.email,'name':user.name,'role':user.role,'exp':int(time.time())+ttl_seconds}
+    payload = {'sub':user.email,'name':user.name,'role':user.role,'ver':user.token_version or 0,'exp':int(time.time())+ttl_seconds}
     h = _b64url(json.dumps(header,separators=(',',':')).encode())
     p = _b64url(json.dumps(payload,separators=(',',':')).encode())
     sig = _b64url(hmac.new(secret.encode(), f'{h}.{p}'.encode(), hashlib.sha256).digest())
@@ -60,6 +60,9 @@ def current_user(request: Request, credentials: HTTPAuthorizationCredentials | N
     payload = decode_token(credentials.credentials)
     user = db.query(User).filter(User.email == payload['sub']).first()
     if not user: raise HTTPException(status_code=401, detail='User not found')
+    # A password change/reset or deactivation bumps token_version, ending every older sign-in.
+    if not user.is_active or int(payload.get('ver', 0)) != (user.token_version or 0):
+        raise HTTPException(status_code=401, detail='session_ended')
     if user.must_change_password and request.url.path not in PASSWORD_CHANGE_ROUTES:
         raise HTTPException(status_code=403, detail='password_change_required')
     return user

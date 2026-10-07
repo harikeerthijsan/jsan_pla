@@ -1,0 +1,32 @@
+// Viewer creation, permissions, workspace switching, dataset selection and bootstrap.
+import * as THREE from "../../potree/libs/three.js/build/three.module.js";
+import { $, api, state } from "./core.js?v=20261007-no-new-dataset";
+import { loadWorkflow } from "./delivery.js?v=20261007-no-new-dataset";
+import { loadNotifications } from "./notifications.js?v=20261007-no-new-dataset";
+import { loadProduction } from "./production-data.js?v=20261007-no-new-dataset";
+import { installProductionNavigation } from "./production-view.js?v=20261007-no-new-dataset";
+import { clearCanvases } from "./qc-analysis.js?v=20261007-no-new-dataset";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261007-no-new-dataset";
+import { loadProject } from "./qc-run.js?v=20261007-no-new-dataset";
+import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261007-no-new-dataset";
+
+export function initViewer(){if(state.viewer)return;const v=new Potree.Viewer($("potree_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.viewer=v;state.overlay=new THREE.Group();state.relation=new THREE.Group();v.scene.scene.add(state.overlay);v.scene.scene.add(state.relation)}
+export function initProductionViewer(){if(state.productionViewer)return;const v=new Potree.Viewer($("production_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.productionViewer=v;installProductionNavigation(v)}
+export function can(permission){return state.permissions.has(permission)}
+export function renderRuntime(){const r=state.runtime||{};const env=(r.railway_environment||r.app_env||"local").toUpperCase();const version=String(r.version||"3.4").replace(/-operational$/,""),badge=$("runtimeBadge");if(badge){badge.textContent=`v${version.replace(/^v/,"")} · ${env}`;badge.className=`version env-${env.toLowerCase()}`}document.title=`JSAN PoleGrid · ${env}`}
+export function applyWorkspace(){$("profilePage").classList.add("hidden");$("teamPage").classList.add("hidden");$("teamProgressBtn").classList.toggle("hidden",!can("work.view_all"));$("poleAssignBtn").classList.toggle("hidden",!can("user.manage"));$("appView").classList.remove("profile-open");const available=state.workspaces.length;$("workspaceSwitch").classList.toggle("hidden",available<2);for(const name of ["PRODUCTION","DELIVERY","QC"]){const id=name.toLowerCase()+"WorkspaceBtn";$(id)?.classList.toggle("active",state.workspace===name)}$("productionWorkspace").classList.toggle("hidden",state.workspace!=="PRODUCTION");$("deliveryWorkspace").classList.toggle("hidden",state.workspace!=="DELIVERY");$("qcWorkspace").classList.toggle("hidden",state.workspace!=="QC");$("qcKpis").classList.toggle("hidden",state.workspace!=="QC");$("productionUploadBtn").classList.toggle("hidden",!can("project.create"));$("reprocessBtn").classList.toggle("hidden",state.workspace==="PRODUCTION"||!can("processing.run"));const projectChanged=state.projects?.length?syncWorkspaceProject():false;if(state.workspace==="PRODUCTION"){initProductionViewer();if(state.projectId)loadProduction()}else if(state.workspace==="DELIVERY"&&state.projectId)loadWorkflow();else if(state.workspace==="QC"&&projectChanged)loadProject()}
+export function chooseWorkspace(){if(!state.workspaces.includes(state.workspace))state.workspace=state.workspaces.includes("PRODUCTION")?"PRODUCTION":(state.workspaces.includes("DELIVERY")?"DELIVERY":"QC");localStorage.setItem("pla_workspace",state.workspace);applyWorkspace()}
+export async function bootstrap(){loadNotifications();const [runtime,access,projects]=await Promise.all([api("/api/system/info"),api("/api/workspaces"),api("/api/projects")]);state.runtime=runtime;state.workspaces=access.workspaces||[];state.permissions=new Set(access.permissions||[]);state.projects=projects;renderRuntime();chooseWorkspace();if(state.workspaces.includes("QC"))initViewer();renderProjectSelect();if(!state.projects.length){clearProject();if(can("project.create")){if(state.workspace!=="PRODUCTION"){state.workspace="PRODUCTION";localStorage.setItem("pla_workspace","PRODUCTION");applyWorkspace()}$("productionUploadDialog").showModal()}return}const listed=workspaceProjects().length?workspaceProjects():state.projects;if(!state.projectId||!listed.some(p=>p.id===state.projectId))state.projectId=listed[0].id;$("projectSelect").value=state.projectId;localStorage.setItem("pla_project_id",state.projectId);await loadProject()}
+export function currentProject(){return state.projects.find(p=>p.id===state.projectId)||{units:"project units"}}
+export function workspaceProjects(){return state.workspace==="PRODUCTION"?state.projects.filter(p=>p.production_dataset):state.projects}
+export function renderProjectSelect(){const s=$("projectSelect");s.innerHTML="";for(const p of workspaceProjects()){const o=document.createElement("option");o.value=p.id;o.textContent=`${p.name}${state.workspace!=="PRODUCTION"&&p.production_dataset?" · Production":""} · ${p.status}`;s.appendChild(o)}if(state.projectId)s.value=state.projectId}
+export function syncWorkspaceProject(){renderProjectSelect();const list=workspaceProjects();if(list.length&&!list.some(p=>p.id===state.projectId)){state.projectId=list[0].id;localStorage.setItem("pla_project_id",state.projectId);$("projectSelect").value=state.projectId;return true}return false}
+export function clearProject(){state.poles=[];state.summary={poles:0,fail:0,review:0,unverifiable:0,open_findings:0};renderSummary();renderPoles();clearClouds();clearThreeGroup(state.overlay);clearThreeGroup(state.relation);$("viewerTitle").textContent="Upload a dataset";$("viewerSub").textContent="COLLECTION workbook + LAS/LAZ/COPC";clearCanvases()}
+
+// One-time setup (original statements 17–32); called by app.js in the original order.
+export function init() {
+  $("productionWorkspaceBtn").onclick=()=>{state.workspace="PRODUCTION";localStorage.setItem("pla_workspace","PRODUCTION");applyWorkspace()};
+  $("deliveryWorkspaceBtn").onclick=()=>{state.workspace="DELIVERY";localStorage.setItem("pla_workspace","DELIVERY");applyWorkspace()};
+  $("qcWorkspaceBtn").onclick=()=>{state.workspace="QC";localStorage.setItem("pla_workspace","QC");applyWorkspace()};
+  $("projectSelect").onchange=async()=>{state.projectId=$("projectSelect").value;localStorage.setItem("pla_project_id",state.projectId);state.currentPole=null;state.analysis=null;state.section=null;await loadProject()};
+}

@@ -1,0 +1,23 @@
+// Configuration, shared state, DOM/API helpers and sign-in/sign-out.
+import { startLoginBackground } from "../login-background.js?v=20261007-no-new-dataset";
+import { openProfilePage, roleLabel } from "./profile.js?v=20261007-no-new-dataset";
+import { bootstrap } from "./workspace.js?v=20261007-no-new-dataset";
+
+export const cfg=window.PLA_CONFIG||{};
+export const defaultApiBase=cfg.API_BASE||(["5500","3000"].includes(window.location.port)?"http://localhost:8000":window.location.origin);
+export const state={layout:{maximized:null,minimized:new Set(),focusWorkspace:false},apiBase:defaultApiBase,token:localStorage.getItem("pla_token")||"",user:JSON.parse(localStorage.getItem("pla_user")||"null"),runtime:null,workspaces:[],permissions:new Set(),workspace:localStorage.getItem("pla_workspace")||"QC",workflow:null,uploadRevisionProjectId:null,projects:[],projectId:localStorage.getItem("pla_project_id")||"",poles:[],summary:null,currentPole:null,currentScene:null,analysis:null,section:null,mode:"both",severity:"",viewer:null,overlay:null,relation:null,pointclouds:[],productionViewer:null,productionPointclouds:[],productionFiles:[],productionBlocks:[],productionBlock:null,productionSceneProjectId:null,productionLoadGeneration:0,productionCatalogue:null,productionAnnotations:[],productionPoles:[],productionDraft:null,productionDraftGeographic:null,productionMeasurements:[],productionClipVolume:null,productionBoxTool:null,productionProfile:null,productionProfileLine:null,productionProfileCursor:null,productionPicking:false,productionPoleFilter:"all",productionPoleQuery:"",productionGeoFeatures:[],productionGeoGroup:null,productionGeoPins:[],productionGeoVisible:true,productionGeoSelected:null,productionViewMode:"3d",crossStation:0,canvasRanges:{}};
+export const $=id=>document.getElementById(id),loginView=$("loginView"),appView=$("appView");
+export async function api(path,options={}){const base=state.apiBase.replace(/\/$/,"");const headers={...(options.headers||{})};if(options.body&&!(options.body instanceof FormData)&&!headers["Content-Type"])headers["Content-Type"]="application/json";if(state.token)headers.Authorization=`Bearer ${state.token}`;const r=await fetch(base+path,{...options,headers});if(r.status===401&&path!=="/api/auth/login"){let detail=null;try{detail=(await r.clone().json())?.detail}catch{}logout(detail==="session_ended"?"You were signed out because this account's password was changed or the account was deactivated. Sign in again.":"");throw new Error("Session expired")}const text=await r.text();let data=null;try{data=text?JSON.parse(text):null}catch{data=text}if(r.status===403&&data?.detail==="password_change_required"){openProfilePage({forced:true});throw new Error("Choose your own password to continue")}if(!r.ok)throw Object.assign(new Error(data?.detail||data||`HTTP ${r.status}`),{status:r.status});return data}
+export function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
+export function toast(message,type="info",timeout=3200){const root=$("toastStack");if(!root)return;const el=document.createElement("div");el.className=`toast ${type}`;el.textContent=message;root.appendChild(el);setTimeout(()=>el.remove(),timeout)}
+export let stopLoginBackground=null;
+export function showLogin(message=""){appView.classList.add("hidden");loginView.classList.remove("hidden");$("loginError").textContent=message;if(!stopLoginBackground){try{stopLoginBackground=startLoginBackground($("loginBackground"))}catch(e){console.warn("Login background:",e.message)}}}
+export function showApp(){loginView.classList.add("hidden");if(stopLoginBackground){stopLoginBackground();stopLoginBackground=null}appView.classList.remove("hidden");$("userBadge").textContent=`${state.user?.name||state.user?.username||state.user?.email||"Reviewer"} · ${roleLabel(state.user?.role)}`}
+export function logout(message=""){state.token="";state.user=null;localStorage.removeItem("pla_token");localStorage.removeItem("pla_user");showLogin(message)}
+
+// One-time setup (original statements 3–16); called by app.js in the original order.
+export function init() {
+  try{localStorage.setItem("pla_api_base",state.apiBase)}catch{}
+  $("logoutBtn").onclick=()=>logout();
+  $("loginBtn").onclick=async()=>{try{const r=await api("/api/auth/login",{method:"POST",body:JSON.stringify({email:$("email").value.trim(),password:$("password").value})});state.token=r.token;state.user=r.user;localStorage.setItem("pla_token",state.token);localStorage.setItem("pla_user",JSON.stringify(state.user));$("password").value="";showApp();if(r.user.must_change_password){openProfilePage({forced:true});return}await bootstrap()}catch(e){$("loginError").textContent=e.message}};
+}

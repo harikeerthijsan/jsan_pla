@@ -7,7 +7,7 @@ from app.db import Base, initialize_schema
 from app.models import Project
 
 
-HEAD = '20261006_0007'
+HEAD = '20261007_0010'
 
 
 def revision(engine) -> str | None:
@@ -25,7 +25,8 @@ def test_fresh_database_upgrades_to_head(tmp_path: Path):
     assert {'latitude', 'longitude', 'pole_internal_id'} <= {column['name'] for column in inspect(engine).get_columns('production_annotations')}
     assert {'verified_lat', 'verified_lon', 'verified_x', 'verified_y', 'verified_z'} <= {column['name'] for column in inspect(engine).get_columns('poles')}
     assert {'verified_bottom_elevation', 'verified_top_elevation', 'verified_height'} <= {column['name'] for column in inspect(engine).get_columns('poles')}
-    assert {'username', 'must_change_password'} <= {column['name'] for column in inspect(engine).get_columns('users')}
+    assert {'username', 'must_change_password', 'token_version', 'is_active'} <= {column['name'] for column in inspect(engine).get_columns('users')}
+    assert 'revision' in {column['name'] for column in inspect(engine).get_columns('production_annotations')}
     assert revision(engine) == HEAD
 
 

@@ -1,4 +1,4 @@
-import json, os, re, uuid, pathlib, time, tempfile
+import json, logging, os, re, uuid, pathlib, time, tempfile
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, Request
@@ -11,17 +11,20 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, text
 from .db import Base, engine, get_db, SessionLocal, initialize_schema
-from .models import User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog
+from .models import iso_utc,User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog
 from .geojson_import import geo_feature_dict, pole_locations
 from .auth import current_user, verify_password, create_token, hash_password
-from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission
-from .workflow import DatasetVersion, VersionFile, CorrectionRequest, QCRun, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
+from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission, normalize_role
+from .workflow import DatasetVersion, VersionFile, CorrectionRequest, FindingRevision, QCRun, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
 from .seed import seed_database, seed_admin, seed_staff_accounts
 from .ingest import parse_workbook
 from .pipeline import pipeline as pipeline_snapshot, production_project_ids
+from .team import router as team_router, hidden_authors
+from .notifications import router as notifications_router, safely, notify_correction_requested, notify_correction_resolved, notify_version_approved
+from .deliverables import build_package, ensure_package
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
-from .production import catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
+from .production import annotations_feature_collection, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
@@ -68,6 +71,8 @@ async def lifespan(app:FastAPI):
     yield
 
 app=FastAPI(title='JSAN PLA Quality Validation API',version=APP_VERSION,lifespan=lifespan)
+app.include_router(team_router)
+app.include_router(notifications_router)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag'])
 
@@ -90,7 +95,7 @@ class UserCreateIn(BaseModel):
     email:str; name:str=Field(min_length=2,max_length=255); role:str='QC_REVIEWER'; password:str=Field(min_length=12,max_length=256)
     username:str|None=Field(default=None,max_length=80,pattern=r'^[A-Za-z0-9._-]*$')
 class UserUpdateIn(BaseModel):
-    name:str|None=None; role:str|None=None; password:str|None=Field(default=None,min_length=12,max_length=256)
+    name:str|None=None; role:str|None=None; password:str|None=Field(default=None,min_length=12,max_length=256); active:bool|None=None
 class PasswordChangeIn(BaseModel):
     current_password:str=Field(min_length=1,max_length=256); new_password:str=Field(min_length=12,max_length=256)
 class ProfileIn(BaseModel): name:str=Field(min_length=2,max_length=255)
@@ -115,6 +120,8 @@ class ProductionAnnotationIn(BaseModel):
     reference_annotation_id:str|None=Field(default=None,max_length=120)
     attributes:dict=Field(default_factory=dict)
     status:str='IN_PROGRESS'
+    # The revision the editor loaded; a mismatch means someone else saved this point since.
+    expected_revision:int|None=Field(default=None,ge=1)
 class WorkbookCellUpdate(BaseModel):
     sheet:str=Field(min_length=1,max_length=160)
     row:int=Field(gt=1)
@@ -166,16 +173,12 @@ def project_dict(p): return {'id':p.id,'name':p.name,'customer':p.customer,'stat
 def is_production_dataset(db:Session,project_id:str)->bool:
     # Datasets imported in Production run LIDAR_INGEST; they are QC-checked through a linked QC dataset with its own Excel.
     return db.query(ProcessingJob.id).filter_by(project_id=project_id,job_type='LIDAR_INGEST').first() is not None
-def user_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password),'created_at':u.created_at.isoformat() if u.created_at else None}
+def user_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password),'active':bool(u.is_active),'created_at':u.created_at.isoformat() if u.created_at else None}
 def account_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password)}
 def finding_dict(f): return {'id':f.id,'rule_id':f.rule_id,'severity':f.severity,'internal_id':f.internal_id,'pole_number':f.pole_number,'sheet':f.sheet,'field':f.field,'message':f.message,'actual':f.actual,'expected':f.expected,'related_poles':json.loads(f.related_poles_json or '[]'),'status':f.status}
 def pole_dict(p):
     d=json.loads(p.manifest_json or '{}'); d.update({'internal_id':p.internal_id,'pole_number':p.pole_number,'block_name':p.block_name,'source_latitude':p.corrected_lat,'source_longitude':p.corrected_lon,'verified_latitude':p.verified_lat,'verified_longitude':p.verified_lon,'verified_x':p.verified_x,'verified_y':p.verified_y,'verified_z':p.verified_z,'verified_bottom_elevation':p.verified_bottom_elevation,'verified_top_elevation':p.verified_top_elevation,'verified_height':p.verified_height,'verified_block_name':p.verified_block_name,'verified_annotation_id':p.verified_annotation_id,'verified_bottom_annotation_id':p.verified_bottom_annotation_id,'verified_top_annotation_id':p.verified_top_annotation_id,'location_verified_by':p.location_verified_by,'location_verified_at':p.location_verified_at.isoformat() if p.location_verified_at else None,'qc_status':p.qc_status,'qc_fail':p.qc_fail,'qc_review':p.qc_review,'qc_unverifiable':p.qc_unverifiable,'remarks':p.remarks,'bottom_elev_ft':p.bottom_elev_ft,'top_elev_ft':p.top_elev_ft}); return d
 
-def hidden_authors(db:Session,u:User)->set[str]:
-    # Users see every user's Production work but never an admin's; admins see everything.
-    if has_permission(u,'work.view_all'): return set()
-    return {email for (email,) in db.query(User.email).filter(func.upper(User.role)=='ADMIN').all()}
 def visible_annotations(db:Session,u:User,project_id:str):
     query=db.query(ProductionAnnotation).filter_by(project_id=project_id)
     hidden=hidden_authors(db,u)
@@ -230,6 +233,7 @@ def login(body:LoginIn,request:Request,db:Session=Depends(get_db)):
     if not u or not verify_password(body.password,u.password_hash):
         LOGIN_FAILURES.setdefault(key,[]).append(time.time()); raise HTTPException(401,'Invalid username or password')
     LOGIN_FAILURES.pop(key,None)
+    if not u.is_active: raise HTTPException(403,'This account is deactivated. Ask an admin to reactivate it.')
     return {'token':create_token(u),'user':account_dict(u)}
 @app.get('/api/auth/me')
 def me(u:User=Depends(current_user)): return {**account_dict(u),'workspaces':workspaces_for(u)}
@@ -237,9 +241,10 @@ def me(u:User=Depends(current_user)): return {**account_dict(u),'workspaces':wor
 def change_password(body:PasswordChangeIn,u:User=Depends(current_user),db:Session=Depends(get_db)):
     if not verify_password(body.current_password,u.password_hash): raise HTTPException(400,'Current password is incorrect')
     if body.new_password==body.current_password: raise HTTPException(400,'Choose a new password that differs from the current one')
-    u.password_hash=hash_password(body.new_password); u.must_change_password=False
+    # Ends every other sign-in; this device gets a fresh token and stays signed in.
+    u.password_hash=hash_password(body.new_password); u.must_change_password=False; u.token_version=(u.token_version or 0)+1
     db.add(AuditLog(actor=u.email,action='CHANGE_OWN_PASSWORD',entity_type='user',entity_id=str(u.id),detail_json='{}')); db.commit()
-    return {'ok':True,'user':account_dict(u)}
+    return {'ok':True,'user':account_dict(u),'token':create_token(u)}
 @app.put('/api/auth/profile')
 def update_profile(body:ProfileIn,u:User=Depends(current_user),db:Session=Depends(get_db)):
     before=u.name; u.name=body.name.strip()
@@ -263,14 +268,25 @@ def create_user(body:UserCreateIn,u:User=Depends(require_permission('user.manage
 def update_user(user_id:int,body:UserUpdateIn,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
     row=db.query(User).filter_by(id=user_id).first()
     if not row: raise HTTPException(404,'User not found')
+    role=body.role.upper() if body.role is not None else row.role
+    if role not in ROLE_PERMISSIONS: raise HTTPException(400,'Unsupported role')
+    active=row.is_active if body.active is None else body.active
+    if body.active is False and row.id==u.id: raise HTTPException(409,'You cannot deactivate your own account')
+    # Keep at least one active admin so the application can always be administered.
+    if (normalize_role(row.role)=='ADMIN' and row.is_active) and not (role=='ADMIN' and active):
+        other_admins=db.query(User.id).filter(func.upper(User.role)=='ADMIN',User.is_active.is_(True),User.id!=row.id).count()
+        if not other_admins: raise HTTPException(409,'At least one active admin account is required')
     if body.name is not None: row.name=body.name
-    if body.role is not None:
-        role=body.role.upper()
-        if role not in ROLE_PERMISSIONS: raise HTTPException(400,'Unsupported role')
-        row.role=role
-    # An admin-set password is temporary: the person replaces it at their next sign-in.
-    if body.password is not None: row.password_hash=hash_password(body.password); row.must_change_password=row.id!=u.id
-    db.add(AuditLog(actor=u.email,action='UPDATE_USER',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'role':row.role,'name':row.name,'password_changed':body.password is not None}))); db.commit(); return user_dict(row)
+    row.role=role
+    # An admin-set password is temporary: the person replaces it at their next sign-in. Resetting a
+    # password or deactivating an account ends that account's existing sign-ins.
+    if body.password is not None:
+        row.password_hash=hash_password(body.password); row.must_change_password=row.id!=u.id; row.token_version=(row.token_version or 0)+1
+    if body.active is not None and body.active!=row.is_active:
+        row.is_active=body.active
+        if not body.active: row.token_version=(row.token_version or 0)+1
+        db.add(AuditLog(actor=u.email,action='REACTIVATE_USER' if body.active else 'DEACTIVATE_USER',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'username':row.username,'email':row.email})))
+    db.add(AuditLog(actor=u.email,action='UPDATE_USER',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'role':row.role,'name':row.name,'active':row.is_active,'password_changed':body.password is not None}))); db.commit(); return user_dict(row)
 
 @app.get('/api/projects')
 def projects(u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
@@ -488,40 +504,7 @@ def download_production_annotations_geojson(project_id:str,u:User=Depends(requir
     project=db.query(Project).filter_by(id=project_id).first()
     if not project: raise HTTPException(404,'Project not found')
     rows=visible_annotations(db,u,project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
-    pole_numbers={pole.internal_id:pole.pole_number for pole in db.query(Pole).filter_by(project_id=project_id).all()}
-    features=[]
-    for row in rows:
-        latitude,longitude=row.latitude,row.longitude
-        if latitude is None or longitude is None:
-            latitude,longitude=project_to_wgs84(project.crs,row.x,row.y)
-        details=annotation_dict(row)
-        properties={
-            'annotation_id':row.id,
-            'pole_number':pole_numbers.get(row.pole_internal_id),
-            'pole_internal_id':row.pole_internal_id,
-            'point_name':row.feature_type,
-            'annotation_group':row.family,
-            'block_name':row.block_name,
-            'project_crs':project.crs,
-            'x':row.x,'y':row.y,'z':row.z,
-            'verified_latitude':latitude,'verified_longitude':longitude,
-            'status':row.status,
-            'reference_annotation_id':row.reference_annotation_id,
-            **details['measurements'],
-            **details['attributes'],
-            'created_by':row.created_by,'modified_by':row.modified_by,
-            'created_at':details['created_at'],'updated_at':details['updated_at'],
-        }
-        features.append({'type':'Feature','id':row.id,'geometry':{'type':'Point','coordinates':[longitude,latitude,row.z]},'properties':properties})
-    document={
-        'type':'FeatureCollection',
-        'name':f'{project.name} production annotation points',
-        'project_id':project.id,
-        'source_crs':project.crs,
-        'feature_count':len(features),
-        'generated_at':datetime.now(timezone.utc).isoformat(),
-        'features':features,
-    }
+    document=annotations_feature_collection(db,project,rows)
     basename=re.sub(r'[^A-Za-z0-9._-]+','_',project.name).strip('._') or 'production'
     filename=f'{basename}-annotation-points.geojson'
     return Response(content=json.dumps(document,ensure_ascii=False,separators=(',',':')),media_type='application/geo+json',headers={'Content-Disposition':f'attachment; filename="{filename}"'})
@@ -591,6 +574,9 @@ def create_production_annotation(project_id:str,body:ProductionAnnotationIn,u:Us
 
 @app.put('/api/projects/{project_id}/production-annotations/{annotation_id}')
 def update_production_annotation(project_id:str,annotation_id:str,body:ProductionAnnotationIn,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+    return _update_production_annotation(project_id,annotation_id,body,u,db)
+
+def _update_production_annotation(project_id:str,annotation_id:str,body:ProductionAnnotationIn,u:User,db:Session,action:str='UPDATE_PRODUCTION_ANNOTATION',extra:dict|None=None):
     row=visible_annotation(db,u,project_id,annotation_id)
     if body.reference_annotation_id==row.id: raise HTTPException(422,'An annotation cannot reference itself')
     if body.reference_annotation_id: visible_annotation(db,u,project_id,body.reference_annotation_id)
@@ -601,16 +587,70 @@ def update_production_annotation(project_id:str,annotation_id:str,body:Productio
         feature_type=(row.feature_type if row.family==body.family and row.pole_internal_id==body.pole_internal_id
                       else next_annotation_feature_type(db,project_id,body.pole_internal_id,body.family,exclude_annotation_id=row.id))
         body=body.model_copy(update={'feature_type':feature_type})
+    _claim_annotation_revision(db,u,row,body.expected_revision)
     before=annotation_dict(row); previous_pole_id=row.pole_internal_id
     _clear_pole_verification_for_annotation(db,project_id,row.id,previous_pole_id)
     _apply_production_annotation(row,body,u.email,db); row.modified_by=u.email
-    db.add(AuditLog(actor=u.email,action='UPDATE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps({'before':before,'feature_type':row.feature_type},default=str)))
+    db.add(AuditLog(actor=u.email,action=action,entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps({'before':before,'feature_type':row.feature_type,**(extra or {})},default=str)))
     db.commit(); db.refresh(row); return annotation_dict(row)
 
+POINT_HISTORY_ACTIONS=('CREATE_PRODUCTION_ANNOTATION','UPDATE_PRODUCTION_ANNOTATION','RESTORE_PRODUCTION_ANNOTATION')
+
+@app.get('/api/projects/{project_id}/production-annotations/{annotation_id}/history')
+def production_annotation_history(project_id:str,annotation_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    row=visible_annotation(db,u,project_id,annotation_id)
+    hidden=hidden_authors(db,u); users={x.email:x for x in db.query(User).all()}
+    def who(email):
+        if email in hidden: return 'an admin'
+        user=users.get(email); return (user.username or user.name or email) if user else email
+    entries=(db.query(AuditLog).filter(AuditLog.entity_type=='production_annotation',AuditLog.entity_id==row.id,AuditLog.action.in_(POINT_HISTORY_ACTIONS))
+        .order_by(AuditLog.created_at.desc(),AuditLog.id.desc()).all())
+    out=[]
+    for entry in entries:
+        try: detail=json.loads(entry.detail_json or '{}')
+        except ValueError: detail={}
+        before=detail.get('before')
+        # Each edit stored the version it replaced; that earlier version is what "Restore" brings back.
+        out.append({'audit_id':entry.id,'action':entry.action,'by':who(entry.actor),'at':iso_utc(entry.created_at),
+                    'restored_from':detail.get('restored_from'),
+                    'previous':None if not before else {'feature_type':before.get('feature_type'),'family':before.get('family'),'status':before.get('status'),
+                        'coordinates':before.get('coordinates'),'pole_internal_id':before.get('pole_internal_id'),'attributes':before.get('attributes') or {},
+                        'saved_by':who(before.get('modified_by')),'saved_at':before.get('updated_at'),'revision':before.get('revision')}})
+    return {'annotation':annotation_dict(row),'current_by':who(row.modified_by),'entries':out}
+
+class AnnotationRestoreIn(BaseModel):
+    audit_id:int; expected_revision:int|None=Field(default=None,ge=1)
+
+@app.post('/api/projects/{project_id}/production-annotations/{annotation_id}/restore')
+def restore_production_annotation(project_id:str,annotation_id:str,body:AnnotationRestoreIn,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+    visible_annotation(db,u,project_id,annotation_id)
+    entry=db.query(AuditLog).filter(AuditLog.id==body.audit_id,AuditLog.entity_type=='production_annotation',AuditLog.entity_id==annotation_id,
+        AuditLog.action.in_(('UPDATE_PRODUCTION_ANNOTATION','RESTORE_PRODUCTION_ANNOTATION'))).first()
+    before=json.loads(entry.detail_json or '{}').get('before') if entry else None
+    if not before: raise HTTPException(404,"That version is not in this point's history")
+    if entry.actor in hidden_authors(db,u) or before.get('modified_by') in hidden_authors(db,u): raise HTTPException(404,"That version is not in this point's history")
+    coords=before.get('coordinates') or {}
+    restored=ProductionAnnotationIn(block_name=before['block_name'],family=before['family'],feature_type=before['feature_type'],
+        x=coords['x'],y=coords['y'],z=coords['z'],pole_internal_id=before.get('pole_internal_id'),reference_annotation_id=before.get('reference_annotation_id'),
+        attributes=before.get('attributes') or {},status=before.get('status') or 'IN_PROGRESS',expected_revision=body.expected_revision)
+    return _update_production_annotation(project_id,annotation_id,restored,u,db,action='RESTORE_PRODUCTION_ANNOTATION',extra={'restored_from':entry.id})
+
+def _claim_annotation_revision(db:Session,u:User,row:ProductionAnnotation,expected:int|None):
+    # Atomic compare-and-set: only one of two concurrent saves of the same revision can succeed.
+    current=row.revision or 1
+    claimed=(db.query(ProductionAnnotation)
+        .filter(ProductionAnnotation.id==row.id,ProductionAnnotation.revision==(expected if expected is not None else current))
+        .update({ProductionAnnotation.revision:ProductionAnnotation.revision+1},synchronize_session=False))
+    if claimed!=1:
+        db.rollback(); db.refresh(row)
+        editor='another user' if row.modified_by in hidden_authors(db,u) else row.modified_by
+        raise HTTPException(409,f'{row.feature_type} was changed by {editor} after you opened it. Your change was not saved; the latest version has been reloaded.')
+
 @app.delete('/api/projects/{project_id}/production-annotations/{annotation_id}')
-def delete_production_annotation(project_id:str,annotation_id:str,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+def delete_production_annotation(project_id:str,annotation_id:str,expected_revision:int|None=Query(None,ge=1),u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
     row=visible_annotation(db,u,project_id,annotation_id)
     if db.query(ProductionAnnotation).filter_by(project_id=project_id,reference_annotation_id=row.id).first(): raise HTTPException(409,'Remove dependent measurement references before deleting this annotation')
+    _claim_annotation_revision(db,u,row,expected_revision)
     snapshot=annotation_dict(row); _clear_pole_verification_for_annotation(db,project_id,row.id); db.delete(row)
     db.add(AuditLog(actor=u.email,action='DELETE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps(snapshot,default=str)))
     db.commit(); return {'ok':True,'id':annotation_id}
@@ -830,15 +870,50 @@ def project_corrections(project_id:str,u:User=Depends(require_permission('projec
 def request_correction(finding_id:str,body:CorrectionIn,u:User=Depends(require_permission('correction.create')),db:Session=Depends(get_db)):
     f=db.query(Finding).filter_by(id=finding_id).first()
     if not f: raise HTTPException(404,'Finding not found')
-    row=create_correction(db,f,u.email,body.comment); db.commit(); return {'id':row.id,'status':row.status,'finding_id':row.finding_id}
+    already_open=db.query(CorrectionRequest.id).filter_by(finding_id=f.id,status='OPEN').first() is not None
+    row=create_correction(db,f,u.email,body.comment); db.commit()
+    if not already_open: safely(notify_correction_requested,db,f,body.comment,u.email)
+    return {'id':row.id,'status':row.status,'finding_id':row.finding_id}
 
 @app.post('/api/corrections/{correction_id}/resolve')
 def close_correction(correction_id:str,u:User=Depends(require_permission('correction.resolve')),db:Session=Depends(get_db)):
-    row=resolve_correction(db,correction_id,u.email); db.commit(); return {'id':row.id,'status':row.status}
+    row=resolve_correction(db,correction_id,u.email); db.commit()
+    pole_number,internal_id=_correction_pole(db,row)
+    safely(notify_correction_resolved,db,row,pole_number,internal_id,u.email)
+    return {'id':row.id,'status':row.status}
+
+def _correction_pole(db:Session,row)->tuple[str|None,int|None]:
+    # Findings are rebuilt per QC run; fall back to the snapshot kept with the version.
+    f=db.query(Finding).filter_by(id=row.finding_id).first()
+    if f: return f.pole_number,f.internal_id
+    snap=db.query(FindingRevision).filter_by(finding_id=row.finding_id).order_by(FindingRevision.id.desc()).first()
+    data=json.loads(snap.snapshot_json or '{}') if snap else {}
+    return data.get('pole_number'),data.get('internal_id')
 
 @app.post('/api/projects/{project_id}/versions/{version_id}/approve')
 def approve_dataset(project_id:str,version_id:str,u:User=Depends(require_permission('version.approve')),db:Session=Depends(get_db)):
-    row=approve_version(db,project_id,version_id,u.email); db.commit(); return version_dict(row)
+    row=approve_version(db,project_id,version_id,u.email); db.commit()
+    project=db.query(Project).filter_by(id=project_id).first()
+    # Freeze the deliverable package as approved. A failure never undoes the approval: it is built on first download.
+    try:
+        build_package(db,project,row,u.email,at_approval=True); db.commit()
+    except Exception:
+        db.rollback(); logging.getLogger(__name__).exception('Deliverable package build failed for %s v%s',project_id,row.version_no)
+    safely(notify_version_approved,db,project,row.version_no,u.email)
+    db.refresh(row); return version_dict(row)
+
+@app.get('/api/projects/{project_id}/versions/{version_id}/deliverable')
+def deliverable_package(project_id:str,version_id:str,u:User=Depends(require_permission('workspace.delivery')),db:Session=Depends(get_db)):
+    project=db.query(Project).filter_by(id=project_id).first()
+    version=db.query(DatasetVersion).filter_by(id=version_id,project_id=project_id).first()
+    if not project or not version: raise HTTPException(404,'Dataset version not found')
+    if version.status!='APPROVED': raise HTTPException(409,'Approve this version before downloading its deliverable package')
+    manifest=ensure_package(db,project,version,u.email)
+    db.add(AuditLog(actor=u.email,action='DOWNLOAD_DELIVERABLE_PACKAGE',entity_type='dataset_version',entity_id=version.id,detail_json=json.dumps({'package_key':manifest['package_key']})))
+    db.commit()
+    # Presigned (S3) or local URL: the ZIP is never proxied through the API process.
+    return {**{k:manifest.get(k) for k in ('package','version_no','approved_by','approved_at','generated_at','built_at_approval','package_sha256','package_bytes')},
+            'files':[{'path':f['path'],'bytes':f['bytes'],'description':f['description']} for f in manifest.get('files',[])],'url':block_url(manifest['package_key'])}
 
 @app.get('/api/storage/{key:path}')
 def local_storage(key:str):

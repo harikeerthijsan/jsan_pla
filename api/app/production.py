@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import math
 import re
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from pyproj import Transformer
 from sqlalchemy.orm import Session
 
-from .models import ProductionAnnotation
+from .models import Pole, ProductionAnnotation, Project, iso_utc
 
 
 # Automatically numbered per pole (arm_1, arm_2, …) with no upper limit.
@@ -168,7 +169,46 @@ def annotation_dict(row: ProductionAnnotation) -> dict:
         "reference_annotation_id": row.reference_annotation_id,
         "measurements": {"vertical_delta": row.vertical_delta, "horizontal_offset": row.horizontal_offset, "distance_3d": row.distance_3d},
         "attributes": json.loads(row.attributes_json or "{}"), "status": row.status,
+        "revision": row.revision or 1,
         "created_by": row.created_by, "modified_by": row.modified_by,
-        "created_at": row.created_at.isoformat() if row.created_at else None,
-        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        "created_at": iso_utc(row.created_at),
+        "updated_at": iso_utc(row.updated_at),
+    }
+
+
+def annotations_feature_collection(db: Session, project: Project, rows: list[ProductionAnnotation]) -> dict:
+    """GeoJSON FeatureCollection (WGS84 lon/lat, Z in project units) of saved Production points."""
+    pole_numbers = {pole.internal_id: pole.pole_number for pole in db.query(Pole).filter_by(project_id=project.id).all()}
+    features = []
+    for row in rows:
+        latitude, longitude = row.latitude, row.longitude
+        if latitude is None or longitude is None:
+            latitude, longitude = project_to_wgs84(project.crs, row.x, row.y)
+        details = annotation_dict(row)
+        properties = {
+            "annotation_id": row.id,
+            "pole_number": pole_numbers.get(row.pole_internal_id),
+            "pole_internal_id": row.pole_internal_id,
+            "point_name": row.feature_type,
+            "annotation_group": row.family,
+            "block_name": row.block_name,
+            "project_crs": project.crs,
+            "x": row.x, "y": row.y, "z": row.z,
+            "verified_latitude": latitude, "verified_longitude": longitude,
+            "status": row.status,
+            "reference_annotation_id": row.reference_annotation_id,
+            **details["measurements"],
+            **details["attributes"],
+            "created_by": row.created_by, "modified_by": row.modified_by,
+            "created_at": details["created_at"], "updated_at": details["updated_at"],
+        }
+        features.append({"type": "Feature", "id": row.id, "geometry": {"type": "Point", "coordinates": [longitude, latitude, row.z]}, "properties": properties})
+    return {
+        "type": "FeatureCollection",
+        "name": f"{project.name} production annotation points",
+        "project_id": project.id,
+        "source_crs": project.crs,
+        "feature_count": len(features),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "features": features,
     }

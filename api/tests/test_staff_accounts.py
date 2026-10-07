@@ -116,6 +116,9 @@ def test_username_login_forces_a_password_change_before_any_work():
         assert short.status_code == 422
         changed = client.post("/api/auth/change-password", headers=headers, json={"current_password": SHARED, "new_password": OWN})
         assert changed.status_code == 200 and changed.json()["user"]["must_change_password"] is False
+        # The change ends the old sign-in; the response carries a fresh token for this device.
+        assert client.get("/api/projects", headers=headers).status_code == 401
+        headers = {"Authorization": f"Bearer {changed.json()['token']}"}
         assert client.get("/api/projects", headers=headers).status_code == 200
         assert client.post("/api/auth/login", json={"email": username, "password": SHARED}).status_code == 401
 

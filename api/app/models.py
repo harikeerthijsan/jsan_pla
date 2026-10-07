@@ -1,11 +1,17 @@
 from datetime import datetime, timezone
-from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey, UniqueConstraint, BigInteger, Boolean, false
+from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey, UniqueConstraint, BigInteger, Boolean, false, true
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 
 
 def now_utc():
     return datetime.now(timezone.utc)
+
+def iso_utc(value):
+    """ISO 8601 with an explicit UTC offset. SQLite returns naive datetimes; they are stored as UTC."""
+    if value is None:
+        return None
+    return (value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)).isoformat()
 
 class User(Base):
     __tablename__='users'
@@ -16,6 +22,9 @@ class User(Base):
     role: Mapped[str]=mapped_column(String(40), default='QC_REVIEWER')
     password_hash: Mapped[str]=mapped_column(Text)
     must_change_password: Mapped[bool]=mapped_column(Boolean, default=False, server_default=false())
+    # Bumped on password change/reset or deactivation; tokens carrying an older value are refused.
+    token_version: Mapped[int]=mapped_column(Integer, default=0, server_default='0')
+    is_active: Mapped[bool]=mapped_column(Boolean, default=True, server_default=true())
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
 
 class Project(Base):
@@ -96,6 +105,8 @@ class ProductionAnnotation(Base):
     distance_3d: Mapped[float|None]=mapped_column(Float, nullable=True)
     attributes_json: Mapped[str]=mapped_column(Text, default='{}')
     status: Mapped[str]=mapped_column(String(40), default='IN_PROGRESS', index=True)
+    # Increments on every edit so a save based on an older copy is refused instead of overwriting.
+    revision: Mapped[int]=mapped_column(Integer, default=1, server_default='1')
     created_by: Mapped[str]=mapped_column(String(255))
     modified_by: Mapped[str]=mapped_column(String(255))
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
@@ -195,3 +206,38 @@ class AuditLog(Base):
     entity_id: Mapped[str]=mapped_column(String(160))
     detail_json: Mapped[str]=mapped_column(Text, default='{}')
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+
+class PoleAssignment(Base):
+    """Which user a pole is assigned to in a Production dataset. Guidance only: it does not lock the pole."""
+    __tablename__='pole_assignments'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'))
+    pole_internal_id: Mapped[int]=mapped_column(Integer)
+    user_id: Mapped[int]=mapped_column(ForeignKey('users.id'))
+    assigned_by: Mapped[str]=mapped_column(String(255))
+    assigned_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+    __table_args__=(UniqueConstraint('project_id','pole_internal_id',name='uq_pole_assignment'),)
+
+class PolePresence(Base):
+    """Heartbeat of the pole each person has open, so others see "Open by …"."""
+    __tablename__='pole_presence'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'))
+    user_email: Mapped[str]=mapped_column(String(255))
+    pole_internal_id: Mapped[int|None]=mapped_column(Integer, nullable=True)
+    last_seen: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+    __table_args__=(UniqueConstraint('project_id','user_email',name='uq_pole_presence_user'),)
+
+class Notification(Base):
+    """In-app notification for one user; read_at is set when they open or dismiss it."""
+    __tablename__='notifications'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int]=mapped_column(ForeignKey('users.id'))
+    kind: Mapped[str]=mapped_column(String(60))
+    title: Mapped[str]=mapped_column(String(300))
+    body: Mapped[str|None]=mapped_column(Text, nullable=True)
+    project_id: Mapped[str|None]=mapped_column(String(80), nullable=True)
+    pole_internal_id: Mapped[int|None]=mapped_column(Integer, nullable=True)
+    link_json: Mapped[str]=mapped_column(Text, default='{}')
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+    read_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)

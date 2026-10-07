@@ -46,6 +46,9 @@ jobs:
         with:
           node-version: '24'
       - run: node --check web/assets/app.js
+      - name: Feature modules
+        shell: bash
+        run: for f in web/assets/modules/*.js; do node --check "$f"; done
       - run: node --check web/config.js
 
   hygiene:

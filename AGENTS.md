@@ -4,7 +4,7 @@
 Build and maintain an industry-grade browser-based PLA quality-validation platform. Preserve the working dynamic ingestion, LAS/LAZ→COPC pipeline, pole-to-LiDAR mapping, synchronized Plan/Profile/Cross/3D evidence views, and reviewer decision flow.
 
 ## Repository map
-- `web/`: static reviewer UI, Potree integration, synchronized engineering views.
+- `web/`: static reviewer UI, Potree integration, synchronized engineering views. `web/assets/app.js` is the entry; feature code is in `web/assets/modules/*.js` (one module per feature, each exporting `init()` setup that app.js runs in a fixed order). Bump asset versions with `python scripts/set_web_version.py <version>` so every module specifier stays identical.
 - `api/app/`: FastAPI application, auth, dataset APIs, QC, storage, section/profile analysis.
 - `api/worker.py`: background processing entrypoint.
 - `worker/Dockerfile`: PDAL-capable worker image.
@@ -28,7 +28,7 @@ Build and maintain an industry-grade browser-based PLA quality-validation platfo
 From repo root:
 - `python -m compileall api/app api/worker.py`
 - `cd api && pytest -q`
-- `node --check web/assets/app.js`
+- `node --check web/assets/app.js` and `node --check` on every `web/assets/modules/*.js`
 - If Dockerfiles changed: build both API and worker images.
 - If frontend changed: verify 1920×1080 four-view layout plus maximize/minimize/restore.
 - If LiDAR/profile logic changed: compare at least one profile/cross-section with the trusted MicroStation/TerraScan workflow.

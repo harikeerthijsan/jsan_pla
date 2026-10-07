@@ -4,9 +4,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def web_javascript() -> str:
+    """The reviewer UI's JavaScript: the app.js entry plus every feature module it loads."""
+    assets = ROOT / "web" / "assets"
+    files = [assets / "app.js", *sorted((assets / "modules").glob("*.js"))]
+    return "\n".join(path.read_text(encoding="utf-8") for path in files)
+
+
 def test_production_bounding_box_controls_and_clipping_are_wired():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
 
     assert 'id="productionBoxBtn"' in html
     assert 'id="productionCloseBoxBtn"' in html
@@ -18,7 +25,7 @@ def test_production_bounding_box_controls_and_clipping_are_wired():
 
 
 def test_production_box_tool_supports_the_combined_multi_cloud_model():
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
 
     # Potree's ScreenBoxSelectTool picks a single point cloud and throws on the
     # combined model, leaving the camera stuck in orthographic mode.
@@ -32,7 +39,7 @@ def test_production_box_tool_supports_the_combined_multi_cloud_model():
 
 def test_production_navigation_controls_are_wired():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
 
     for view in ("top", "front", "side", "3d"):
         assert f'data-production-view="{view}"' in html
@@ -46,7 +53,7 @@ def test_production_navigation_controls_are_wired():
 
 def test_production_profile_view_is_wired():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
 
     for element in (
         "productionProfileBtn", "productionProfileBar", "productionProfileOverlay",
@@ -74,7 +81,7 @@ def test_production_profile_view_is_wired():
 
 
 def test_production_pick_lets_the_user_navigate_and_geojson_markers_are_large():
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
     css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
 
     # Pick mode places a point only on a click; a drag rotates or pans the view.
@@ -91,7 +98,7 @@ def test_production_pick_lets_the_user_navigate_and_geojson_markers_are_large():
 
 def test_production_workbook_poles_and_verified_coordinates_are_wired():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
 
     assert 'id="productionWorkbookFile"' in html
     assert 'id="annotationPoleId"' in html
@@ -126,7 +133,7 @@ def test_production_workbook_poles_and_verified_coordinates_are_wired():
 
 def test_production_geojson_upload_overlay_and_details_are_wired():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
 
     assert 'id="productionGeojsonFile"' in html
     assert 'GeoJSON is not required' not in html
@@ -150,7 +157,7 @@ def test_production_geojson_upload_overlay_and_details_are_wired():
 
 def test_production_pole_workflow_is_wired():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
     css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
 
     for element in ("productionPoleList", "productionPoleSearch", "productionPoleProgress", "productionPolePrev",
@@ -178,7 +185,7 @@ def test_production_pole_workflow_is_wired():
 
 def test_qc_banner_runs_qc_on_production_lidar():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
     css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
 
     assert 'id="qcProductionBanner"' in html
@@ -199,7 +206,7 @@ def test_qc_banner_runs_qc_on_production_lidar():
 
 def test_delivery_pipeline_connects_production_and_qc():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
 
     assert 'id="deliveryPipeline"' in html
     assert "function renderDeliveryPipeline()" in javascript
@@ -214,7 +221,7 @@ def test_delivery_pipeline_connects_production_and_qc():
 
 
 def test_all_production_lidar_blocks_share_one_combined_viewer():
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
     workbook_editor = (ROOT / "web" / "assets" / "workbook-editor.js").read_text(encoding="utf-8")
 
     assert 'import "./workbook-editor.js?v=' in javascript
@@ -244,7 +251,7 @@ def test_all_production_lidar_blocks_share_one_combined_viewer():
 
 def test_login_page_has_brand_and_animated_background_without_api_url():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    javascript = web_javascript()
     background = (ROOT / "web" / "assets" / "login-background.js").read_text(encoding="utf-8")
 
     assert "<h1>JSAN PoleGrid</h1>" in html and "<p>LiDAR Utility Engineering Platform</p>" in html
@@ -260,3 +267,66 @@ def test_login_page_has_brand_and_animated_background_without_api_url():
     assert "export function startLoginBackground(canvas)" in background
     assert "(prefers-reduced-motion: reduce)" in background
     assert "return function stop()" in background
+
+
+def test_team_progress_page_has_kpis_chart_leaders_and_sortable_table():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = web_javascript()
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+
+    for element in ("teamSummary", "teamChart", "teamLeaders", "teamTable", "teamSearch", "teamShowIdle", "teamRefreshBtn", "teamBackBtn"):
+        assert f'id="{element}"' in html
+    assert all(f'data-team-days="{days}"' in html for days in (7, 14, 30))
+    for function in ("renderTeamKpis", "renderTeamChart", "renderTeamLeaders", "renderTeamTable", "teamCountUp"):
+        assert f"function {function}(" in javascript
+    assert 'data-team-sort="${k}"' in javascript and "aria-sort" in javascript
+    # Motion is decorative only: reduced-motion users get the final state without animation.
+    assert "@media (prefers-reduced-motion:reduce){.team-page *{animation:none!important" in css
+    # Pages never stretch past the viewport because of a wide header.
+    assert ".app-shell{grid-template-columns:minmax(0,1fr)}" in css
+
+
+def test_qc_workspace_layout_fixes_are_kept():
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    # Potree's canvas sits in a container that already starts below the 32px header; offsetting it again
+    # left a blank band and cut off the bottom of the 3D view.
+    assert "#qcWorkspace .three-card #potree_render_area>canvas{top:0}" in css
+    # The other evidence canvases are still positioned from the 32px header.
+    assert ".view-card canvas{position:absolute;left:0;right:0;top:32px;" in css
+    # The pole search keeps its height in the flex column; the QC Evidence title no longer wraps.
+    assert "#qcWorkspace .search{flex:0 0 auto;height:38px;" in css
+    assert "#qcWorkspace .qc-panel .panel-head{display:grid;grid-template-columns:minmax(0,1fr) 128px" in css
+    # KPI cards fit the 70px strip row instead of overflowing into the panels below.
+    assert "#qcKpis{gap:12px;padding:5px 12px;" in css and "height:100%;padding:6px 14px 6px 18px" in css
+
+
+def test_profile_page_keeps_its_ids_and_adds_password_helpers():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = web_javascript()
+
+    # IDs the account, password and admin handlers depend on are all still present.
+    for element in ("profileUsername", "profileEmail", "profileRole", "profileName", "profileNameForm", "passwordForm", "currentPassword",
+                    "newPassword", "confirmPassword", "profileForcedNote", "profileBackBtn", "profileUsersCard", "profileUsers",
+                    "profileCreateUserForm", "profileCreatePassword", "profileCreateConfirmPassword"):
+        assert f'id="{element}"' in html
+    for element in ("profileAvatar", "profileRoleChip", "profileHandleChip", "pwStrengthBar", "profileGeneratePassword", "profileUserSearch"):
+        assert f'id="{element}"' in html
+    assert all(f'data-pw-toggle="{field}"' in html for field in ("currentPassword", "newPassword", "confirmPassword"))
+    for function in ("renderProfileHero", "updatePasswordHelpers", "renderProfileUsers", "loadProfileUsers"):
+        assert f"function {function}(" in javascript
+    # Temporary passwords come from the browser's cryptographic generator, never Math.random.
+    generator = javascript[javascript.index('$("profileGeneratePassword").onclick'):]
+    generator = generator[:generator.index("\n")]
+    assert "crypto.getRandomValues" in generator and "Math.random" not in generator
+
+
+def test_datasets_are_created_only_from_production_import():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = web_javascript()
+    # QC and Delivery work on datasets imported in Production (QC links to the Production LiDAR); they have no
+    # separate "New dataset" entry point.
+    assert 'id="newDatasetBtn"' not in html and "newDatasetBtn" not in javascript
+    assert 'id="productionUploadBtn"' in html
+    # With no datasets yet, an admin is taken to Production's Import LiDAR instead of the old QC upload dialog.
+    assert 'if(state.workspace!=="PRODUCTION"){state.workspace="PRODUCTION";' in javascript
+    assert '$("productionUploadDialog").showModal()}return}' in javascript
