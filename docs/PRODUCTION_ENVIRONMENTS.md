@@ -89,6 +89,17 @@ rejects a configured value shorter than 12 characters or equal to a known defaul
 environment. Only ADMIN uploads LiDAR/Excel/GeoJSON or creates datasets, sees every user's Production work, and
 edits a workbook `internal_id`. USER accounts share Production work with each other but never see an admin's.
 
+## Office-network access
+Admins can limit USER accounts to office networks in Profile → **Network access** (stored in the database, so no
+redeploy is needed). Admins are never restricted, and individual users can be given "Anywhere" access in the users
+table. The restriction starts off and cannot be turned on with no networks listed.
+
+Behind Railway the client address is taken from the edge proxy's `X-Real-IP` header (`CLIENT_IP_HEADER` overrides
+the header name elsewhere; locally the socket address is used). Railway sees an office's **public** address, never a
+LAN address such as 192.168.3.100, so private ranges are rejected there: open the card from the office and use
+**Add my current network**. Turning the switch off restores access immediately. Every change and every blocked
+sign-in is audited.
+
 ## CI isolation
 GitHub Actions uses no repository secrets and no `pull_request_target`. CI runs with SQLite and local
 storage only, so a PR can never reach staging or production databases/buckets. Deployment is performed

@@ -1,7 +1,7 @@
 // Team progress dashboard.
-import { $, api, esc, state, toast } from "./core.js?v=20261007-tab-order";
-import { openTeamPage } from "./team.js?v=20261007-tab-order";
-import { applyWorkspace } from "./workspace.js?v=20261007-tab-order";
+import { $, api, esc, state, toast } from "./core.js?v=20261007-last-sign-in";
+import { openTeamPage } from "./team.js?v=20261007-last-sign-in";
+import { applyWorkspace } from "./workspace.js?v=20261007-last-sign-in";
 
 export const TEAM_REDUCED=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 export const TEAM_AVATAR_HUES=[206,152,262,28,340,188,96,226];

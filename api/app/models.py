@@ -25,6 +25,16 @@ class User(Base):
     # Bumped on password change/reset or deactivation; tokens carrying an older value are refused.
     token_version: Mapped[int]=mapped_column(Integer, default=0, server_default='0')
     is_active: Mapped[bool]=mapped_column(Boolean, default=True, server_default=true())
+    # USER accounts limited to office networks may be allowed to work from anywhere.
+    remote_access: Mapped[bool]=mapped_column(Boolean, default=False, server_default=false())
+    # Latest sign-in only (no history): time, address and the browser location when the person shares it.
+    last_login_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_ip: Mapped[str|None]=mapped_column(String(64), nullable=True)
+    last_login_location_status: Mapped[str|None]=mapped_column(String(20), nullable=True)  # pending, shared, denied, unavailable
+    last_login_latitude: Mapped[float|None]=mapped_column(Float, nullable=True)
+    last_login_longitude: Mapped[float|None]=mapped_column(Float, nullable=True)
+    last_login_accuracy: Mapped[float|None]=mapped_column(Float, nullable=True)
+    last_login_location_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
 
 class Project(Base):
@@ -241,3 +251,11 @@ class Notification(Base):
     link_json: Mapped[str]=mapped_column(Text, default='{}')
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
     read_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
+
+class AppSetting(Base):
+    """Application-wide settings changed by admins in the app (e.g. the office-network policy)."""
+    __tablename__='app_settings'
+    key: Mapped[str]=mapped_column(String(80), primary_key=True)
+    value_json: Mapped[str]=mapped_column(Text, default='{}')
+    updated_by: Mapped[str|None]=mapped_column(String(255), nullable=True)
+    updated_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)

@@ -1,14 +1,14 @@
 // Viewer creation, permissions, workspace switching, dataset selection and bootstrap.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, state } from "./core.js?v=20261007-tab-order";
-import { loadWorkflow } from "./delivery.js?v=20261007-tab-order";
-import { loadNotifications } from "./notifications.js?v=20261007-tab-order";
-import { loadProduction } from "./production-data.js?v=20261007-tab-order";
-import { installProductionNavigation } from "./production-view.js?v=20261007-tab-order";
-import { clearCanvases } from "./qc-analysis.js?v=20261007-tab-order";
-import { renderPoles, renderSummary } from "./qc-review.js?v=20261007-tab-order";
-import { loadProject } from "./qc-run.js?v=20261007-tab-order";
-import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261007-tab-order";
+import { $, api, state } from "./core.js?v=20261007-last-sign-in";
+import { loadWorkflow } from "./delivery.js?v=20261007-last-sign-in";
+import { loadNotifications } from "./notifications.js?v=20261007-last-sign-in";
+import { loadProduction } from "./production-data.js?v=20261007-last-sign-in";
+import { installProductionNavigation } from "./production-view.js?v=20261007-last-sign-in";
+import { clearCanvases } from "./qc-analysis.js?v=20261007-last-sign-in";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261007-last-sign-in";
+import { loadProject } from "./qc-run.js?v=20261007-last-sign-in";
+import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261007-last-sign-in";
 
 export function initViewer(){if(state.viewer)return;const v=new Potree.Viewer($("potree_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.viewer=v;state.overlay=new THREE.Group();state.relation=new THREE.Group();v.scene.scene.add(state.overlay);v.scene.scene.add(state.relation)}
 export function initProductionViewer(){if(state.productionViewer)return;const v=new Potree.Viewer($("production_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.productionViewer=v;installProductionNavigation(v)}

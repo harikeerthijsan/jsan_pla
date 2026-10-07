@@ -1,10 +1,10 @@
 // QC pole list, pole selection, findings, reviewer decisions and evidence focus.
-import { $, api, esc, state, toast } from "./core.js?v=20261007-tab-order";
-import { loadWorkflow } from "./delivery.js?v=20261007-tab-order";
-import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261007-tab-order";
-import { loadProject } from "./qc-run.js?v=20261007-tab-order";
-import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261007-tab-order";
-import { can, currentProject } from "./workspace.js?v=20261007-tab-order";
+import { $, api, esc, state, toast } from "./core.js?v=20261007-last-sign-in";
+import { loadWorkflow } from "./delivery.js?v=20261007-last-sign-in";
+import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261007-last-sign-in";
+import { loadProject } from "./qc-run.js?v=20261007-last-sign-in";
+import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261007-last-sign-in";
+import { can, currentProject } from "./workspace.js?v=20261007-last-sign-in";
 
 export function renderSummary(){const s=state.summary||{};$("kpiPoles").textContent=s.poles??0;$("kpiFail").textContent=s.fail??0;$("kpiReview").textContent=s.review??0;$("kpiUnver").textContent=s.unverifiable??0;$("kpiOpen").textContent=s.open_findings??0;$("kpiCurrent").textContent=state.currentPole?`P${state.currentPole.internal_id}`:"—"}
 export function renderPoles(){const q=$("poleSearch").value.trim().toLowerCase(),root=$("poleList");root.innerHTML="";for(const p of state.poles.filter(p=>!q||String(p.internal_id).includes(q)||String(p.pole_number||"").toLowerCase().includes(q))){const row=document.createElement("div");row.className="pole-row"+(state.currentPole?.internal_id===p.internal_id?" active":"");row.innerHTML=`<div class="pole-id">${p.internal_id}</div><div class="pole-meta"><b>${esc(p.pole_number||"No tag")}</b><small>${esc(p.block_name||"No LiDAR block")}</small></div><span class="status-chip ${p.qc_status}">${p.qc_status}</span>`;row.onclick=()=>selectPole(p.internal_id);root.appendChild(row)}}

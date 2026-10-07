@@ -330,3 +330,25 @@ def test_datasets_are_created_only_from_production_import():
     # With no datasets yet, an admin is taken to Production's Import LiDAR instead of the old QC upload dialog.
     assert 'if(state.workspace!=="PRODUCTION"){state.workspace="PRODUCTION";' in javascript
     assert '$("productionUploadDialog").showModal()}return}' in javascript
+
+
+def test_saved_points_have_quick_edit_and_remove_actions():
+    javascript = web_javascript()
+    # One remove path: open the point and run the existing Delete flow (confirmation, revision and parent checks).
+    assert 'export function removeSavedPoint(id){' in javascript and '$("annotationDeleteBtn").click()' in javascript
+    # Clicking a saved point in the 3D view opens its menu before GeoJSON pin selection.
+    assert "if(!openPointMenuAt(e.clientX-r.left,e.clientY-r.top))selectProductionGeoAt(" in javascript
+    assert 'data-point-action="edit"' in javascript and 'data-point-action="delete"' in javascript
+    # Saved points list rows and the Pole base / top checklist rows offer delete directly.
+    assert "data-row-delete" in javascript and "removeSavedPoint(row.id)" in javascript
+    assert 'data-check-delete="${esc(row.id)}"' in javascript and "removeSavedPoint(button.dataset.checkDelete)" in javascript
+
+
+def test_network_access_controls_are_wired():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = web_javascript()
+    for element in ("profileNetworkCard", "networkEnabled", "networkYourIp", "networkAddMine", "networkList", "networkAddForm"):
+        assert f'id="{element}"' in html
+    # Users cut off mid-session are signed out with the reason; admins toggle per-user remote access.
+    assert 'data?.detail==="network_not_allowed"){logout("Your account can only be used from the office network.' in javascript
+    assert "data-remote-user=" in javascript and "remote_access:allow" in javascript

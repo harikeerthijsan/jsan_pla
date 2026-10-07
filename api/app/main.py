@@ -1,5 +1,5 @@
 import json, logging, os, re, uuid, pathlib, time, tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, Request
 from fastapi.responses import FileResponse, Response
@@ -22,6 +22,7 @@ from .pipeline import pipeline as pipeline_snapshot, production_project_ids
 from .team import router as team_router, hidden_authors
 from .notifications import router as notifications_router, safely, notify_correction_requested, notify_correction_resolved, notify_version_approved
 from .deliverables import build_package, ensure_package
+from .network_access import client_ip, get_network_policy, ip_on_listed_network, set_network_policy, user_network_allowed
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
 from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
@@ -83,7 +84,8 @@ async def security_headers(request:Request,call_next):
     response.headers.setdefault('X-Content-Type-Options','nosniff')
     response.headers.setdefault('X-Frame-Options','DENY')
     response.headers.setdefault('Referrer-Policy','same-origin')
-    response.headers.setdefault('Permissions-Policy','camera=(), microphone=(), geolocation=()')
+    # The app's own pages may ask for location (sign-in area); embedded third-party content may not.
+    response.headers.setdefault('Permissions-Policy','camera=(), microphone=(), geolocation=(self)')
     if APP_ENV in STRICT_ENVIRONMENTS:
         response.headers.setdefault('Strict-Transport-Security','max-age=31536000; includeSubDomains')
     return response
@@ -95,10 +97,18 @@ class UserCreateIn(BaseModel):
     email:str; name:str=Field(min_length=2,max_length=255); role:str='QC_REVIEWER'; password:str=Field(min_length=12,max_length=256)
     username:str|None=Field(default=None,max_length=80,pattern=r'^[A-Za-z0-9._-]*$')
 class UserUpdateIn(BaseModel):
-    name:str|None=None; role:str|None=None; password:str|None=Field(default=None,min_length=12,max_length=256); active:bool|None=None
+    name:str|None=None; role:str|None=None; password:str|None=Field(default=None,min_length=12,max_length=256); active:bool|None=None; remote_access:bool|None=None
+class NetworkEntryIn(BaseModel):
+    cidr:str=Field(min_length=2,max_length=64); label:str=Field(default='',max_length=80)
+class NetworkPolicyIn(BaseModel):
+    enabled:bool; networks:list[NetworkEntryIn]=Field(default_factory=list,max_length=50)
 class PasswordChangeIn(BaseModel):
     current_password:str=Field(min_length=1,max_length=256); new_password:str=Field(min_length=12,max_length=256)
 class ProfileIn(BaseModel): name:str=Field(min_length=2,max_length=255)
+class SignInLocationIn(BaseModel):
+    status:str=Field(pattern='^(shared|denied|unavailable)$')
+    latitude:float|None=Field(default=None,ge=-90,le=90); longitude:float|None=Field(default=None,ge=-180,le=180)
+    accuracy:float|None=Field(default=None,ge=0,le=1_000_000)
 class ProjectIn(BaseModel):
     name:str=Field(min_length=2,max_length=255); customer:str='PLA'; crs:str='EPSG:6424'; units:str='US survey foot'
 class UploadRequest(BaseModel): filename:str; role:str; size_bytes:int|None=None; content_type:str|None=None
@@ -173,8 +183,13 @@ def project_dict(p): return {'id':p.id,'name':p.name,'customer':p.customer,'stat
 def is_production_dataset(db:Session,project_id:str)->bool:
     # Datasets imported in Production run LIDAR_INGEST; they are QC-checked through a linked QC dataset with its own Excel.
     return db.query(ProcessingJob.id).filter_by(project_id=project_id,job_type='LIDAR_INGEST').first() is not None
-def user_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password),'active':bool(u.is_active),'created_at':u.created_at.isoformat() if u.created_at else None}
-def account_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password)}
+def user_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password),'active':bool(u.is_active),'remote_access':bool(u.remote_access),**sign_in_dict(u),'created_at':u.created_at.isoformat() if u.created_at else None}
+def sign_in_dict(u):
+    shared=u.last_login_location_status=='shared' and u.last_login_latitude is not None
+    return {'last_login_at':iso_utc(u.last_login_at),'last_login_ip':u.last_login_ip,
+            'last_login_location':{'status':u.last_login_location_status,'latitude':u.last_login_latitude if shared else None,'longitude':u.last_login_longitude if shared else None,
+                                   'accuracy':u.last_login_accuracy if shared else None,'at':iso_utc(u.last_login_location_at)}}
+def account_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password),**sign_in_dict(u)}
 def finding_dict(f): return {'id':f.id,'rule_id':f.rule_id,'severity':f.severity,'internal_id':f.internal_id,'pole_number':f.pole_number,'sheet':f.sheet,'field':f.field,'message':f.message,'actual':f.actual,'expected':f.expected,'related_poles':json.loads(f.related_poles_json or '[]'),'status':f.status}
 def pole_dict(p):
     d=json.loads(p.manifest_json or '{}'); d.update({'internal_id':p.internal_id,'pole_number':p.pole_number,'block_name':p.block_name,'source_latitude':p.corrected_lat,'source_longitude':p.corrected_lon,'verified_latitude':p.verified_lat,'verified_longitude':p.verified_lon,'verified_x':p.verified_x,'verified_y':p.verified_y,'verified_z':p.verified_z,'verified_bottom_elevation':p.verified_bottom_elevation,'verified_top_elevation':p.verified_top_elevation,'verified_height':p.verified_height,'verified_block_name':p.verified_block_name,'verified_annotation_id':p.verified_annotation_id,'verified_bottom_annotation_id':p.verified_bottom_annotation_id,'verified_top_annotation_id':p.verified_top_annotation_id,'location_verified_by':p.location_verified_by,'location_verified_at':p.location_verified_at.isoformat() if p.location_verified_at else None,'qc_status':p.qc_status,'qc_fail':p.qc_fail,'qc_review':p.qc_review,'qc_unverifiable':p.qc_unverifiable,'remarks':p.remarks,'bottom_elev_ft':p.bottom_elev_ft,'top_elev_ft':p.top_elev_ft}); return d
@@ -234,6 +249,14 @@ def login(body:LoginIn,request:Request,db:Session=Depends(get_db)):
         LOGIN_FAILURES.setdefault(key,[]).append(time.time()); raise HTTPException(401,'Invalid username or password')
     LOGIN_FAILURES.pop(key,None)
     if not u.is_active: raise HTTPException(403,'This account is deactivated. Ask an admin to reactivate it.')
+    ip=client_ip(request)
+    if not user_network_allowed(db,u,ip):
+        db.add(AuditLog(actor=u.email,action='LOGIN_BLOCKED_NETWORK',entity_type='user',entity_id=str(u.id),detail_json=json.dumps({'ip':ip}))); db.commit()
+        raise HTTPException(403,'This account can only be used from the office network. Ask an admin to allow access from anywhere.')
+    # Only the latest sign-in is kept. The browser reports its location separately, if the person allows it.
+    u.last_login_at=datetime.now(timezone.utc); u.last_login_ip=ip; u.last_login_location_status='pending'
+    u.last_login_latitude=u.last_login_longitude=u.last_login_accuracy=None; u.last_login_location_at=None
+    db.commit()
     return {'token':create_token(u),'user':account_dict(u)}
 @app.get('/api/auth/me')
 def me(u:User=Depends(current_user)): return {**account_dict(u),'workspaces':workspaces_for(u)}
@@ -245,6 +268,17 @@ def change_password(body:PasswordChangeIn,u:User=Depends(current_user),db:Sessio
     u.password_hash=hash_password(body.new_password); u.must_change_password=False; u.token_version=(u.token_version or 0)+1
     db.add(AuditLog(actor=u.email,action='CHANGE_OWN_PASSWORD',entity_type='user',entity_id=str(u.id),detail_json='{}')); db.commit()
     return {'ok':True,'user':account_dict(u),'token':create_token(u)}
+SIGN_IN_LOCATION_WINDOW=timedelta(minutes=15)
+@app.post('/api/auth/sign-in-location')
+def sign_in_location(body:SignInLocationIn,u:User=Depends(current_user),db:Session=Depends(get_db)):
+    # Accepted only right after a sign-in, so it always describes where that sign-in happened.
+    signed_in=u.last_login_at.replace(tzinfo=timezone.utc) if u.last_login_at and u.last_login_at.tzinfo is None else u.last_login_at
+    if not signed_in or datetime.now(timezone.utc)-signed_in>SIGN_IN_LOCATION_WINDOW: raise HTTPException(409,'Location can only be recorded right after signing in')
+    if body.status=='shared' and (body.latitude is None or body.longitude is None): raise HTTPException(422,'Latitude and longitude are required when the location is shared')
+    u.last_login_location_status=body.status; u.last_login_location_at=datetime.now(timezone.utc)
+    if body.status=='shared': u.last_login_latitude,u.last_login_longitude,u.last_login_accuracy=body.latitude,body.longitude,body.accuracy
+    else: u.last_login_latitude=u.last_login_longitude=u.last_login_accuracy=None
+    db.commit(); return sign_in_dict(u)
 @app.put('/api/auth/profile')
 def update_profile(body:ProfileIn,u:User=Depends(current_user),db:Session=Depends(get_db)):
     before=u.name; u.name=body.name.strip()
@@ -282,11 +316,29 @@ def update_user(user_id:int,body:UserUpdateIn,u:User=Depends(require_permission(
     # password or deactivating an account ends that account's existing sign-ins.
     if body.password is not None:
         row.password_hash=hash_password(body.password); row.must_change_password=row.id!=u.id; row.token_version=(row.token_version or 0)+1
+    if body.remote_access is not None and body.remote_access!=bool(row.remote_access):
+        row.remote_access=body.remote_access
+        db.add(AuditLog(actor=u.email,action='ALLOW_REMOTE_ACCESS' if body.remote_access else 'REVOKE_REMOTE_ACCESS',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'username':row.username,'email':row.email})))
     if body.active is not None and body.active!=row.is_active:
         row.is_active=body.active
         if not body.active: row.token_version=(row.token_version or 0)+1
         db.add(AuditLog(actor=u.email,action='REACTIVATE_USER' if body.active else 'DEACTIVATE_USER',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'username':row.username,'email':row.email})))
     db.add(AuditLog(actor=u.email,action='UPDATE_USER',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'role':row.role,'name':row.name,'active':row.is_active,'password_changed':body.password is not None}))); db.commit(); return user_dict(row)
+
+def _network_policy_view(db:Session,request:Request,u:User)->dict:
+    policy=get_network_policy(db); ip=client_ip(request)
+    return {**policy,'your_ip':ip,'your_ip_listed':ip_on_listed_network(ip,policy['networks']),
+            'users_with_remote_access':db.query(User.id).filter(User.remote_access.is_(True),func.upper(User.role)!='ADMIN').count()}
+@app.get('/api/admin/network-access')
+def network_access_policy(request:Request,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
+    return _network_policy_view(db,request,u)
+@app.put('/api/admin/network-access')
+def update_network_access_policy(body:NetworkPolicyIn,request:Request,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
+    before=get_network_policy(db)
+    try: saved=set_network_policy(db,body.enabled,[entry.model_dump() for entry in body.networks],u.email)
+    except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+    db.add(AuditLog(actor=u.email,action='UPDATE_NETWORK_POLICY',entity_type='settings',entity_id='user_network_policy',detail_json=json.dumps({'before':{k:before[k] for k in ('enabled','networks')},'after':saved,'ip':client_ip(request)})))
+    db.commit(); return _network_policy_view(db,request,u)
 
 @app.get('/api/projects')
 def projects(u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):

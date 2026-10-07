@@ -1,10 +1,10 @@
 // QC banner for Production datasets and the Run-QC dialog/job watcher; QC project loading.
-import { $, api, esc, state, toast } from "./core.js?v=20261007-tab-order";
-import { loadWorkflow } from "./delivery.js?v=20261007-tab-order";
-import { loadProduction } from "./production-data.js?v=20261007-tab-order";
-import { renderPoles, renderSummary } from "./qc-review.js?v=20261007-tab-order";
-import { progress, sendFile } from "./uploads.js?v=20261007-tab-order";
-import { bootstrap, can, currentProject } from "./workspace.js?v=20261007-tab-order";
+import { $, api, esc, state, toast } from "./core.js?v=20261007-last-sign-in";
+import { loadWorkflow } from "./delivery.js?v=20261007-last-sign-in";
+import { loadProduction } from "./production-data.js?v=20261007-last-sign-in";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261007-last-sign-in";
+import { progress, sendFile } from "./uploads.js?v=20261007-last-sign-in";
+import { bootstrap, can, currentProject } from "./workspace.js?v=20261007-last-sign-in";
 
 export function renderQcProductionBanner(){const el=$("qcProductionBanner"),s=state.summary||{},canRun=can("upload.create")&&can("processing.run"),files=`${s.lidar_blocks} LiDAR file${s.lidar_blocks===1?"":"s"}`;let html="",action=null;
   if(s.qc_job_id){html='<div><b>QC is running on the shared Production LiDAR</b><small id="qcProductionProgress">Starting…</small></div>'}

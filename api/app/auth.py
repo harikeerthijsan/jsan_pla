@@ -4,6 +4,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from .db import get_db
 from .models import User
+from .network_access import client_ip, user_network_allowed
 
 bearer = HTTPBearer(auto_error=False)
 ITERATIONS = 210_000
@@ -52,7 +53,7 @@ def decode_token(token: str) -> dict:
         raise HTTPException(status_code=401, detail='Invalid or expired token')
 
 # Routes a user may call while still holding the shared initial password.
-PASSWORD_CHANGE_ROUTES = {'/api/auth/me', '/api/auth/change-password', '/api/auth/profile', '/api/workspaces', '/api/system/info'}
+PASSWORD_CHANGE_ROUTES = {'/api/auth/me', '/api/auth/change-password', '/api/auth/profile', '/api/auth/sign-in-location', '/api/workspaces', '/api/system/info'}
 
 def current_user(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)) -> User:
     if not credentials:
@@ -63,6 +64,9 @@ def current_user(request: Request, credentials: HTTPAuthorizationCredentials | N
     # A password change/reset or deactivation bumps token_version, ending every older sign-in.
     if not user.is_active or int(payload.get('ver', 0)) != (user.token_version or 0):
         raise HTTPException(status_code=401, detail='session_ended')
+    # Users limited to office networks are stopped on any request made from elsewhere.
+    if not user_network_allowed(db, user, client_ip(request)):
+        raise HTTPException(status_code=403, detail='network_not_allowed')
     if user.must_change_password and request.url.path not in PASSWORD_CHANGE_ROUTES:
         raise HTTPException(status_code=403, detail='password_change_required')
     return user

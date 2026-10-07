@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="potree/libs/openlayers3/ol.css" />
   <link rel="stylesheet" href="potree/libs/spectrum/spectrum.css" />
   <link rel="stylesheet" href="potree/libs/jstree/themes/mixed/style.css" />
-  <link rel="stylesheet" href="assets/app.css?v=20261007-tab-order" />
+  <link rel="stylesheet" href="assets/app.css?v=20261007-last-sign-in" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -40,7 +40,7 @@
       <div class="profile-grid">
         <article class="profile-card">
           <div class="profile-card-head"><i class="profile-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5Z"/></svg></i><div><h3>Account</h3><small>How you appear to the team</small></div></div>
-          <dl class="profile-facts"><div><dt>Username</dt><dd id="profileUsername">—</dd></div><div><dt>Role</dt><dd id="profileRole">—</dd></div><div class="wide"><dt>Email</dt><dd id="profileEmail">—</dd></div></dl>
+          <dl class="profile-facts"><div><dt>Username</dt><dd id="profileUsername">—</dd></div><div><dt>Role</dt><dd id="profileRole">—</dd></div><div class="wide"><dt>Email</dt><dd id="profileEmail">—</dd></div><div class="wide"><dt>Last sign-in</dt><dd id="profileLastSignIn">—</dd></div></dl>
           <form id="profileNameForm" class="profile-form"><label>Display name<input id="profileName" required minlength="2" maxlength="255" autocomplete="name" /></label><div class="profile-actions"><button class="primary" type="submit">Save name</button><small id="profileNameStatus" role="status"></small></div></form>
         </article>
         <article class="profile-card">
@@ -52,6 +52,13 @@
             <label>Confirm new password<span class="pw-field"><input id="confirmPassword" type="password" required minlength="12" maxlength="256" autocomplete="new-password" /><button type="button" class="pw-toggle" data-pw-toggle="confirmPassword" aria-label="Show password">Show</button></span></label>
             <ul class="pw-rules" aria-label="Password requirements"><li data-rule="length">At least 12 characters</li><li data-rule="different">Different from the current password</li><li data-rule="match">New passwords match</li></ul>
             <div class="profile-actions"><button class="primary" type="submit">Change password</button><small id="passwordStatus" role="status"></small></div></form>
+        </article>
+        <article id="profileNetworkCard" class="profile-card wide hidden">
+          <div class="profile-card-head"><i class="profile-card-icon network" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm6.93 6h-2.95a15.6 15.6 0 0 0-1.38-3.56A8 8 0 0 1 18.93 8ZM12 4a13.9 13.9 0 0 1 1.91 4h-3.82A13.9 13.9 0 0 1 12 4ZM4.26 14a7.9 7.9 0 0 1 0-4h3.38a16.5 16.5 0 0 0 0 4Zm.81 2h2.95a15.6 15.6 0 0 0 1.38 3.56A8 8 0 0 1 5.07 16ZM8.02 8H5.07a8 8 0 0 1 4.33-3.56A15.6 15.6 0 0 0 8.02 8ZM12 20a13.9 13.9 0 0 1-1.91-4h3.82A13.9 13.9 0 0 1 12 20Zm2.34-6H9.66a14.7 14.7 0 0 1 0-4h4.68a14.7 14.7 0 0 1 0 4Zm.26 5.56A15.6 15.6 0 0 0 15.98 16h2.95a8 8 0 0 1-4.33 3.56ZM16.36 14a16.5 16.5 0 0 0 0-4h3.38a7.9 7.9 0 0 1 0 4Z"/></svg></i><div><h3>Network access</h3><small>Limit users to your office network. Admins can always sign in from anywhere; give a user “Anywhere” access in the list below.</small></div><label class="net-switch"><input type="checkbox" id="networkEnabled" /><span class="net-switch-track" aria-hidden="true"></span><span>Restrict users to office networks</span></label></div>
+          <div class="net-you"><span>You're connecting from <b id="networkYourIp">—</b></span><span id="networkYourStatus" class="profile-status pending">—</span><button type="button" id="networkAddMine" class="profile-link-btn">Add my current network</button></div>
+          <div id="networkList" class="net-list"></div>
+          <form id="networkAddForm" class="net-add"><input id="networkCidr" required maxlength="64" autocomplete="off" placeholder="Office public IP or range, e.g. 52.14.20.7 or 52.14.20.0/24" aria-label="Office public IP or range" /><input id="networkLabel" maxlength="80" autocomplete="off" placeholder="Label, e.g. Head office" aria-label="Label" /><button class="primary" type="submit">Add network</button></form>
+          <small id="networkStatus" class="net-status" role="status" aria-live="polite"></small>
         </article>
         <article id="profileUsersCard" class="profile-card wide hidden">
           <div class="profile-card-head"><i class="profile-card-icon admin" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm-8 1a3 3 0 1 0-3-3 3 3 0 0 0 3 3Zm8 1c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4Zm-8 .5c-.29 0-.62.02-.97.05C8.2 14.4 9 15.6 9 17v3H1v-3c0-2.06 4.1-3.5 7-3.5Z"/></svg></i><div><h3>User administration</h3><small>New accounts and password resets use a temporary password that must be changed at next sign-in</small></div><span id="profileUserCount" class="profile-count">—</span></div>
@@ -216,7 +223,7 @@
   <dialog id="decisionDialog"><form method="dialog" id="decisionForm"><h3 id="decisionTitle">Review finding</h3><input type="hidden" id="decisionFindingId" /><label>Decision<select id="decisionValue"><option value="CONFIRMED_FAIL">Confirm fail</option><option value="ACCEPTED_EXCEPTION">Accept exception</option><option value="NEEDS_FIELD_REVIEW">Needs field review</option><option value="CORRECTED">Corrected</option><option value="OPEN">Re-open</option></select></label><label>Reviewer comment<textarea id="decisionComment" rows="4" placeholder="Evidence / correction note"></textarea></label><div class="dialog-actions"><button value="cancel">Cancel</button><button id="saveDecision" value="default" class="primary">Save decision</button></div></form></dialog>
 
   <script src="potree/libs/jquery/jquery-3.1.1.min.js"></script><script src="potree/libs/spectrum/spectrum.js"></script><script src="potree/libs/jquery-ui/jquery-ui.min.js"></script><script src="potree/libs/other/BinaryHeap.js"></script><script src="potree/libs/tween/tween.min.js"></script><script src="potree/libs/d3/d3.js"></script><script src="potree/libs/proj4/proj4.js"></script><script src="potree/libs/openlayers3/ol.js"></script><script src="potree/libs/i18next/i18next.js"></script><script src="potree/libs/jstree/jstree.js"></script><script src="potree/libs/copc/index.js"></script><script src="potree/build/potree/potree.js"></script><script src="potree/libs/plasio/js/laslaz.js"></script>
-  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261007-tab-order"></script>
+  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261007-last-sign-in"></script>
 <div id="toastStack" class="toast-stack" aria-live="polite"></div>
 </body>
 </html>
