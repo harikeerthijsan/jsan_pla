@@ -6,13 +6,7 @@ from datetime import date, datetime, time
 from io import BytesIO
 
 from openpyxl import load_workbook
-
-
-INTERNAL_ID_HEADER = "internal id"
-
-
-def normalize_header(value) -> str:
-    return re.sub(r"\s+", " ", str(value or "").replace("_", " ").strip()).casefold()
+from .source_schema import canonical_field, detect_pole_sheet, normalize_header
 
 
 def normalize_pole_number(value) -> str | None:
@@ -37,19 +31,24 @@ def _serializable(value):
     return value
 
 
-def match_geojson_pole_number(features: list[dict], pole_number) -> dict:
+def match_geojson_pole_number(features: list[dict], pole_number, internal_id=None) -> dict:
     target = normalize_pole_number(pole_number)
-    if target is None:
+    target_internal = normalize_pole_number(internal_id)
+    if target is None and target_internal is None:
         return {"status": "MISSING", "feature_indexes": []}
     matching = []
     for index, feature in enumerate(features):
         if feature.get("geometry_type") != "Point":
             continue
         properties = feature.get("properties") or {}
-        if any(
-            normalize_header(key) == "pole number" and normalize_pole_number(value) == target
-            for key, value in properties.items()
-        ):
+        pole_values = [normalize_pole_number(value) for key, value in properties.items() if canonical_field(key) == "pole_number"]
+        internal_values = [normalize_pole_number(value) for key, value in properties.items() if canonical_field(key) == "internal_id"]
+        pole_values = [value for value in pole_values if value]
+        internal_values = [value for value in internal_values if value]
+        pole_match = target is not None and target in pole_values
+        internal_match = target_internal is not None and target_internal in internal_values
+        conflict = (pole_values and target is not None and not pole_match) or (internal_values and target_internal is not None and not internal_match)
+        if not conflict and (pole_match or internal_match):
             matching.append(index)
     return {
         "status": "MISSING" if not matching else "MATCHED" if len(matching) == 1 else "AMBIGUOUS",
@@ -66,24 +65,32 @@ def _header_columns(worksheet) -> list[tuple[int, str]]:
     return headers
 
 
-def _matching_rows(worksheet, pole_number) -> tuple[list[tuple[int, str]], list[int], int]:
+def _matching_rows(worksheet, pole_number, internal_id=None) -> tuple[list[tuple[int, str]], list[int], int, list[int]]:
     headers = _header_columns(worksheet)
-    pole_columns = [column for column, label in headers if normalize_header(label) == "pole number"]
+    pole_columns = [column for column, label in headers if canonical_field(label) == "pole_number"]
+    internal_columns = [column for column, label in headers if canonical_field(label) == "internal_id"]
     if len(pole_columns) > 1:
         raise ValueError(f"Worksheet {worksheet.title!r} has multiple Pole Number columns")
-    if not pole_columns:
-        return headers, [], 0
-    pole_column = pole_columns[0]
+    if len(internal_columns) > 1:
+        raise ValueError(f"Worksheet {worksheet.title!r} has multiple Internal ID columns")
+    if not pole_columns and not internal_columns:
+        return headers, [], 0, []
+    pole_column = pole_columns[0] if pole_columns else 0
+    internal_column = internal_columns[0] if internal_columns else 0
     target = normalize_pole_number(pole_number)
-    rows = [
-        row
-        for row in range(2, worksheet.max_row + 1)
-        if target is not None and normalize_pole_number(worksheet.cell(row, pole_column).value) == target
-    ]
-    return headers, rows, pole_column
+    target_internal = normalize_pole_number(internal_id)
+    rows = []
+    for row in range(2, worksheet.max_row + 1):
+        pole_match = bool(pole_column and target is not None and normalize_pole_number(worksheet.cell(row, pole_column).value) == target)
+        internal_match = bool(internal_column and target_internal is not None and normalize_pole_number(worksheet.cell(row, internal_column).value) == target_internal)
+        # Pole Number is the stable workbook-row key. Internal ID is the fallback for sheets
+        # without a Pole Number column and remains admin-editable for backward compatibility.
+        matched = pole_match if pole_column and target is not None else internal_match
+        if matched: rows.append(row)
+    return headers, rows, pole_column, internal_columns
 
 
-def inspect_workbook(contents: bytes, pole_number) -> dict:
+def inspect_workbook(contents: bytes, pole_number, internal_id=None) -> dict:
     target = normalize_pole_number(pole_number)
     if target is None:
         raise ValueError("Selected pole has no Pole Number")
@@ -91,19 +98,16 @@ def inspect_workbook(contents: bytes, pole_number) -> dict:
         workbook = load_workbook(BytesIO(contents), data_only=False, read_only=False)
     except Exception as exc:
         raise ValueError("Workbook is invalid or cannot be read") from exc
-    if "poles" not in workbook.sheetnames:
-        raise ValueError("Workbook has no poles worksheet")
-
-    poles_sheet = workbook["poles"]
-    _, pole_rows, pole_column = _matching_rows(poles_sheet, target)
-    if pole_column == 0 or not pole_rows:
-        raise ValueError("No exact Pole Number row exists in the poles worksheet")
+    poles_sheet, _ = detect_pole_sheet(workbook, require_location=False)
+    _, pole_rows, pole_column, internal_columns = _matching_rows(poles_sheet, target, internal_id)
+    if (pole_column == 0 and not internal_columns) or not pole_rows:
+        raise ValueError(f"No exact pole identity row exists in worksheet {poles_sheet.title!r}")
     if len(pole_rows) > 1:
         raise ValueError(f"Workbook has duplicate Pole Number {target}")
 
     worksheets = []
     for worksheet in workbook.worksheets:
-        headers, rows, pole_column = _matching_rows(worksheet, target)
+        headers, rows, pole_column, internal_columns = _matching_rows(worksheet, target, internal_id)
         if not rows:
             continue
         worksheets.append({
@@ -111,7 +115,8 @@ def inspect_workbook(contents: bytes, pole_number) -> dict:
             "headers": [label for _, label in headers],
             "columns": [column for column, _ in headers],
             "pole_number_column": pole_column,
-            "internal_id_columns": [column for column, label in headers if normalize_header(label) == INTERNAL_ID_HEADER],
+            "internal_id_columns": internal_columns,
+            "identity_columns": ([pole_column] if pole_column else []) + internal_columns,
             "rows": [
                 {
                     "row": row,
@@ -120,7 +125,8 @@ def inspect_workbook(contents: bytes, pole_number) -> dict:
                 for row in rows
             ],
         })
-    return {"pole_number": target, "pole_row_count": len(pole_rows), "worksheets": worksheets}
+    return {"pole_number": target, "internal_id": target_internal if (target_internal := normalize_pole_number(internal_id)) else None,
+            "pole_sheet": poles_sheet.title, "pole_row_count": len(pole_rows), "worksheets": worksheets}
 
 
 def _coerce_value(value, existing):
@@ -170,10 +176,10 @@ def _coerce_value(value, existing):
     return value
 
 
-def apply_workbook_updates(contents: bytes, pole_number, updates: list[dict], *, allow_internal_id: bool = False) -> bytes:
+def apply_workbook_updates(contents: bytes, pole_number, updates: list[dict], *, internal_id=None, allow_internal_id: bool = False) -> bytes:
     if not updates:
         raise ValueError("No workbook changes were submitted")
-    inspected = inspect_workbook(contents, pole_number)
+    inspected = inspect_workbook(contents, pole_number, internal_id)
     allowed_rows = {
         (sheet["name"], row["row"]): {
             column: (header, sheet["pole_number_column"])

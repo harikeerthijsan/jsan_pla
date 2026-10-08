@@ -112,6 +112,8 @@ def test_deployed_images_keep_pinned_native_geospatial_stack():
         assert 'site-packages/pip-*.dist-info' in text, dockerfile
         assert 'conda-meta/pip-*.json' in text, dockerfile
         assert '--strict-channel-priority' in text, dockerfile
+        assert '"untwine=1.5.1"' in text and 'test -x /opt/conda/envs/pla/bin/untwine' in text, dockerfile
+        assert 'UNTWINE_BIN=/opt/conda/envs/pla/bin/untwine' in text, dockerfile
 
     worker_runtime = read('worker/Dockerfile').split('FROM ubuntu:24.04', maxsplit=1)[1]
     assert 'WORKDIR /app' in worker_runtime

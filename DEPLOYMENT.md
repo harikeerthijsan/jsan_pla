@@ -70,6 +70,9 @@ You can deploy the same package without the IaC file:
 APP_ENV=production
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 ADMIN_EMAIL=<company administrator email>
+# Super admins (comma-separated e-mails or usernames of EXISTING accounts) are promoted at startup. This is the only
+# way to create the first super admin; afterwards a super admin can promote others in the app.
+SUPER_ADMIN_EMAILS=<company super administrator email or username>
 ADMIN_PASSWORD=<unique password, at least 12 characters>
 STAFF_INITIAL_PASSWORD=<shared first-sign-in password for Admin001-002 and JSAN001-020, at least 12 characters>
 JWT_SECRET=<random secret, at least 32 characters>
@@ -84,6 +87,13 @@ AUTO_CONFIGURE_BUCKET_CORS=true
 BUCKET_CORS_ORIGINS=https://your-app.up.railway.app
 SEED_DEMO=false
 WORKER_POLL_SECONDS=3
+# LAS/LAZ -> COPC uses untwine when installed (UNTWINE_BIN; the Docker images include it): multi-core and
+# ~24 B RAM + ~70 B scratch disk per point. Without it PDAL writers.copc is used (~120 B RAM per point, one core).
+# Max parallel conversions per worker (default 2 with untwine, else half the CPU cores, at most 4).
+# Tiles only run together while they fit the memory budget
+# (LIDAR_MEMORY_BUDGET_GB, default 70% of free RAM). A tile too large to fit alone is split into
+# pieces (<tile>_1, <tile>_2 ...) with low-memory PDAL range filters; every point is kept.
+LIDAR_CONVERT_WORKERS=2
 DB_CONNECT_TIMEOUT=120
 ```
 

@@ -73,6 +73,18 @@ def test_numeric_property_matches_internal_id():
     assert features[0]['pole_internal_id'] == 2 and features[0]['match_method'] == 'ID'
 
 
+def test_both_identifiers_must_select_the_same_pole_and_point_z_is_preserved():
+    first = point(*POLE_1, POLE_NO='P-001', InternalID=1)
+    first['geometry']['coordinates'].append(515.25)
+    _, features = parse_features(collection(first, point(*POLE_2, POLE_NO='P-001', InternalID=2)), PROJECT_CRS)
+    summary = match_to_poles(features, poles(), 'US survey foot')
+    assert features[0]['z'] == pytest.approx(515.25)
+    assert features[0]['geometry']['coordinates'][2] == pytest.approx(515.25)
+    assert features[0]['pole_internal_id'] == 1 and features[0]['match_method'] == 'ID'
+    assert features[1]['pole_internal_id'] is None and features[1]['match_method'] == 'CONFLICT'
+    assert summary['identity_conflicts'] == 1
+
+
 def test_coincidental_objectid_far_from_the_pole_is_not_an_id_match():
     far = (POLE_1[0] + 0.05, POLE_1[1])  # ~4.6 km east
     _, features = parse_features(collection(point(*far, OBJECTID=1)), PROJECT_CRS)

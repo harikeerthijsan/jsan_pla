@@ -42,14 +42,16 @@ def safely(action, *args, **kwargs) -> None:
 
 
 def _admins(db: Session) -> list[User]:
-    return [u for u in db.query(User).filter(func.upper(User.role) == "ADMIN").all() if u.is_active]
+    return [u for u in db.query(User).filter(func.upper(User.role).in_(["ADMIN", "SUPER_ADMIN"])).all() if u.is_active]
 
 
 def _who(actor_email: str | None, recipient: User, users: dict[str, User]) -> str:
     actor = users.get(actor_email or "")
     if not actor:
         return actor_email or "someone"
-    if (actor.role or "").upper() == "ADMIN" and not has_permission(recipient, "work.view_all"):
+    role = (actor.role or "").upper()
+    # Admins stay anonymous to users, and super admins to everyone but other super admins.
+    if (role == "ADMIN" and not has_permission(recipient, "work.view_all")) or (role == "SUPER_ADMIN" and not has_permission(recipient, "super.view")):
         return "an admin"
     return actor.username or actor.name or actor.email
 

@@ -1,4 +1,4 @@
-.annotation-tabs{position:sticky;top:0;z-index:6;display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0 -11px 8px;padding:5px 7px;background:#eaf3fb;border-bottom:1px solid var(--line)}
+.annotation-tabs{position:sticky;top:0;z-index:6;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:0 -11px 8px;padding:5px 7px;background:#eaf3fb;border-bottom:1px solid var(--line)}
 .annotation-tab{padding:7px 6px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--brand-mid);font-size:10px;font-weight:800}
 .annotation-tab:hover{background:linear-gradient(180deg,#174e76,#123a58);border-color:#7eaed6;color:#edf8ff}
 .annotation-tab.active{background:linear-gradient(180deg,#1f648f,#184b6f);border-color:#6ca9d6;color:#fff}

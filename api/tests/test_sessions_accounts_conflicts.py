@@ -100,13 +100,14 @@ def test_deactivation_requires_admin_and_blocks_the_account_until_reactivated():
 
 
 def test_admin_cannot_deactivate_themselves_or_remove_the_last_active_admin(tmp_path):
+    # Admin accounts are managed by super admins, so the protections are exercised by a super admin.
     engine = create_engine(f"sqlite:///{tmp_path / 'admins.db'}", connect_args={"check_same_thread": False})
     initialize_schema(engine)
     Isolated = sessionmaker(bind=engine)
     db = Isolated()
     db.add_all([
-        User(email="first@example.invalid", name="First", role="ADMIN", password_hash=hash_password(PASSWORD)),
-        User(email="second@example.invalid", name="Second", role="ADMIN", password_hash=hash_password(PASSWORD)),
+        User(email="first@example.invalid", name="First", role="SUPER_ADMIN", password_hash=hash_password(PASSWORD)),
+        User(email="second@example.invalid", name="Second", role="SUPER_ADMIN", password_hash=hash_password(PASSWORD)),
     ])
     db.commit()
     first_id, second_id = (db.query(User.id).filter_by(email=e).scalar() for e in ("first@example.invalid", "second@example.invalid"))
@@ -125,9 +126,9 @@ def test_admin_cannot_deactivate_themselves_or_remove_the_last_active_admin(tmp_
             first = _login(client, "first@example.invalid")
             assert client.put(f"/api/users/{first_id}", headers=first, json={"active": False}).status_code == 409
             assert client.put(f"/api/users/{second_id}", headers=first, json={"active": False}).status_code == 200
-            # first is now the only active admin: it cannot be demoted.
+            # first is now the only active super admin: it cannot demote itself.
             last = client.put(f"/api/users/{first_id}", headers=first, json={"role": "USER"})
-            assert last.status_code == 409 and "active admin" in last.json()["detail"]
+            assert last.status_code == 409 and "super admin" in last.json()["detail"]
             assert client.put(f"/api/users/{second_id}", headers=first, json={"active": True}).status_code == 200
             assert client.put(f"/api/users/{second_id}", headers=first, json={"role": "USER"}).status_code == 200
     finally:

@@ -226,6 +226,9 @@ def test_all_production_lidar_blocks_share_one_combined_viewer():
 
     assert 'import "./workbook-editor.js?v=' in javascript
     assert 'data-annotation-tab="workbook"' in workbook_editor
+    assert 'data-annotation-tab="geojson"' in workbook_editor
+    assert 'id="poleGeojsonProperties"' in workbook_editor
+    assert '/production-geo-features' in workbook_editor
     assert 'id="workbookPoleSearch"' in workbook_editor
     assert 'poleSearch.addEventListener("input",syncPoleOptions)' in workbook_editor
     assert 'id="poleWorkbookBusy"' in workbook_editor
@@ -247,6 +250,30 @@ def test_all_production_lidar_blocks_share_one_combined_viewer():
     assert "loadProductionPointCloud(block,generation,projectId)" in javascript
     assert "productionBlockForCoordinates(state.productionDraft)" in javascript
     assert "No points saved for this pole." in javascript
+
+
+def test_profile_import_manager_is_grouped_and_lidar_source_list_is_view_only():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    javascript = web_javascript()
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+
+    assert 'id="profileImportsCard"' in html
+    assert 'id="profileImports"' in html
+    assert 'id="profileImportCount"' in html
+    assert 'api("/api/admin/imports")' in javascript
+    assert 'data-delete-import=' in javascript
+    assert 'method:"DELETE"' in javascript and 'encodeURIComponent(projectId)' in javascript
+    assert 'LIDAR_SOURCE:"LiDAR"' in javascript and 'GEOJSON:"GeoJSON"' in javascript and 'WORKBOOK:"Excel"' in javascript
+    assert ".profile-import-row" in css and ".profile-import-files" in css
+    assert 'id="productionManageLidarBtn"' in html
+    assert '$("productionManageLidarBtn").classList.toggle("hidden",!can("project.read"))' in javascript
+    assert '$("productionManageLidarBtn").onclick=' in javascript
+    assert "sources.open=true" in javascript and "catalogue.scrollTop=catalogue.scrollHeight" in javascript
+    assert 'sources.querySelector(".lidar-delete-btn")' not in javascript
+    assert "deleteProductionLidar" not in javascript
+    assert "lidar-delete-btn" not in javascript
+    assert ".lidar-delete-btn" not in css
+    assert '/uploads/${encodeURIComponent(file.id)}`' not in javascript
 
 
 def test_login_page_has_brand_and_animated_background_without_api_url():

@@ -191,7 +191,7 @@ def test_unreadable_replacement_excel_is_rejected_and_the_current_excel_is_kept(
         file_id = upload(client, admin, f'/api/projects/{project_id}/production-workbook/prepare', 'wrong-layout.xlsx', stream.getvalue())
         rejected = client.post(f'/api/projects/{project_id}/production-workbook/{file_id}/apply', headers=admin)
         assert rejected.status_code == 400
-        assert 'poles sheet' in rejected.json()['detail'] and 'The current Excel was kept' in rejected.json()['detail']
+        assert 'Pole catalogue' in rejected.json()['detail'] and 'no valid data rows' in rejected.json()['detail'] and 'The current Excel was kept' in rejected.json()['detail']
     db = SessionLocal()
     try:
         statuses = {f.id: f.status for f in db.query(DatasetFile).filter_by(project_id=project_id).all()}

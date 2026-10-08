@@ -1,12 +1,18 @@
 // QC pole list, pole selection, findings, reviewer decisions and evidence focus.
-import { $, api, esc, state, toast } from "./core.js?v=20261007-last-sign-in";
-import { loadWorkflow } from "./delivery.js?v=20261007-last-sign-in";
-import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261007-last-sign-in";
-import { loadProject } from "./qc-run.js?v=20261007-last-sign-in";
-import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261007-last-sign-in";
-import { can, currentProject } from "./workspace.js?v=20261007-last-sign-in";
+import { $, api, esc, state, toast } from "./core.js?v=20261008-project-delete-2";
+import { loadWorkflow } from "./delivery.js?v=20261008-project-delete-2";
+import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261008-project-delete-2";
+import { loadProject } from "./qc-run.js?v=20261008-project-delete-2";
+import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261008-project-delete-2";
+import { can, currentProject } from "./workspace.js?v=20261008-project-delete-2";
 
-export function renderSummary(){const s=state.summary||{};$("kpiPoles").textContent=s.poles??0;$("kpiFail").textContent=s.fail??0;$("kpiReview").textContent=s.review??0;$("kpiUnver").textContent=s.unverifiable??0;$("kpiOpen").textContent=s.open_findings??0;$("kpiCurrent").textContent=state.currentPole?`P${state.currentPole.internal_id}`:"—"}
+function renderRuleCoverage(){const c=state.summary?.rule_coverage,btn=$("kpiCoverageBtn");if(!btn)return;btn.classList.toggle("partial",Boolean(c&&c.ran<c.total));$("kpiCoverage").textContent=c?`${c.ran} / ${c.total} ran`:"—";btn.title=c?`${c.total-c.ran} rule(s) could not run on this workbook. Click for details.`:"Run QC to see which rules apply to this workbook"}
+function openRuleCoverage(){const c=state.summary?.rule_coverage;if(!c){toast("Run QC on this dataset to see which rules apply to its workbook.","info",4200);return}
+  $("ruleCoverageSub").textContent=`Latest QC run${c.finished_at?` · ${new Date(c.finished_at).toLocaleString()}`:""}${c.pole_sheet?` · pole sheet “${c.pole_sheet}”`:""}`;
+  const skipped=c.total-c.ran,group=(scope,label)=>{const rows=c.rules.filter(r=>r.scope===scope);if(!rows.length)return"";return`<div class="rule-coverage-group">${label}</div><table class="rule-coverage-table"><tbody>${rows.map(r=>`<tr><td class="rule-id">${esc(r.rule_id)}</td><td>${esc(r.title)}${r.applicable?"":`<span class="rule-reason">${esc(r.reason||"")}</span>`}</td><td><span class="rule-state ${r.applicable?"ran":"skipped"}">${r.applicable?"Ran":"Not applicable"}</span></td><td class="rule-count">${r.applicable?`${r.findings} finding${r.findings===1?"":"s"}`:"—"}</td></tr>`).join("")}</tbody></table>`};
+  $("ruleCoverageBody").innerHTML=(skipped?`<p class="rule-coverage-note">${skipped} of ${c.total} rules could not run because this workbook does not have the sheets or columns they check. A pole with no findings has only passed the rules that ran.</p>`:"")+group("GENERIC","Checks for any workbook")+group("PLA","PLA workbook rules");
+  $("ruleCoverageDialog").showModal()}
+export function renderSummary(){const s=state.summary||{};renderRuleCoverage();$("kpiPoles").textContent=s.poles??0;$("kpiFail").textContent=s.fail??0;$("kpiReview").textContent=s.review??0;$("kpiUnver").textContent=s.unverifiable??0;$("kpiOpen").textContent=s.open_findings??0;$("kpiCurrent").textContent=state.currentPole?`P${state.currentPole.internal_id}`:"—"}
 export function renderPoles(){const q=$("poleSearch").value.trim().toLowerCase(),root=$("poleList");root.innerHTML="";for(const p of state.poles.filter(p=>!q||String(p.internal_id).includes(q)||String(p.pole_number||"").toLowerCase().includes(q))){const row=document.createElement("div");row.className="pole-row"+(state.currentPole?.internal_id===p.internal_id?" active":"");row.innerHTML=`<div class="pole-id">${p.internal_id}</div><div class="pole-meta"><b>${esc(p.pole_number||"No tag")}</b><small>${esc(p.block_name||"No LiDAR block")}</small></div><span class="status-chip ${p.qc_status}">${p.qc_status}</span>`;row.onclick=()=>selectPole(p.internal_id);root.appendChild(row)}}
 export function fillTargetSelect(defaultId){const s=$("targetPole");s.innerHTML='<option value="">Auto</option>';for(const p of state.poles){if(p.internal_id===state.currentPole?.internal_id)continue;const o=document.createElement("option");o.value=p.internal_id;o.textContent=`P${p.internal_id} · ${p.pole_number||"No tag"}`;s.appendChild(o)}if(defaultId)s.value=String(defaultId)}
 export async function selectPole(id){const pole=state.poles.find(x=>x.internal_id===Number(id));if(!pole)return;state.currentPole=pole;state.section=null;state.analysis=null;renderPoles();renderSummary();$("viewerEmpty").classList.add("hidden");$("loading").classList.remove("hidden");$("viewerTitle").textContent=`Pole ${pole.internal_id} · ${pole.pole_number||"No tag"}`;$("viewerSub").textContent=`${pole.block_name||"No LiDAR"} · ${pole.qc_status} · ${currentProject().units}`;$("sectionStatus").textContent="Loading pole evidence…";try{
@@ -34,6 +40,7 @@ export async function focusFinding(f){if(f.related_poles?.length){$("targetPole"
 
 // One-time setup (original statements 49–68); called by app.js in the original order.
 export function init() {
+  $("kpiCoverageBtn").onclick=openRuleCoverage;
   $("poleSearch").oninput=renderPoles;
   $("targetPole").onchange=reloadAnalysisAndSection;
   $("refreshProfile").onclick=reloadAnalysisAndSection;

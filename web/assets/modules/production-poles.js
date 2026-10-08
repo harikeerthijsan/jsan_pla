@@ -1,14 +1,14 @@
 // Production pole list, status, header, checklist and pole navigation.
-import { $, esc, state } from "./core.js?v=20261007-last-sign-in";
-import { fillProductionPoles, isPoleBase, isPoleTop, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261007-last-sign-in";
-import { clearProductionClip } from "./production-data.js?v=20261007-last-sign-in";
-import { chooseProductionPole, closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261007-last-sign-in";
-import { editProductionAnnotation, productionBlockForCoordinates, removeSavedPoint, startProductionPick } from "./production-pick.js?v=20261007-last-sign-in";
-import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261007-last-sign-in";
-import { productionPickPresets } from "./production-shell.js?v=20261007-last-sign-in";
-import { cancelProductionBox, productionUnitLabel, setProductionView } from "./production-view.js?v=20261007-last-sign-in";
-import { poleAssignee, poleTeamChips, renderPoleTeamInfo } from "./team.js?v=20261007-last-sign-in";
-import { can } from "./workspace.js?v=20261007-last-sign-in";
+import { $, esc, state } from "./core.js?v=20261008-project-delete-2";
+import { fillProductionPoles, isPoleBase, isPoleTop, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261008-project-delete-2";
+import { clearProductionClip } from "./production-data.js?v=20261008-project-delete-2";
+import { chooseProductionPole, closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261008-project-delete-2";
+import { editProductionAnnotation, productionBlockForCoordinates, removeSavedPoint, startProductionPick } from "./production-pick.js?v=20261008-project-delete-2";
+import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261008-project-delete-2";
+import { productionPickPresets } from "./production-shell.js?v=20261008-project-delete-2";
+import { cancelProductionBox, productionUnitLabel, setProductionView } from "./production-view.js?v=20261008-project-delete-2";
+import { poleAssignee, poleTeamChips, renderPoleTeamInfo } from "./team.js?v=20261008-project-delete-2";
+import { can } from "./workspace.js?v=20261008-project-delete-2";
 
 export function productionPoleStatus(pole){const rows=state.productionAnnotations.filter(row=>String(row.pole_internal_id??row.attributes?.pole_internal_id)===String(pole.internal_id)),base=rows.find(isPoleBase),top=rows.find(isPoleTop);return {rows,base,top,state:base&&top?"done":rows.length?"progress":"todo"}}
 export function productionGeoForPole(pole){return state.productionGeoFeatures.find(f=>f.geometry_type==="Point"&&f.pole_internal_id===pole.internal_id)}
@@ -25,7 +25,7 @@ export function renderProductionChecklist(){const root=$("productionChecklist"),
 export function productionFullModelRow(active){const row=document.createElement("button"),points=state.productionAnnotations.length,poles=new Set(state.productionAnnotations.map(item=>item.pole_internal_id).filter(id=>id!=null)).size;row.type="button";row.className=`production-pole-row production-full-row${active?" active":""}`;row.innerHTML=`<span class="pole-row-name"><b>Full LiDAR model</b><small>All poles · ${points} saved point${points===1?"":"s"}${points?` on ${poles} pole${poles===1?"":"s"}`:""}</small></span><span class="pole-chips"></span><em>3D</em>`;row.onclick=showFullProductionModel;return row}
 export function showFullProductionModel(){const v=state.productionViewer;cancelProductionBox(false);cancelProductionProfileLine();exitProductionProfile(false);closeProductionGeoCard();fillProductionPoles("");$("annotationPoleId").dispatchEvent(new Event("change",{bubbles:true}));if(!v||!state.productionPointclouds.length)return;if(state.productionClipVolume)clearProductionClip(false);v.setControls(v.orbitControls);$("productionNavModeBtn").textContent="Orbit";setProductionView("3d",{yaw:Math.PI/4,pitch:-Math.PI/4});v.fitToScreen(.8)}
 export function renderProductionPoleWorkflow(){renderProductionPoleList();renderProductionPoleHeader();renderProductionChecklist()}
-export function productionPoleTarget(pole){const geo=productionGeoForPole(pole),x=pole.verified_x??geo?.x??pole.workbook_x,y=pole.verified_y??geo?.y??pole.workbook_y;if(x==null||y==null)return null;let z0=pole.verified_bottom_elevation,z1=pole.verified_top_elevation;if((z0==null||z1==null)&&productionUnitLabel()==="ft"&&pole.bottom_elev_ft!=null&&pole.top_elev_ft!=null){z0=pole.bottom_elev_ft;z1=pole.top_elev_ft}if(z0==null||z1==null){const block=productionBlockForCoordinates({x:Number(x),y:Number(y),z:NaN});if(block?.bounds?.z_min==null)return null;z0=block.bounds.z_min;z1=block.bounds.z_max??z0}return {x:Number(x),y:Number(y),z:(Number(z0)+Number(z1))/2}}
+export function productionPoleTarget(pole){const geo=productionGeoForPole(pole),x=pole.verified_x??geo?.x??pole.workbook_x,y=pole.verified_y??geo?.y??pole.workbook_y;if(x==null||y==null)return null;let z0=pole.verified_bottom_elevation,z1=pole.verified_top_elevation;if((z0==null||z1==null)&&productionUnitLabel()==="ft"&&pole.bottom_elev_ft!=null&&pole.top_elev_ft!=null){z0=pole.bottom_elev_ft;z1=pole.top_elev_ft}if((z0==null||z1==null)&&pole.workbook_z!=null){z0=z1=Number(pole.workbook_z)}if(z0==null||z1==null){const block=productionBlockForCoordinates({x:Number(x),y:Number(y),z:NaN});if(block?.bounds?.z_min==null)return null;z0=block.bounds.z_min;z1=block.bounds.z_max??z0}return {x:Number(x),y:Number(y),z:(Number(z0)+Number(z1))/2}}
 export function flyToProductionPole(pole){const v=state.productionViewer,target=productionPoleTarget(pole);if(!v||!target||state.productionProfile)return;const view=v.scene.view,V=view.position.constructor;view.radius=productionUnitLabel()==="ft"?120:36;view.position.copy(new V(target.x,target.y,target.z)).sub(view.direction.multiplyScalar(view.radius));v.orbitControls.stop()}
 export function selectProductionPole(id,{fly=true}={}){const pole=state.productionPoles.find(p=>String(p.internal_id)===String(id));if(!pole)return;if(String(pole.internal_id)!==$("annotationPoleId").value)chooseProductionPole(pole);else renderProductionPoleWorkflow();const geo=productionGeoForPole(pole);if(geo&&state.productionGeoSelected!==geo.id){state.productionGeoSelected=geo.id;renderProductionGeoOverlay()}if(fly)flyToProductionPole(pole)}
 export function stepProductionPole(delta){const order=visibleProductionPoles(),index=order.findIndex(p=>String(p.internal_id)===$("annotationPoleId").value),next=index<0?order[delta>0?0:order.length-1]:order[index+delta];if(next)selectProductionPole(next.internal_id)}

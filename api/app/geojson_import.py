@@ -16,6 +16,7 @@ from pyproj import CRS, Transformer
 from sqlalchemy.orm import Session
 
 from .models import Pole, ProductionGeoFeature, Project
+from .source_schema import canonical_field, manifest_coordinates
 
 
 GEOMETRY_TYPES = {"Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon"}
@@ -90,7 +91,7 @@ def _positions(coordinates, geometry_type: str):
 def _transform_coordinates(coordinates, transform):
     if coordinates and isinstance(coordinates[0], (int, float)):
         x, y = transform(float(coordinates[0]), float(coordinates[1]))
-        return [x, y]
+        return [x, y, *coordinates[2:]]
     return [_transform_coordinates(item, transform) for item in coordinates]
 
 
@@ -147,6 +148,7 @@ def parse_features(raw: bytes | str, project_crs: str) -> tuple[str, list[dict]]
             "geometry": {"type": geometry["type"], "coordinates": projected},
             "x": sum(p[0] for p in flat) / len(flat),
             "y": sum(p[1] for p in flat) / len(flat),
+            "z": (sum(float(p[2]) for p in flat) / len(flat)) if flat and all(len(p) > 2 for p in flat) else None,
             "properties": properties,
         })
     return crs, parsed
@@ -171,23 +173,37 @@ def match_to_poles(features: list[dict], poles: list[dict], units: str | None) -
             return None
         return math.hypot(feature["x"] - pole["x"], feature["y"] - pole["y"])
 
-    def id_candidate(feature, prop, target):
-        candidates = by_target[target].get(normalise_id(feature["properties"].get(prop)) or "", [])
+    def property_identity(feature, target):
+        values = [(name, normalise_id(value)) for name, value in feature["properties"].items() if canonical_field(name) == target]
+        values = [(name, value) for name, value in values if value]
+        if not values:
+            return None, None, False
+        unique = {value for _, value in values}
+        return (values[0][1], values[0][0], len(unique) > 1)
+
+    def plausible(feature, candidates):
         scored = [(distance(feature, pole), pole) for pole in candidates]
-        # An ID match must also be spatially plausible, so a generic OBJECTID cannot pose as a pole ID.
         scored = [(d, pole) for d, pole in scored if d is None or d <= id_max_distance]
         if not scored:
             return None
         return min(scored, key=lambda item: math.inf if item[0] is None else item[0])
 
-    best = (0, None, None)
-    keys = sorted({key for feature in points for key in feature["properties"]})
-    for target in ("pole_number", "internal_id"):  # pole_number wins ties
-        for prop in keys:
-            count = sum(1 for feature in points if id_candidate(feature, prop, target))
-            if count > best[0]:
-                best = (count, prop, target)
-    _, match_property, match_target = best
+    def has_identity(feature):
+        return any(canonical_field(name) in ("pole_number", "internal_id") for name in feature["properties"])
+
+    def legacy_candidate(feature, prop, target):
+        return plausible(feature, by_target[target].get(normalise_id(feature["properties"].get(prop)) or "", []))
+
+    # Files without recognised identity columns keep the earlier behaviour: the property that yields the
+    # most spatially plausible ID matches (pole_number wins ties), so a generic OBJECTID cannot pose as a pole ID.
+    legacy_points = [feature for feature in points if not has_identity(feature)]
+    legacy = (0, None, None)
+    for target in ("pole_number", "internal_id"):
+        for prop in sorted({key for feature in legacy_points for key in feature["properties"]}):
+            count = sum(1 for feature in legacy_points if legacy_candidate(feature, prop, target))
+            if count > legacy[0]:
+                legacy = (count, prop, target)
+    _, legacy_property, legacy_target = legacy
 
     grid = defaultdict(list)
     for pole in poles:
@@ -195,14 +211,43 @@ def match_to_poles(features: list[dict], poles: list[dict], units: str | None) -
             grid[(math.floor(pole["x"] / nearest_radius), math.floor(pole["y"] / nearest_radius))].append(pole)
 
     summary = {"features": len(features), "points": len(points), "matched_id": 0, "matched_nearest": 0, "unmatched_points": 0,
-               "match_property": match_property, "match_target": match_target}
+               "identity_conflicts": 0, "match_property": None, "match_target": None}
+    matched_keys = []
     for feature in features:
         feature.update(pole_internal_id=None, match_method=None, match_property=None, match_distance=None)
     for feature in points:
-        hit = id_candidate(feature, match_property, match_target) if match_property else None
+        pole_value, pole_prop, pole_conflict = property_identity(feature, "pole_number")
+        internal_value, internal_prop, internal_conflict = property_identity(feature, "internal_id")
+        identity_conflict = pole_conflict or internal_conflict
+        candidates = None
+        match_property = match_target = None
+        if pole_value and internal_value and not identity_conflict:
+            pole_ids = {pole["internal_id"] for pole in by_target["pole_number"].get(pole_value, [])}
+            internal_ids = {pole["internal_id"] for pole in by_target["internal_id"].get(internal_value, [])}
+            ids = pole_ids & internal_ids
+            candidates = [pole for pole in poles if pole["internal_id"] in ids]
+            identity_conflict = not candidates and bool(pole_ids or internal_ids)
+            match_property = f"{pole_prop} + {internal_prop}"
+            match_target = "pole_number+internal_id"
+        elif pole_value and not identity_conflict:
+            candidates = by_target["pole_number"].get(pole_value, [])
+            match_property, match_target = pole_prop, "pole_number"
+        elif internal_value and not identity_conflict:
+            candidates = by_target["internal_id"].get(internal_value, [])
+            match_property, match_target = internal_prop, "internal_id"
+        hit = plausible(feature, candidates or []) if candidates is not None and not identity_conflict else None
+        if candidates is None and legacy_property and not has_identity(feature):
+            hit = legacy_candidate(feature, legacy_property, legacy_target)
+            match_property, match_target = legacy_property, legacy_target
         if hit:
             feature.update(pole_internal_id=hit[1]["internal_id"], match_method="ID", match_property=match_property, match_distance=hit[0])
             summary["matched_id"] += 1
+            matched_keys.append((match_property, match_target))
+            continue
+        if identity_conflict:
+            feature.update(match_method="CONFLICT", match_property=match_property)
+            summary["identity_conflicts"] += 1
+            summary["unmatched_points"] += 1
             continue
         cx, cy = math.floor(feature["x"] / nearest_radius), math.floor(feature["y"] / nearest_radius)
         nearby = [pole for dx in (-1, 0, 1) for dy in (-1, 0, 1) for pole in grid.get((cx + dx, cy + dy), [])]
@@ -214,6 +259,9 @@ def match_to_poles(features: list[dict], poles: list[dict], units: str | None) -
             summary["matched_nearest"] += 1
         else:
             summary["unmatched_points"] += 1
+    if matched_keys:
+        match_property, match_target = max(set(matched_keys), key=lambda item: (matched_keys.count(item), item[1] == "pole_number"))
+        summary.update(match_property=match_property, match_target=match_target)
     return summary
 
 
@@ -222,8 +270,17 @@ def pole_locations(project: Project, poles: list[Pole]) -> list[dict]:
     to_project = Transformer.from_crs("EPSG:4326", project.crs, always_xy=True)
     out = []
     for pole in poles:
-        x = y = workbook_x = workbook_y = None
-        if pole.corrected_lat is not None and pole.corrected_lon is not None:
+        x = y = workbook_x = workbook_y = workbook_z = None
+        try:
+            manifest = json.loads(pole.manifest_json or "{}")
+            raw_x, raw_y, raw_z = manifest_coordinates(manifest)
+            workbook_x, workbook_y = float(raw_x), float(raw_y)
+            workbook_z = float(raw_z) if raw_z is not None and str(raw_z).strip() else None
+            if not (math.isfinite(workbook_x) and math.isfinite(workbook_y)):
+                workbook_x = workbook_y = None
+        except (TypeError, ValueError, json.JSONDecodeError):
+            workbook_x = workbook_y = workbook_z = None
+        if workbook_x is None and pole.corrected_lat is not None and pole.corrected_lon is not None:
             workbook_x, workbook_y = to_project.transform(float(pole.corrected_lon), float(pole.corrected_lat))
             if not (math.isfinite(workbook_x) and math.isfinite(workbook_y)):
                 workbook_x = workbook_y = None
@@ -232,7 +289,7 @@ def pole_locations(project: Project, poles: list[Pole]) -> list[dict]:
         else:
             x, y = workbook_x, workbook_y
         out.append({"internal_id": pole.internal_id, "pole_number": pole.pole_number, "x": x, "y": y,
-                    "workbook_x": workbook_x, "workbook_y": workbook_y, "pole": pole})
+                    "workbook_x": workbook_x, "workbook_y": workbook_y, "workbook_z": workbook_z, "pole": pole})
     return out
 
 
@@ -257,9 +314,10 @@ def import_project_geojson(db: Session, project: Project, source_file_id: str, r
 
 
 def summary_message(summary: dict) -> str:
+    conflicts = f" · {summary.get('identity_conflicts', 0)} identity conflicts" if summary.get('identity_conflicts') else ""
     return (f"GeoJSON: {summary['features']} features ({summary['points']} points) · "
             f"{summary['matched_id']} matched by ID · {summary['matched_nearest']} by nearest pole · "
-            f"{summary['unmatched_points']} unmatched")
+            f"{summary['unmatched_points']} unmatched{conflicts}")
 
 
 def geo_feature_dict(row: ProductionGeoFeature, location: dict | None) -> dict:
@@ -270,11 +328,14 @@ def geo_feature_dict(row: ProductionGeoFeature, location: dict | None) -> dict:
             offsets["verified"] = math.hypot(row.x - pole.verified_x, row.y - pole.verified_y)
         if location["workbook_x"] is not None:
             offsets["workbook"] = math.hypot(row.x - location["workbook_x"], row.y - location["workbook_y"])
+    geometry = json.loads(row.geometry_json)
+    coordinates = geometry.get("coordinates") or []
     return {
         "id": row.id, "feature_index": row.feature_index, "geometry_type": row.geometry_type,
-        "source_crs": row.source_crs, "geometry": json.loads(row.geometry_json),
+        "source_crs": row.source_crs, "geometry": geometry,
         "source_geometry": json.loads(row.source_geometry_json), "x": row.x, "y": row.y,
         "properties": json.loads(row.properties_json or "{}"), "pole_internal_id": row.pole_internal_id,
         "match_method": row.match_method, "match_property": row.match_property, "match_distance": row.match_distance,
+        "z": coordinates[2] if row.geometry_type == "Point" and len(coordinates) > 2 else None,
         "offsets": offsets,
     }

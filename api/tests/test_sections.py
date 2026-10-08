@@ -1,4 +1,9 @@
-from app.sections import project_xyz, project_features, section_result_key
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.db import Base
+from app.models import Pole, Project
+from app.sections import _pole_anchor, project_xyz, project_features, section_result_key
 
 
 def test_profile_coordinate_transform():
@@ -24,3 +29,17 @@ def test_section_cache_key_changes_with_width():
     b=section_result_key('p',1,2,20,12,.5,90000)
     assert a!=b
     assert a.endswith('.json')
+
+
+def test_qc_section_anchor_uses_generalized_workbook_xyz(tmp_path):
+    engine=create_engine(f"sqlite:///{tmp_path/'sections.db'}"); Base.metadata.create_all(engine); db=sessionmaker(bind=engine)()
+    try:
+        db.add(Project(id='generalized',name='Generalized',customer='Test',crs='EPSG:6424',units='US survey foot',status='READY_FOR_QC'))
+        db.add(Pole(project_id='generalized',internal_id=7,pole_number='P-007',block_name=None,
+                    manifest_json='{"Easting": 6450000.25, "Northing": 1840000.75, "Elevation": 512.5}'))
+        db.commit()
+        anchor=_pole_anchor(db,'generalized',7)
+        assert anchor['xyz']==(6450000.25,1840000.75,512.5)
+        assert anchor['source']=='workbook_xyz' and anchor['has_3d'] is True
+    finally:
+        db.close()

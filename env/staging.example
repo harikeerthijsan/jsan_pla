@@ -14,10 +14,20 @@ AUTO_CONFIGURE_BUCKET_CORS=true
 BUCKET_CORS_ORIGINS=<staging-origin-allowlist>
 SEED_DEMO=false
 WORKER_POLL_SECONDS=3
+# LAS/LAZ -> COPC uses untwine when installed (UNTWINE_BIN; the Docker images include it): multi-core and
+# ~24 B RAM + ~70 B scratch disk per point. Without it PDAL writers.copc is used (~120 B RAM per point, one core).
+# Max parallel conversions per worker (default 2 with untwine, else half the CPU cores, at most 4).
+# Tiles only run together while they fit the memory budget
+# (LIDAR_MEMORY_BUDGET_GB, default 70% of free RAM). A tile too large to fit alone is split into
+# pieces (<tile>_1, <tile>_2 ...) with low-memory PDAL range filters; every point is kept.
+LIDAR_CONVERT_WORKERS=2
 DB_CONNECT_TIMEOUT=120
 # Unique to staging: never the production values.
 JWT_SECRET=<staging-only-random-value-of-32+-chars>
 ADMIN_EMAIL=<staging-admin-email>
+# Super admins (comma-separated e-mails or usernames of EXISTING accounts) are promoted at startup. This is the only
+# way to create the first super admin; afterwards a super admin can promote others in the app.
+SUPER_ADMIN_EMAILS=<staging-super-admin-email>
 ADMIN_PASSWORD=<staging-only-password-of-12+-chars>
 STAFF_INITIAL_PASSWORD=<staging-only-staff-password-of-12+-chars>
 # Optional; only needed if a separate (e.g. Vercel) frontend calls this API cross-origin. Never *.

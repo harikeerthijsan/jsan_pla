@@ -58,7 +58,7 @@ def seed_staff_accounts(db: Session) -> list[str]:
         if username.lower() in existing or db.query(User.id).filter(User.email == staff_email(username)).first():
             continue
         db.add(User(email=staff_email(username), username=username, name=username, role=role,
-                    password_hash=hash_password(password), must_change_password=True))
+                    password_hash=hash_password(password), must_change_password=True, remote_access=role == 'ADMIN'))
         db.add(AuditLog(actor='system', action='SEED_STAFF_ACCOUNT', entity_type='user', entity_id=username,
                         detail_json=json.dumps({'role': role})))
         created.append(username)
@@ -76,5 +76,25 @@ def seed_admin(db: Session):
         raise RuntimeError('Production requires ADMIN_EMAIL and ADMIN_PASSWORD')
     email = email or 'admin@jsan.local'
     password = password or 'ChangeMe123!'
-    db.add(User(email=email, name=os.getenv('ADMIN_NAME','JSAN QC Admin'), role='ADMIN', password_hash=hash_password(password)))
+    db.add(User(email=email, name=os.getenv('ADMIN_NAME','JSAN QC Admin'), role='ADMIN', password_hash=hash_password(password), remote_access=True))
     db.commit()
+
+
+def promote_super_admins(db: Session) -> list[str]:
+    """Promote the accounts named in SUPER_ADMIN_EMAILS (e-mails or usernames, comma separated) to SUPER_ADMIN.
+
+    This server setting is the only way to create the first super admin: nobody can grant it to themselves in the
+    app. Accounts already promoted, or not found, are left alone; each promotion is audited."""
+    wanted = {item.strip().lower() for item in os.getenv('SUPER_ADMIN_EMAILS', '').split(',') if item.strip()}
+    promoted = []
+    for user in db.query(User).all() if wanted else []:
+        keys = {(user.email or '').lower(), (user.username or '').lower()}
+        if keys & wanted and (user.role or '').upper() != 'SUPER_ADMIN':
+            previous = user.role
+            user.role = 'SUPER_ADMIN'
+            db.add(AuditLog(actor='system', action='PROMOTE_SUPER_ADMIN', entity_type='user', entity_id=str(user.id),
+                            detail_json=json.dumps({'username': user.username, 'email': user.email, 'previous_role': previous,
+                                                    'source': 'SUPER_ADMIN_EMAILS'})))
+            promoted.append(user.username or user.email)
+    if promoted: db.commit()
+    return promoted

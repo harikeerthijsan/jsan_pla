@@ -93,7 +93,9 @@ def ip_on_listed_network(ip: str | None, networks: list[dict]) -> bool:
 
 
 def user_network_allowed(db: Session, user: User, ip: str | None) -> bool:
-    if (user.role or "").upper() == "ADMIN" or user.remote_access:
+    # Super admins are never restricted. Admins and users follow their own "anywhere" switch, which a
+    # super admin (for admins) or an admin (for users) controls; existing admins were migrated to "anywhere".
+    if (user.role or "").strip().upper() == "SUPER_ADMIN" or user.remote_access:
         return True
     policy = get_network_policy(db)
     return not policy["enabled"] or ip_on_listed_network(ip, policy["networks"])

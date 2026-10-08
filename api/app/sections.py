@@ -5,6 +5,7 @@ from .models import Project, Pole, Finding, SceneFeature, LidarBlock
 from pyproj import Transformer
 from .storage import MODE, local_path, block_url, upload_from, object_exists, download_to
 from .workflow import DatasetVersion
+from .source_schema import manifest_coordinates
 
 
 def _pole_feature(db: Session, project_id: str, internal_id: int):
@@ -37,21 +38,32 @@ def _pole_anchor(db: Session, project_id: str, internal_id: int):
         return {'xyz': base, 'source': 'delivery_3d', 'has_3d': True}
 
     pole = db.query(Pole).filter_by(project_id=project_id, internal_id=internal_id).first()
-    if not pole or pole.corrected_lat is None or pole.corrected_lon is None:
+    if not pole:
         return None
     project = db.query(Project).filter_by(id=project_id).first()
     if not project:
         return None
-    tf = Transformer.from_crs('EPSG:4326', project.crs, always_xy=True)
-    x, y = tf.transform(float(pole.corrected_lon), float(pole.corrected_lat))
-    z = pole.bottom_elev_ft
+    try:
+        source_x, source_y, source_z = manifest_coordinates(json.loads(pole.manifest_json or '{}'))
+        x, y = float(source_x), float(source_y)
+        z = float(source_z) if source_z is not None and str(source_z).strip() else pole.bottom_elev_ft
+        if not (math.isfinite(x) and math.isfinite(y) and (z is None or math.isfinite(float(z)))):
+            raise ValueError
+        source = 'workbook_xyz'
+    except (TypeError, ValueError, json.JSONDecodeError):
+        if pole.corrected_lat is None or pole.corrected_lon is None:
+            return None
+        tf = Transformer.from_crs('EPSG:4326', project.crs, always_xy=True)
+        x, y = tf.transform(float(pole.corrected_lon), float(pole.corrected_lat))
+        z = pole.bottom_elev_ft
+        source = 'source_latlon'
     if z is None and pole.block_name:
         block = db.query(LidarBlock).filter_by(project_id=project_id, name=pole.block_name).first()
         if block and block.zmin is not None:
             z = float(block.zmin)
     if z is None:
         z = 0.0
-    return {'xyz': (float(x), float(y), float(z)), 'source': 'source_xy', 'has_3d': False}
+    return {'xyz': (float(x), float(y), float(z)), 'source': source, 'has_3d': source_z is not None if source == 'workbook_xyz' else False}
 
 
 def _center(feature):

@@ -1,8 +1,8 @@
 // Pole assignments, live presence and the Assign dialog.
-import { $, api, esc, state, toast } from "./core.js?v=20261007-last-sign-in";
-import { renderProductionPoleHeader, renderProductionPoleList, visibleProductionPoles } from "./production-poles.js?v=20261007-last-sign-in";
-import { range } from "./qc-analysis.js?v=20261007-last-sign-in";
-import { loadTeamProgress } from "./team-progress.js?v=20261007-last-sign-in";
+import { $, api, esc, state, toast } from "./core.js?v=20261008-project-delete-2";
+import { renderProductionPoleHeader, renderProductionPoleList, visibleProductionPoles } from "./production-poles.js?v=20261008-project-delete-2";
+import { range } from "./qc-analysis.js?v=20261008-project-delete-2";
+import { loadTeamProgress } from "./team-progress.js?v=20261008-project-delete-2";
 
 export function setPoleAssignments(rows){state.poleAssignments=new Map((rows||[]).map(row=>[String(row.pole_internal_id),row]))}
 export function poleAssignee(pole){return state.poleAssignments.get(String(pole?.internal_id))||null}
@@ -16,7 +16,7 @@ export function parsePoleSelection(text){const byId=new Map(state.productionPole
 export function poleAssignSelection(){const {ids,unknown}=parsePoleSelection($("poleAssignPoles").value);if($("poleAssignVisible").checked)visibleProductionPoles().forEach(p=>ids.add(p.internal_id));return {ids:[...ids],unknown}}
 export function updatePoleAssignPreview(){const {ids,unknown}=poleAssignSelection();$("poleAssignPreview").textContent=`${ids.length} pole${ids.length===1?"":"s"} selected${unknown.length?` · not found: ${unknown.slice(0,8).join(", ")}${unknown.length>8?"…":""}`:""}`}
 export async function savePoleAssignment(userId){const {ids,unknown}=poleAssignSelection();if(!ids.length){$("poleAssignError").textContent=unknown.length?`No matching poles: ${unknown.slice(0,8).join(", ")}`:"Enter poles or tick “All poles in the current list”";return}if(userId===undefined&&!$("poleAssignUser").value){$("poleAssignError").textContent="Choose a user";return}const target=userId===undefined?Number($("poleAssignUser").value):null;try{setPoleAssignments(await api(`/api/projects/${state.projectId}/pole-assignments`,{method:"PUT",body:JSON.stringify({user_id:target,pole_internal_ids:ids})}));$("poleAssignDialog").close();renderProductionPoleList();renderProductionPoleHeader();toast(target?`${ids.length} pole${ids.length===1?"":"s"} assigned to ${$("poleAssignUser").selectedOptions[0].textContent.split(" · ")[0]}`:`${ids.length} pole${ids.length===1?"":"s"} unassigned`,"success")}catch(e){$("poleAssignError").textContent=e.message}}
-export function openTeamPage(){$("productionWorkspace").classList.add("hidden");$("deliveryWorkspace").classList.add("hidden");$("qcWorkspace").classList.add("hidden");$("qcKpis").classList.add("hidden");$("profilePage").classList.add("hidden");$("teamPage").classList.remove("hidden");loadTeamProgress()}
+export function openTeamPage(){$("productionWorkspace").classList.add("hidden");$("deliveryWorkspace").classList.add("hidden");$("qcWorkspace").classList.add("hidden");$("qcKpis").classList.add("hidden");$("profilePage").classList.add("hidden");$("superPage").classList.add("hidden");$("teamPage").classList.remove("hidden");loadTeamProgress()}
 
 // One-time setup (original statements 261–284); called by app.js in the original order.
 export function init() {

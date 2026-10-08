@@ -174,8 +174,14 @@ def test_only_admin_can_create_user_and_admin_accounts():
             "role": "ADMIN",
             "password": temporary_password,
         }
-        created_admin = client.post("/api/users", headers=admin, json=admin_body)
+        # Only a super admin may create admin accounts.
+        refused = client.post("/api/users", headers=admin, json=admin_body)
+        assert refused.status_code == 403 and "super admin" in refused.json()["detail"]
+        super_email = _user("SUPER_ADMIN")
+        super_admin, _ = _login(client, super_email, OWN)
+        created_admin = client.post("/api/users", headers=super_admin, json=admin_body)
         assert created_admin.status_code == 200, created_admin.text
+        assert created_admin.json()["remote_access"] is True, "new admins start with access from anywhere"
         assert created_admin.json()["role"] == "ADMIN"
         assert created_admin.json()["must_change_password"] is True
 

@@ -13,9 +13,17 @@ from .models import User
 ROLE_PERMISSIONS = {
     "ADMIN": {
         "workspace.production", "workspace.delivery", "workspace.qc", "project.read", "project.create",
-        "upload.create", "processing.run", "production.annotate", "analysis.run", "finding.review", "correction.create",
+        "upload.create", "project.delete", "processing.run", "production.annotate", "analysis.run", "finding.review", "correction.create",
         "correction.resolve", "version.create", "version.approve", "user.manage", "work.view_all",
         "workbook.edit_internal_id",
+    },
+    # Everything an admin can do, plus managing admin accounts and the oversight page. Super admins'
+    # own work is hidden from admins and users (see team.hidden_authors).
+    "SUPER_ADMIN": {
+        "workspace.production", "workspace.delivery", "workspace.qc", "project.read", "project.create",
+        "upload.create", "project.delete", "processing.run", "production.annotate", "analysis.run", "finding.review", "correction.create",
+        "correction.resolve", "version.create", "version.approve", "user.manage", "work.view_all",
+        "workbook.edit_internal_id", "user.manage_admins", "super.view",
     },
     "USER": {
         "workspace.production", "workspace.delivery", "workspace.qc", "project.read", "production.annotate",
@@ -47,8 +55,19 @@ ROLE_PERMISSIONS = {
 }
 
 
+ADMIN_ROLES = {"ADMIN", "SUPER_ADMIN"}
+
+
 def normalize_role(role: str | None) -> str:
     return (role or "").strip().upper()
+
+
+def is_super_admin(user: User | None) -> bool:
+    return bool(user) and normalize_role(user.role) == "SUPER_ADMIN"
+
+
+def is_admin_role(role: str | None) -> bool:
+    return normalize_role(role) in ADMIN_ROLES
 
 
 def permissions_for(user: User) -> set[str]:

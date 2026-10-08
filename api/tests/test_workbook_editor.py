@@ -61,6 +61,30 @@ def test_geojson_match_requires_exact_pole_number_property():
     assert match_geojson_pole_number(features[:1] * 2, "P-001")["status"] == "AMBIGUOUS"
 
 
+def test_geojson_workbook_match_accepts_aliases_and_rejects_identity_conflicts():
+    features = [
+        {"geometry_type": "Point", "properties": {"POLE_NO": "P-001", "InternalID": 1}},
+        {"geometry_type": "Point", "properties": {"POLE_NO": "P-001", "InternalID": 99}},
+    ]
+    assert match_geojson_pole_number(features[:1], "P-001", 1)["status"] == "MATCHED"
+    assert match_geojson_pole_number(features[1:], "P-001", 1)["status"] == "MISSING"
+
+
+def test_inspect_generalized_workbook_uses_detected_catalogue_and_related_internal_id():
+    workbook = Workbook(); catalogue = workbook.active; catalogue.title = "Customer Assets"
+    catalogue.append(["InternalID", "Pole_No", "Lat", "Lng", "Customer Field"])
+    catalogue.append([7, "P-007", 34.2, -118.1, "Preserved"])
+    related = workbook.create_sheet("Anything")
+    related.append(["Internal ID", "Owner", "Custom Value"]); related.append([7, "Utility", 42])
+    stream = BytesIO(); workbook.save(stream)
+
+    result = inspect_workbook(stream.getvalue(), "P-007", 7)
+    assert result["pole_sheet"] == "Customer Assets"
+    assert {sheet["name"] for sheet in result["worksheets"]} == {"Customer Assets", "Anything"}
+    custom = next(sheet for sheet in result["worksheets"] if sheet["name"] == "Customer Assets")
+    assert custom["headers"][-1] == "Customer Field" and custom["rows"][0]["values"][-1] == "Preserved"
+
+
 def test_inspect_workbook_reports_duplicate_pole_number_as_ambiguous():
     data = workbook_bytes()
     workbook = load_workbook(BytesIO(data))

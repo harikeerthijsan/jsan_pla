@@ -1,6 +1,6 @@
 // QC four-view layout: maximize, minimize, focus workspace and resize.
-import { $, state, toast } from "./core.js?v=20261007-last-sign-in";
-import { renderAnalysisViews } from "./qc-analysis.js?v=20261007-last-sign-in";
+import { $, state, toast } from "./core.js?v=20261008-project-delete-2";
+import { renderAnalysisViews } from "./qc-analysis.js?v=20261008-project-delete-2";
 
 export function refreshViewLayout(){
   const grid=document.querySelector('.quad-grid');

@@ -11,19 +11,20 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, text
 from .db import Base, engine, get_db, SessionLocal, initialize_schema
-from .models import iso_utc,User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog
+from .models import iso_utc,User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog,PoleAssignment,PolePresence,Notification
 from .geojson_import import geo_feature_dict, pole_locations
 from .auth import current_user, verify_password, create_token, hash_password
-from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission, normalize_role
-from .workflow import DatasetVersion, VersionFile, CorrectionRequest, FindingRevision, QCRun, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
-from .seed import seed_database, seed_admin, seed_staff_accounts
+from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission, normalize_role, is_admin_role, is_super_admin
+from .workflow import DatasetVersion, VersionFile, CorrectionRequest, FindingRevision, FindingComparison, ReviewDecisionArchive, ProcessingLease, QCRun, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
+from .seed import promote_super_admins, seed_database, seed_admin, seed_staff_accounts
 from .ingest import parse_workbook
 from .pipeline import pipeline as pipeline_snapshot, production_project_ids
 from .team import router as team_router, hidden_authors
+from .super_admin import router as super_admin_router
 from .notifications import router as notifications_router, safely, notify_correction_requested, notify_correction_resolved, notify_version_approved
 from .deliverables import build_package, ensure_package
 from .network_access import client_ip, get_network_policy, ip_on_listed_network, set_network_policy, user_network_allowed
-from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
+from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, list_objects, delete_objects, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
 from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
@@ -67,6 +68,7 @@ async def lifespan(app:FastAPI):
         configure_bucket_cors()
         seed_admin(db)
         seed_staff_accounts(db)
+        promote_super_admins(db)
         if os.getenv('SEED_DEMO','false').lower()=='true': seed_database(db)
     finally: db.close()
     yield
@@ -74,6 +76,7 @@ async def lifespan(app:FastAPI):
 app=FastAPI(title='JSAN PLA Quality Validation API',version=APP_VERSION,lifespan=lifespan)
 app.include_router(team_router)
 app.include_router(notifications_router)
+app.include_router(super_admin_router)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag'])
 
@@ -95,7 +98,7 @@ class DecisionIn(BaseModel): decision:str; comment:str|None=None
 class CorrectionIn(BaseModel): comment:str|None=None
 class UserCreateIn(BaseModel):
     email:str; name:str=Field(min_length=2,max_length=255); role:str='QC_REVIEWER'; password:str=Field(min_length=12,max_length=256)
-    username:str|None=Field(default=None,max_length=80,pattern=r'^[A-Za-z0-9._-]*$')
+    username:str|None=Field(default=None,max_length=80,pattern=r'^[A-Za-z0-9._-]*$'); remote_access:bool|None=None
 class UserUpdateIn(BaseModel):
     name:str|None=None; role:str|None=None; password:str|None=Field(default=None,min_length=12,max_length=256); active:bool|None=None; remote_access:bool|None=None
 class NetworkEntryIn(BaseModel):
@@ -287,30 +290,55 @@ def update_profile(body:ProfileIn,u:User=Depends(current_user),db:Session=Depend
 @app.get('/api/workspaces')
 def workspaces(u:User=Depends(current_user)): return {'workspaces':workspaces_for(u),'permissions':sorted(ROLE_PERMISSIONS.get((u.role or '').upper(),set()))}
 
+def visible_accounts(db:Session,u:User):
+    """Accounts this manager may see: super admins are invisible to everyone except other super admins."""
+    rows=db.query(User).order_by(User.name,User.email)
+    return rows.all() if is_super_admin(u) else rows.filter(func.upper(User.role)!='SUPER_ADMIN').all()
+
+def require_account_authority(u:User,*roles:str|None):
+    """Admin and super-admin accounts (and granting those roles) are managed only by super admins."""
+    if any(is_admin_role(role) for role in roles) and not has_permission(u,'user.manage_admins'):
+        raise HTTPException(403,'Only a super admin can manage admin accounts')
+
+def active_super_admins(db:Session,exclude_id:int|None=None)->int:
+    q=db.query(User.id).filter(func.upper(User.role)=='SUPER_ADMIN',User.is_active.is_(True))
+    return (q.filter(User.id!=exclude_id) if exclude_id is not None else q).count()
+
 @app.get('/api/users')
 def list_users(u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
-    return [user_dict(x) for x in db.query(User).order_by(User.name,User.email).all()]
+    return [user_dict(x) for x in visible_accounts(db,u)]
 @app.post('/api/users')
 def create_user(body:UserCreateIn,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
     role=body.role.upper()
     if role not in ROLE_PERMISSIONS: raise HTTPException(400,'Unsupported role')
+    require_account_authority(u,role)
     if db.query(User).filter(func.lower(User.email)==body.email.lower()).first(): raise HTTPException(409,'User already exists')
     username=(body.username or '').strip() or None
     if username and db.query(User.id).filter(func.lower(User.username)==username.lower()).first(): raise HTTPException(409,'Username already exists')
-    row=User(email=body.email.lower(),username=username,name=body.name,role=role,password_hash=hash_password(body.password),must_change_password=True); db.add(row); db.add(AuditLog(actor=u.email,action='CREATE_USER',entity_type='user',entity_id=body.email.lower(),detail_json=json.dumps({'role':role,'name':body.name}))); db.commit(); return user_dict(row)
+    # New admins work from anywhere unless a super admin limits them; users start office-only (as before).
+    remote=body.remote_access if body.remote_access is not None else role in {'ADMIN','SUPER_ADMIN'}
+    row=User(email=body.email.lower(),username=username,name=body.name,role=role,password_hash=hash_password(body.password),must_change_password=True,remote_access=remote); db.add(row); db.add(AuditLog(actor=u.email,action='CREATE_USER',entity_type='user',entity_id=body.email.lower(),detail_json=json.dumps({'role':role,'name':body.name}))); db.commit(); return user_dict(row)
 @app.put('/api/users/{user_id}')
 def update_user(user_id:int,body:UserUpdateIn,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
     row=db.query(User).filter_by(id=user_id).first()
-    if not row: raise HTTPException(404,'User not found')
+    if not row or (normalize_role(row.role)=='SUPER_ADMIN' and not is_super_admin(u)): raise HTTPException(404,'User not found')
     role=body.role.upper() if body.role is not None else row.role
     if role not in ROLE_PERMISSIONS: raise HTTPException(400,'Unsupported role')
-    active=row.is_active if body.active is None else body.active
     if body.active is False and row.id==u.id: raise HTTPException(409,'You cannot deactivate your own account')
+    require_account_authority(u,row.role,role)
+    active=row.is_active if body.active is None else body.active
+    if row.id==u.id and normalize_role(row.role)=='SUPER_ADMIN' and normalize_role(role)!='SUPER_ADMIN':
+        raise HTTPException(409,'You cannot remove your own super admin role')
+    # Keep at least one active super admin once the role exists, so admins can always be managed.
+    if normalize_role(row.role)=='SUPER_ADMIN' and row.is_active and not (normalize_role(role)=='SUPER_ADMIN' and active) and not active_super_admins(db,row.id):
+        raise HTTPException(409,'At least one active super admin account is required')
     # Keep at least one active admin so the application can always be administered.
-    if (normalize_role(row.role)=='ADMIN' and row.is_active) and not (role=='ADMIN' and active):
-        other_admins=db.query(User.id).filter(func.upper(User.role)=='ADMIN',User.is_active.is_(True),User.id!=row.id).count()
+    if (is_admin_role(row.role) and row.is_active) and not (is_admin_role(role) and active):
+        other_admins=db.query(User.id).filter(func.upper(User.role).in_(['ADMIN','SUPER_ADMIN']),User.is_active.is_(True),User.id!=row.id).count()
         if not other_admins: raise HTTPException(409,'At least one active admin account is required')
     if body.name is not None: row.name=body.name
+    if normalize_role(role)!=normalize_role(row.role):
+        db.add(AuditLog(actor=u.email,action='CHANGE_ROLE',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'username':row.username,'email':row.email,'from':row.role,'to':role})))
     row.role=role
     # An admin-set password is temporary: the person replaces it at their next sign-in. Resetting a
     # password or deactivating an account ends that account's existing sign-ins.
@@ -328,7 +356,8 @@ def update_user(user_id:int,body:UserUpdateIn,u:User=Depends(require_permission(
 def _network_policy_view(db:Session,request:Request,u:User)->dict:
     policy=get_network_policy(db); ip=client_ip(request)
     return {**policy,'your_ip':ip,'your_ip_listed':ip_on_listed_network(ip,policy['networks']),
-            'users_with_remote_access':db.query(User.id).filter(User.remote_access.is_(True),func.upper(User.role)!='ADMIN').count()}
+            'users_with_remote_access':db.query(User.id).filter(User.remote_access.is_(True),func.upper(User.role)=='USER').count(),
+            'admins_with_remote_access':db.query(User.id).filter(User.remote_access.is_(True),func.upper(User.role)=='ADMIN').count() if is_super_admin(u) else None}
 @app.get('/api/admin/network-access')
 def network_access_policy(request:Request,u:User=Depends(require_permission('user.manage')),db:Session=Depends(get_db)):
     return _network_policy_view(db,request,u)
@@ -344,6 +373,98 @@ def update_network_access_policy(body:NetworkPolicyIn,request:Request,u:User=Dep
 def projects(u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
     production_ids=production_project_ids(db)
     return [{**project_dict(p),'production_dataset':p.id in production_ids} for p in db.query(Project).order_by(Project.created_at.desc()).all()]
+
+def project_deletion_blocker(db:Session,project_id:str)->str|None:
+    """Why this project cannot be deleted right now, or None when deletion is allowed."""
+    if db.query(ProcessingJob.id).filter(ProcessingJob.project_id==project_id,ProcessingJob.status.in_(['QUEUED','RUNNING'])).first():
+        return 'Wait for project processing to finish before deleting this import'
+    protected=db.query(DatasetVersion.version_no).filter(DatasetVersion.project_id==project_id,DatasetVersion.status.in_(['APPROVED','ARCHIVED'])).order_by(DatasetVersion.version_no).first()
+    if protected: return f'This project has an approved or archived version v{protected[0]} and cannot be deleted'
+    linked=db.query(Project.name).filter(Project.source_project_id==project_id).first()
+    if linked: return f'Its LiDAR is shared with the QC dataset "{linked[0]}". Delete that QC dataset first'
+    return None
+
+def project_owned_keys(db:Session,project:Project)->list[str]:
+    """Storage objects this project owns: everything under its own key prefix. Objects it merely references from
+    another project (a QC dataset borrows its Production dataset's LiDAR) are never part of its deletion."""
+    prefix=f'{project.id}/'
+    files=db.query(DatasetFile.object_key).filter_by(project_id=project.id).all()
+    blocks=db.query(LidarBlock.object_key,LidarBlock.source_object_key).filter_by(project_id=project.id).all()
+    jobs=db.query(ProcessingJob.result_key).filter_by(project_id=project.id).all()
+    referenced=[project.source_workbook_key,*[k for (k,) in files],*[k for row in blocks for k in row],*[k for (k,) in jobs]]
+    return list(dict.fromkeys([*list_objects(prefix),*[key for key in referenced if key and key.startswith(prefix)]]))
+
+@app.get('/api/admin/imports')
+def admin_imports(u:User=Depends(require_permission('project.delete')),db:Session=Depends(get_db)):
+    projects=db.query(Project).order_by(Project.created_at.desc()).all()
+    files_by_project={project.id:[] for project in projects}
+    if files_by_project:
+        for file in db.query(DatasetFile).filter(DatasetFile.project_id.in_(files_by_project)).order_by(DatasetFile.created_at).all():
+            files_by_project[file.project_id].append({'id':file.id,'filename':file.filename,'role':file.role,'size_bytes':file.size_bytes,'status':file.status,'created_at':iso_utc(file.created_at),
+                                                      'shared':not (file.object_key or '').startswith(f'{file.project_id}/')})
+    names={project.id:project.name for project in projects}
+    out=[]
+    for project in projects:
+        blocker=project_deletion_blocker(db,project.id)
+        out.append({'id':project.id,'name':project.name,'customer':project.customer,'status':project.status,'created_at':iso_utc(project.created_at),
+                    'source_project':{'id':project.source_project_id,'name':names.get(project.source_project_id)} if project.source_project_id else None,
+                    'can_delete':blocker is None,'blocked_reason':blocker,'files':files_by_project[project.id]})
+    return out
+
+@app.delete('/api/projects/{project_id}')
+def delete_project_import(project_id:str,u:User=Depends(require_permission('project.delete')),db:Session=Depends(get_db)):
+    project=db.query(Project).filter_by(id=project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    blocker=project_deletion_blocker(db,project_id)
+    if blocker: raise HTTPException(409,blocker)
+    try: object_keys=project_owned_keys(db,project)
+    except Exception as exc:
+        logging.getLogger(__name__).exception('Project storage listing failed for %s',project_id)
+        raise HTTPException(502,'Project storage could not be listed; no project data was changed.') from exc
+    # Never delete an object another dataset still uses.
+    if object_keys:
+        others=or_(
+            db.query(DatasetFile.id).filter(DatasetFile.object_key.in_(object_keys),DatasetFile.project_id!=project_id).exists(),
+            db.query(LidarBlock.id).filter(LidarBlock.project_id!=project_id,or_(LidarBlock.object_key.in_(object_keys),LidarBlock.source_object_key.in_(object_keys))).exists(),
+            db.query(ProcessingJob.id).filter(ProcessingJob.project_id!=project_id,ProcessingJob.result_key.in_(object_keys)).exists(),
+            db.query(Project.id).filter(Project.id!=project_id,Project.source_workbook_key.in_(object_keys)).exists())
+        if db.query(others).scalar():
+            raise HTTPException(409,'This project contains storage objects used by another dataset and cannot be deleted')
+
+    files=db.query(DatasetFile).filter_by(project_id=project_id).all()
+    blocks=db.query(LidarBlock).filter_by(project_id=project_id).all()
+    version_ids=[row[0] for row in db.query(DatasetVersion.id).filter_by(project_id=project_id).all()]
+    job_ids=[row[0] for row in db.query(ProcessingJob.id).filter_by(project_id=project_id).all()]
+    finding_ids=[row[0] for row in db.query(Finding.id).filter_by(project_id=project_id).all()]
+    run_ids=[row[0] for row in db.query(QCRun.id).filter(QCRun.project_id==project_id).all()]
+    file_ids=[file.id for file in files]; name=project.name; deleted_files=len(files); deleted_blocks=len(blocks)
+    # Stage every row deletion first (children before parents), then delete storage, then commit: if storage
+    # deletion fails the transaction is rolled back and nothing changes, and a retry finds the same objects
+    # (objects already removed count as deleted).
+    if finding_ids: db.query(ReviewDecision).filter(ReviewDecision.finding_id.in_(finding_ids)).delete(synchronize_session=False)
+    if version_ids or run_ids: db.query(FindingRevision).filter(or_(FindingRevision.version_id.in_(version_ids),FindingRevision.qc_run_id.in_(run_ids))).delete(synchronize_session=False)
+    db.query(CorrectionRequest).filter(CorrectionRequest.project_id==project_id).delete(synchronize_session=False)
+    db.query(ReviewDecisionArchive).filter(ReviewDecisionArchive.project_id==project_id).delete(synchronize_session=False)
+    db.query(FindingComparison).filter(FindingComparison.project_id==project_id).delete(synchronize_session=False)
+    db.query(QCRun).filter(QCRun.project_id==project_id).delete(synchronize_session=False)
+    if job_ids: db.query(ProcessingLease).filter(ProcessingLease.job_id.in_(job_ids)).delete(synchronize_session=False)
+    if version_ids or file_ids: db.query(VersionFile).filter(or_(VersionFile.version_id.in_(version_ids),VersionFile.file_id.in_(file_ids))).delete(synchronize_session=False)
+    for model in (ProductionAnnotation,ProductionGeoFeature,SceneFeature,PoleAssignment,PolePresence,Notification,Finding,Pole,LidarBlock,ProcessingJob,DatasetFile):
+        db.query(model).filter_by(project_id=project_id).delete(synchronize_session=False)
+    if version_ids: db.query(DatasetVersion).filter(DatasetVersion.id.in_(version_ids)).delete(synchronize_session=False)
+    db.delete(project)
+    db.add(AuditLog(actor=u.email,action='DELETE_PROJECT',entity_type='project',entity_id=project_id,
+        detail_json=json.dumps({'project_id':project_id,'name':name,'source_project_id':project.source_project_id,'file_count':deleted_files,
+                                'block_count':deleted_blocks,'object_count':len(object_keys),'object_keys':object_keys[:200]})))
+    try:
+        db.flush()  # surfaces any constraint problem before a single object is deleted
+        delete_objects(object_keys)
+    except Exception as exc:
+        db.rollback()
+        logging.getLogger(__name__).exception('Project deletion failed for %s; database changes rolled back',project_id)
+        raise HTTPException(502,'The project could not be deleted; nothing was changed in the database. Retry the deletion.') from exc
+    db.commit()
+    return {'ok':True,'project_id':project_id,'name':name,'deleted_files':deleted_files,'deleted_blocks':deleted_blocks,'deleted_objects':len(object_keys)}
 
 @app.get('/api/projects/{project_id}/pipeline')
 def project_pipeline(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
@@ -411,12 +532,12 @@ def project_files(project_id:str,u:User=Depends(current_user),db:Session=Depends
     return [{'id':f.id,'filename':f.filename,'role':f.role,'size_bytes':f.size_bytes,'status':f.status} for f in db.query(DatasetFile).filter_by(project_id=project_id).order_by(DatasetFile.created_at).all()]
 
 @app.get('/api/projects/{project_id}/lidar-blocks')
-def project_lidar_blocks(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+def project_lidar_blocks(project_id:str,request:Request,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
     if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
     files={f.object_key:f.filename for f in db.query(DatasetFile).filter_by(project_id=project_id,role='LIDAR_SOURCE').all()}
     return [{'id':b.id,'name':b.name,'source_filename':files.get(b.source_object_key),'point_count':b.point_count,
              'bounds':{'x_min':b.x_min,'y_min':b.y_min,'z_min':b.zmin,'x_max':b.x_max,'y_max':b.y_max,'z_max':b.zmax},
-             'copc_url':block_url(b.object_key)}
+             'copc_url':block_url(b.object_key,str(request.base_url))}
             for b in db.query(LidarBlock).filter_by(project_id=project_id).order_by(LidarBlock.name).all()]
 
 @app.get('/api/production/catalogue')
@@ -459,7 +580,7 @@ def _pole_workbook_context(project_id:str,internal_id:int,db:Session):
     geojson_ids=[file.id for file in files if file.role=='GEOJSON']
     geo_rows=(db.query(ProductionGeoFeature).filter(ProductionGeoFeature.project_id==project_id,ProductionGeoFeature.source_file_id.in_(geojson_ids)).order_by(ProductionGeoFeature.feature_index).all() if geojson_ids else [])
     geo_features=[{'geometry_type':row.geometry_type,'properties':json.loads(row.properties_json or '{}')} for row in geo_rows]
-    geojson_match=match_geojson_pole_number(geo_features,pole.pole_number)
+    geojson_match=match_geojson_pole_number(geo_features,pole.pole_number,pole.internal_id)
     try:
         contents=read_bytes(workbook_file.object_key)
     except FileNotFoundError as exc:
@@ -470,7 +591,7 @@ def _pole_workbook_context(project_id:str,internal_id:int,db:Session):
 def get_pole_workbook(project_id:str,internal_id:int,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
     project,pole,version,workbook_file,contents,geojson_match=_pole_workbook_context(project_id,internal_id,db)
     try:
-        result=inspect_workbook(contents,pole.pole_number)
+        result=inspect_workbook(contents,pole.pole_number,pole.internal_id)
     except ValueError as exc:
         raise HTTPException(409,str(exc)) from exc
     result.update({
@@ -496,7 +617,7 @@ def save_pole_workbook(project_id:str,internal_id:int,body:PoleWorkbookSaveIn,u:
     if geojson_match['status']!='MATCHED': raise HTTPException(422,'Workbook editing requires one exact GeoJSON Pole Number match')
     updates=[cell.model_dump() for cell in body.updates]
     try:
-        updated=apply_workbook_updates(contents,pole.pole_number,updates,allow_internal_id=has_permission(u,'workbook.edit_internal_id'))
+        updated=apply_workbook_updates(contents,pole.pole_number,updates,internal_id=pole.internal_id,allow_internal_id=has_permission(u,'workbook.edit_internal_id'))
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
     if len(updated)>MAX_WORKBOOK_BYTES: raise HTTPException(413,'Updated workbook exceeds configured size limit')
@@ -513,7 +634,7 @@ def save_pole_workbook(project_id:str,internal_id:int,body:PoleWorkbookSaveIn,u:
     new_file=DatasetFile(id=file_id,project_id=project_id,filename=filename,role='WORKBOOK_EDITED',object_key=key,
                          content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',size_bytes=len(updated),status='UPLOADED')
     db.add(new_file); db.flush(); db.add(VersionFile(version_id=version.id,file_id=file_id))
-    original=inspect_workbook(contents,pole.pole_number)
+    original=inspect_workbook(contents,pole.pole_number,pole.internal_id)
     column_names={(sheet['name'],column):header for sheet in original['worksheets'] for column,header in zip(sheet['columns'],sheet['headers'])}
     changed_columns=sorted({f"{update['sheet']}:{column_names.get((update['sheet'],update['column']),update['column'])}" for update in updates})
     db.add(AuditLog(actor=u.email,action='UPDATE_PRODUCTION_WORKBOOK',entity_type='pole_workbook',
@@ -524,7 +645,7 @@ def save_pole_workbook(project_id:str,internal_id:int,body:PoleWorkbookSaveIn,u:
                     })))
     db.commit()
     try:
-        result=inspect_workbook(updated,pole.pole_number)
+        result=inspect_workbook(updated,pole.pole_number,pole.internal_id)
     except ValueError as exc:
         raise HTTPException(500,'Saved workbook could not be reopened') from exc
     result.update({'project_id':project_id,'version_id':version.id,'snapshot_file_id':file_id,
@@ -815,6 +936,18 @@ def get_job(job_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
     if not j: raise HTTPException(404,'Job not found')
     return {'id':j.id,'project_id':j.project_id,'job_type':j.job_type,'status':j.status,'progress':j.progress,'stage':j.stage,'message':j.message,'error':j.error,'result_key':j.result_key}
 
+def rule_coverage_summary(runs):
+    """Which QC rules the latest successful run could apply to this workbook, so "no findings" is never mistaken for a pass."""
+    done=[r for r in runs if r.status=='SUCCEEDED' and r.finished_at]
+    if not done: return None
+    run=max(done,key=lambda r: r.finished_at)
+    try: summary=json.loads(run.summary_json or '{}')
+    except ValueError: return None
+    rules=summary.get('rules')
+    if not isinstance(rules,list): return None  # runs made before coverage was recorded
+    return {'qc_run_id':run.id,'finished_at':iso_utc(run.finished_at),'pole_sheet':summary.get('pole_sheet'),'rules':rules,
+            'ran':sum(1 for r in rules if r.get('applicable')),'total':len(rules)}
+
 @app.get('/api/projects/{project_id}/summary')
 def summary(project_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
     poles=db.query(Pole).filter_by(project_id=project_id).all(); fs=db.query(Finding).filter_by(project_id=project_id).all(); p=db.query(Project).filter_by(id=project_id).first()
@@ -830,7 +963,8 @@ def summary(project_id:str,u:User=Depends(current_user),db:Session=Depends(get_d
                 'has_geojson':'GEOJSON' in version_roles,'qc_runs':len(runs),'qc_job_id':active_run.processing_job_id if active_run else None,
                 'production_dataset':is_production_dataset(db,project_id),
                 'qc_dataset':{'id':qc_dataset.id,'name':qc_dataset.name} if qc_dataset else None,
-                'source_project':{'id':source.id,'name':source.name} if source else None}
+                'source_project':{'id':source.id,'name':source.name} if source else None,
+                'rule_coverage':rule_coverage_summary(runs)}
     return {**production,'project_id':project_id,'project_status':p.status,'poles':len(poles),'poles_pass':sum(x.qc_status=='PASS' for x in poles),'poles_fail':sum(x.qc_status=='FAIL' for x in poles),'poles_review':sum(x.qc_status=='REVIEW' for x in poles),'poles_unverifiable':sum(x.qc_status=='UNVERIFIABLE' for x in poles),'findings':len(fs),'fail':sum(x.severity=='FAIL' for x in fs),'review':sum(x.severity=='REVIEW' for x in fs),'unverifiable':sum(x.severity=='UNVERIFIABLE' for x in fs),'open_findings':sum(x.status=='OPEN' for x in fs)}
 @app.get('/api/projects/{project_id}/poles')
 def poles(project_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)):
@@ -840,7 +974,8 @@ def poles(project_id:str,u:User=Depends(current_user),db:Session=Depends(get_db)
     try: locations={location['internal_id']:location for location in pole_locations(project,rows)} if project and rows else {}
     except Exception: locations={}
     hidden=hidden_annotation_ids(db,u,project_id)
-    return [{**visible_pole_dict(p,hidden),'workbook_x':locations.get(p.internal_id,{}).get('workbook_x'),'workbook_y':locations.get(p.internal_id,{}).get('workbook_y')} for p in rows]
+    return [{**visible_pole_dict(p,hidden),'workbook_x':locations.get(p.internal_id,{}).get('workbook_x'),
+             'workbook_y':locations.get(p.internal_id,{}).get('workbook_y'),'workbook_z':locations.get(p.internal_id,{}).get('workbook_z')} for p in rows]
 @app.get('/api/projects/{project_id}/findings')
 def findings(project_id:str,severity:str|None=None,internal_id:int|None=None,status:str|None=None,u:User=Depends(current_user),db:Session=Depends(get_db)):
     q=db.query(Finding).filter_by(project_id=project_id)
@@ -849,12 +984,12 @@ def findings(project_id:str,severity:str|None=None,internal_id:int|None=None,sta
     if status:q=q.filter(Finding.status==status)
     return [finding_dict(f) for f in q.order_by(Finding.internal_id,Finding.id).all()]
 @app.get('/api/projects/{project_id}/poles/{internal_id}/scene')
-def scene(project_id:str,internal_id:int,include_related:bool=Query(True),u:User=Depends(current_user),db:Session=Depends(get_db)):
+def scene(project_id:str,internal_id:int,request:Request,include_related:bool=Query(True),u:User=Depends(current_user),db:Session=Depends(get_db)):
     p=db.query(Pole).filter_by(project_id=project_id,internal_id=internal_id).first()
     if not p: raise HTTPException(404,'Pole not found')
     fs=db.query(Finding).filter_by(project_id=project_id,internal_id=internal_id).all(); related=sorted(set(x for f in fs for x in json.loads(f.related_poles_json or '[]'))); ids=[internal_id]+(related if include_related else [])
     feats=db.query(SceneFeature).filter(SceneFeature.project_id==project_id,SceneFeature.internal_id.in_(ids)).all(); selected=db.query(Pole).filter(Pole.project_id==project_id,Pole.internal_id.in_(ids)).all(); names=sorted(set(x.block_name for x in selected if x.block_name)); blocks=[]
-    for b in db.query(LidarBlock).filter(LidarBlock.project_id==project_id,LidarBlock.name.in_(names)).all(): blocks.append({'name':b.name,'bbox':[b.x_min,b.y_min,b.x_max,b.y_max],'copc_url':block_url(b.object_key),'object_key':b.object_key,'point_count':b.point_count})
+    for b in db.query(LidarBlock).filter(LidarBlock.project_id==project_id,LidarBlock.name.in_(names)).all(): blocks.append({'name':b.name,'bbox':[b.x_min,b.y_min,b.x_max,b.y_max],'copc_url':block_url(b.object_key,str(request.base_url)),'object_key':b.object_key,'point_count':b.point_count})
     return {'project_id':project_id,'pole':visible_pole_dict(p,hidden_annotation_ids(db,u,project_id)),'related_poles':related,'block':next((b for b in blocks if b['name']==p.block_name),None),'blocks':blocks,'features':[json.loads(x.payload_json) for x in feats],'findings':[finding_dict(f) for f in fs]}
 
 @app.get('/api/projects/{project_id}/poles/{internal_id}/analysis-frame')
@@ -958,7 +1093,7 @@ def approve_dataset(project_id:str,version_id:str,u:User=Depends(require_permiss
     db.refresh(row); return version_dict(row)
 
 @app.get('/api/projects/{project_id}/versions/{version_id}/deliverable')
-def deliverable_package(project_id:str,version_id:str,u:User=Depends(require_permission('workspace.delivery')),db:Session=Depends(get_db)):
+def deliverable_package(project_id:str,version_id:str,request:Request,u:User=Depends(require_permission('workspace.delivery')),db:Session=Depends(get_db)):
     project=db.query(Project).filter_by(id=project_id).first()
     version=db.query(DatasetVersion).filter_by(id=version_id,project_id=project_id).first()
     if not project or not version: raise HTTPException(404,'Dataset version not found')
@@ -968,7 +1103,7 @@ def deliverable_package(project_id:str,version_id:str,u:User=Depends(require_per
     db.commit()
     # Presigned (S3) or local URL: the ZIP is never proxied through the API process.
     return {**{k:manifest.get(k) for k in ('package','version_no','approved_by','approved_at','generated_at','built_at_approval','package_sha256','package_bytes')},
-            'files':[{'path':f['path'],'bytes':f['bytes'],'description':f['description']} for f in manifest.get('files',[])],'url':block_url(manifest['package_key'])}
+            'files':[{'path':f['path'],'bytes':f['bytes'],'description':f['description']} for f in manifest.get('files',[])],'url':block_url(manifest['package_key'],str(request.base_url))}
 
 @app.get('/api/storage/{key:path}')
 def local_storage(key:str):

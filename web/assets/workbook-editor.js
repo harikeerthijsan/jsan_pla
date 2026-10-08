@@ -15,7 +15,7 @@ function installPoleWorkbookEditor(){
   tabs.className="annotation-tabs";
   tabs.setAttribute("role","tablist");
   tabs.setAttribute("aria-label","Production details");
-  tabs.innerHTML='<button type="button" role="tab" aria-selected="true" class="annotation-tab active" data-annotation-tab="points">Point Attributes</button><button type="button" role="tab" aria-selected="false" class="annotation-tab" data-annotation-tab="workbook">Workbook Data</button>';
+  tabs.innerHTML='<button type="button" role="tab" aria-selected="true" class="annotation-tab active" data-annotation-tab="points">Point Attributes</button><button type="button" role="tab" aria-selected="false" class="annotation-tab" data-annotation-tab="workbook">Workbook Data</button><button type="button" role="tab" aria-selected="false" class="annotation-tab" data-annotation-tab="geojson">GeoJSON Data</button>';
   panel.prepend(tabs);
   const savedHeading=annotationList?.previousElementSibling;
   const view=document.createElement("section");
@@ -23,9 +23,14 @@ function installPoleWorkbookEditor(){
   view.className="pole-workbook-view hidden";
   view.innerHTML='<div class="annotation-panel-head"><b>Pole workbook</b><small id="poleWorkbookPole">Select an Excel pole</small></div><div id="poleWorkbookBusy" class="pole-workbook-busy hidden" role="status" aria-live="polite"><span class="pole-workbook-spinner" aria-hidden="true"></span><b id="poleWorkbookBusyText">Loading workbook data…</b></div><label class="workbook-pole-label">Search Pole Number or internal_id<input id="workbookPoleSearch" type="search" autocomplete="off" placeholder="Type a Pole Number or internal_id" aria-label="Search workbook poles by Pole Number or internal_id"></label><label class="workbook-pole-label">Pole Number<select id="workbookPoleSelect" aria-label="Select pole workbook data"><option value="">Select a workbook pole</option></select></label><small id="workbookPoleSearchStatus" class="workbook-pole-search-status" aria-live="polite"></small><div class="pole-workbook-toolbar"><span id="poleWorkbookMatch" class="pole-workbook-match" role="status"></span><button type="button" id="downloadPoleWorkbookBtn" class="compact-btn" disabled title="Download the saved updated workbook">Download Excel</button></div><div id="poleWorkbookError" class="pole-workbook-error" role="alert"></div><div id="poleWorkbookSheets" class="pole-workbook-sheets"></div><div class="pole-workbook-footer"><button type="button" id="savePoleWorkbookBtn" class="primary" disabled>Save changes</button></div>';
   panel.append(view);
+  const geoView=document.createElement("section");
+  geoView.id="poleGeojsonView";
+  geoView.className="pole-workbook-view hidden";
+  geoView.innerHTML='<div class="annotation-panel-head"><b>GeoJSON data</b><small id="poleGeojsonPole">Select a pole</small></div><div id="poleGeojsonBusy" class="pole-workbook-busy hidden" role="status" aria-live="polite"><span class="pole-workbook-spinner" aria-hidden="true"></span><b>Loading GeoJSON data…</b></div><div id="poleGeojsonError" class="pole-workbook-error" role="alert"></div><div id="poleGeojsonProperties" class="pole-workbook-sheets"></div>';
+  panel.append(geoView);
   const stylesheet=document.createElement("link");
   stylesheet.rel="stylesheet";
-  stylesheet.href=new URL("./workbook-editor.css?v=20261005-workbook-editor-v4",import.meta.url).href;
+  stylesheet.href=new URL("./workbook-editor.css?v=20261007-generalized-import-3",import.meta.url).href;
   document.head.append(stylesheet);
 
   const matchStatus=document.getElementById("poleWorkbookMatch");
@@ -39,25 +44,34 @@ function installPoleWorkbookEditor(){
   const errorRoot=document.getElementById("poleWorkbookError");
   const saveButton=document.getElementById("savePoleWorkbookBtn");
   const downloadButton=document.getElementById("downloadPoleWorkbookBtn");
-  let active=false;
+  const geoPoleLabel=document.getElementById("poleGeojsonPole");
+  const geoBusy=document.getElementById("poleGeojsonBusy");
+  const geoError=document.getElementById("poleGeojsonError");
+  const geoProperties=document.getElementById("poleGeojsonProperties");
+  let active="points";
   let generation=0;
   let snapshot=null;
   let loadedContext=null;
   let busy=false;
+  let geoProject="";
+  let geoFeatures=[];
 
   function setTab(name){
-    active=name==="workbook";
+    active=name;
     for(const tab of tabs.querySelectorAll("[data-annotation-tab]")){
       const selected=tab.dataset.annotationTab===name;
       tab.classList.toggle("active",selected);
       tab.setAttribute("aria-selected",String(selected));
     }
-    pointHeader?.classList.toggle("hidden",active);
-    pointForm?.classList.toggle("hidden",active);
-    annotationList?.classList.toggle("hidden",active);
-    savedHeading?.classList.toggle("hidden",active);
-    view.classList.toggle("hidden",!active);
-    if(active){syncPoleOptions();loadPoleWorkbook()}
+    const showPoints=name==="points",showWorkbook=name==="workbook",showGeojson=name==="geojson";
+    pointHeader?.classList.toggle("hidden",!showPoints);
+    pointForm?.classList.toggle("hidden",!showPoints);
+    annotationList?.classList.toggle("hidden",!showPoints);
+    savedHeading?.classList.toggle("hidden",!showPoints);
+    view.classList.toggle("hidden",!showWorkbook);
+    geoView.classList.toggle("hidden",!showGeojson);
+    if(showWorkbook){syncPoleOptions();loadPoleWorkbook()}
+    if(showGeojson)loadPoleGeojson()
   }
 
   async function request(path,options={}){
@@ -155,6 +169,26 @@ function installPoleWorkbookEditor(){
     }
   }
 
+  function renderPoleGeojson(selectedPole){
+    const matches=geoFeatures.filter(feature=>String(feature.pole_internal_id??"")===String(selectedPole));
+    geoPoleLabel.textContent=selectedPole?`Pole ID ${selectedPole}`:"Select a pole";
+    if(!selectedPole){geoProperties.innerHTML='<div class="empty-workflow">Choose a pole to see its matched GeoJSON fields.</div>';return}
+    if(!matches.length){geoProperties.innerHTML='<div class="empty-workflow">No GeoJSON Point is matched to this pole.</div>';return}
+    geoProperties.innerHTML=matches.map(feature=>{const coordinates=feature.source_geometry?.coordinates||[],fields=[['Feature index',feature.feature_index],['Match method',feature.match_method],['Match property',feature.match_property],['Source CRS',feature.source_crs],['Source X / longitude',coordinates[0]],['Source Y / latitude',coordinates[1]],['Source Z',coordinates[2]],...Object.entries(feature.properties||{})];return `<section class="workbook-sheet"><h3>GeoJSON feature ${feature.feature_index}</h3><div class="workbook-fields">${fields.map(([name,value])=>`<label class="workbook-field"><span>${workbookEscape(name)}</span><input type="text" readonly value="${workbookEscape(value!==null&&typeof value==="object"?JSON.stringify(value):value??"")}"></label>`).join("")}</div></section>`}).join("");
+  }
+
+  async function loadPoleGeojson({force=false}={}){
+    const projectId=projectSelect?.value||localStorage.getItem("pla_project_id")||"",selectedPole=poleSelect?.value||"";
+    geoError.textContent="";
+    if(!projectId){renderPoleGeojson("");return}
+    geoBusy.classList.remove("hidden");
+    try{
+      if(force||geoProject!==projectId){geoFeatures=await request(`/api/projects/${encodeURIComponent(projectId)}/production-geo-features`);geoProject=projectId}
+      renderPoleGeojson(selectedPole);
+    }catch(error){geoError.textContent=error.message;geoProperties.replaceChildren()}
+    finally{geoBusy.classList.add("hidden")}
+  }
+
   tabs.addEventListener("click",event=>{
     const tab=event.target.closest("[data-annotation-tab]");
     if(tab)setTab(tab.dataset.annotationTab);
@@ -170,9 +204,9 @@ function installPoleWorkbookEditor(){
     const first=workbookPole.options[1];
     if(first){workbookPole.value=first.value;workbookPole.dispatchEvent(new Event("change",{bubbles:true}))}
   });
-  poleSelect?.addEventListener("change",()=>{if(active){poleSearch.value="";syncPoleOptions();loadPoleWorkbook()}});
-  projectSelect?.addEventListener("change",()=>{if(active)setTimeout(loadPoleWorkbook,0)});
-  poleSelect&&new MutationObserver(()=>{syncPoleOptions();if(active)setTimeout(loadPoleWorkbook,0)}).observe(poleSelect,{childList:true});
+  poleSelect?.addEventListener("change",()=>{if(active==="workbook"){poleSearch.value="";syncPoleOptions();loadPoleWorkbook()}else if(active==="geojson")loadPoleGeojson()});
+  projectSelect?.addEventListener("change",()=>{geoProject="";geoFeatures=[];if(active==="workbook")setTimeout(loadPoleWorkbook,0);else if(active==="geojson")setTimeout(()=>loadPoleGeojson({force:true}),0)});
+  poleSelect&&new MutationObserver(()=>{syncPoleOptions();if(active==="workbook")setTimeout(loadPoleWorkbook,0);else if(active==="geojson")setTimeout(loadPoleGeojson,0)}).observe(poleSelect,{childList:true});
   syncPoleOptions();
   sheetsRoot.addEventListener("input",updateSaveState);
 
@@ -192,7 +226,7 @@ function installPoleWorkbookEditor(){
         method:"PUT",body:JSON.stringify({snapshot_file_id:snapshot.snapshot_file_id,updates}),
       });
       if(context.key===workbookContext().key){renderWorkbook(data,context.key);matchStatus.textContent="Workbook changes saved"}
-      else{snapshot=null;loadedContext=null;if(active)setTimeout(loadPoleWorkbook,0)}
+      else{snapshot=null;loadedContext=null;if(active==="workbook")setTimeout(loadPoleWorkbook,0)}
     }catch(error){
       errorRoot.textContent=error.message;
     }finally{setBusy()}

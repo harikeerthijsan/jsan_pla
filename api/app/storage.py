@@ -54,7 +54,9 @@ def configure_bucket_cors():
     )
 
 def local_path(key:str)->pathlib.Path:
-    p=(LOCAL_ROOT/key).resolve()
+    # Lexical normalisation, not resolve(): on Windows resolve() can return a different spelling while another
+    # thread is creating folders under the same root, which made valid keys fail this check intermittently.
+    p=pathlib.Path(os.path.normpath(os.path.join(LOCAL_ROOT,key)))
     if not p.is_relative_to(LOCAL_ROOT): raise ValueError('Invalid storage key')
     return p
 
@@ -89,20 +91,58 @@ def object_exists(key:str)->bool:
         if e.response.get('ResponseMetadata',{}).get('HTTPStatusCode')==404: return False
         raise
 
+def list_objects(prefix:str)->list[str]:
+    """List exact keys below a non-empty, directory-shaped object prefix."""
+    if not prefix or not prefix.endswith('/') or any(part in {'.','..'} for part in prefix.split('/')):
+        raise ValueError('Invalid storage prefix')
+    if MODE=='local':
+        root=local_path(prefix)
+        if not root.exists() or not root.is_dir(): return []
+        return sorted(path.relative_to(LOCAL_ROOT).as_posix() for path in root.rglob('*') if path.is_file())
+    paginator=_s3().get_paginator('list_objects_v2')
+    return [item['Key'] for page in paginator.paginate(Bucket=bucket_name(),Prefix=prefix) for item in page.get('Contents',[]) if item.get('Key')]
+
+def delete_objects(keys:list[str])->list[str]:
+    """Delete exact object keys. Missing objects are already deleted and therefore succeed."""
+    unique=list(dict.fromkeys(key for key in keys if key))
+    if MODE=='local':
+        for key in unique:
+            path=local_path(key)
+            if path.exists() and not path.is_file(): raise IsADirectoryError(f'Storage object is not a file: {key}')
+            path.unlink(missing_ok=True)
+            parent=path.parent
+            while parent!=LOCAL_ROOT:
+                try: parent.rmdir()
+                except OSError: break
+                parent=parent.parent
+        return unique
+    for start in range(0,len(unique),1000):
+        batch=unique[start:start+1000]
+        response=_s3().delete_objects(Bucket=bucket_name(),Delete={'Objects':[{'Key':key} for key in batch],'Quiet':True})
+        errors=response.get('Errors') or []
+        if errors:
+            failed=', '.join(str(item.get('Key') or 'unknown') for item in errors[:5])
+            raise RuntimeError(f'Object storage refused deletion for: {failed}')
+    return unique
+
 def presign_put(key:str,content_type:str|None=None,expires=3600):
     if MODE=='local': return None
     params={'Bucket':bucket_name(),'Key':key}
     if content_type: params['ContentType']=content_type
     return _s3().generate_presigned_url('put_object',Params=params,ExpiresIn=expires,HttpMethod='PUT')
 
-def block_url(key:str)->str|None:
+def block_url(key:str,local_base_url:str|None=None)->str|None:
     if not key: return None
     if MODE=='local':
-        base=os.getenv('LIDAR_PUBLIC_BASE_URL','').rstrip('/')
+        # A literal localhost URL only works in a browser running on the API machine. Use the
+        # request's API origin for local/private-network clients unless an explicit public base
+        # is configured. Production uses S3 presigned URLs and never reaches this branch.
+        base=(os.getenv('LIDAR_PUBLIC_BASE_URL','') or local_base_url or '').rstrip('/')
         if not base:
             railway_domain=os.getenv('RAILWAY_PUBLIC_DOMAIN','').strip()
-            base=f'https://{railway_domain}' if railway_domain else 'http://localhost:8000'
-        return f"{base}/api/storage/{quote(key, safe='/')}"
+            base=f'https://{railway_domain}' if railway_domain else ''
+        path=f"/api/storage/{quote(key, safe='/')}"
+        return f"{base}{path}" if base else path
     return _s3().generate_presigned_url('get_object',Params={'Bucket':bucket_name(),'Key':key},ExpiresIn=int(os.getenv('SIGNED_URL_TTL','3600')))
 
 def create_multipart(key:str,content_type:str|None=None):

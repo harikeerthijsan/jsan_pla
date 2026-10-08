@@ -20,7 +20,7 @@ from .db import get_db
 from .notifications import notify_poles_assigned, safely
 from .models import iso_utc, AuditLog, Finding, Pole, PoleAssignment, PolePresence, ProductionAnnotation, Project, User
 from .pipeline import POLE_BASE, POLE_TOP, dataset_pair
-from .rbac import has_permission, require_permission
+from .rbac import has_permission, is_super_admin, require_permission
 from .workbook_editor import normalize_pole_number
 
 router = APIRouter()
@@ -30,10 +30,12 @@ PRESENCE_RETENTION = timedelta(days=1)
 
 
 def hidden_authors(db: Session, u: User) -> set[str]:
-    # Users see every user's Production work but never an admin's; admins see everything.
-    if has_permission(u, "work.view_all"):
+    """E-mails whose work this viewer must not see. Users never see admins' or super admins' work, admins never
+    see super admins' work, and only super admins see everything (including other super admins)."""
+    if is_super_admin(u):
         return set()
-    return {email for (email,) in db.query(User.email).filter(func.upper(User.role) == "ADMIN").all()}
+    hidden_roles = ["SUPER_ADMIN"] if has_permission(u, "work.view_all") else ["ADMIN", "SUPER_ADMIN"]
+    return {email for (email,) in db.query(User.email).filter(func.upper(User.role).in_(hidden_roles)).all()}
 
 
 def display_name(user: User | None, fallback: str) -> str:
@@ -138,11 +140,32 @@ def team_progress(project_id: str, days: int = Query(14, ge=1, le=90), u: User =
     production, qc = dataset_pair(db, _project(db, project_id))
     if not production:
         raise HTTPException(409, "Team progress is available for Production datasets")
+    return compute_team_progress(db, production, qc, days, hidden_authors(db, u))
+
+
+TEAM_ACTIONS = ["CREATE_PRODUCTION_ANNOTATION", "UPDATE_PRODUCTION_ANNOTATION", "RESTORE_PRODUCTION_ANNOTATION"]
+
+
+def audit_project(entry: AuditLog) -> str | None:
+    try:
+        detail = json.loads(entry.detail_json or "{}")
+    except ValueError:
+        return None
+    return detail.get("project_id") or (detail.get("before") or {}).get("project_id")
+
+
+def compute_team_progress(db: Session, production, qc, days: int, hidden: set[str], *, users: dict | None = None,
+                          audit_rows: list | None = None, include_idle: bool = True) -> dict:
+    """Per-person Production progress for one dataset pair; people in ``hidden`` are left out entirely.
+
+    ``users`` and ``audit_rows`` (this dataset's Production audit entries in the period) may be preloaded by a
+    caller summarising many datasets, so each dataset does not re-read every account and the whole audit log."""
     today = datetime.now(timezone.utc).date()
     day_list = [(today - timedelta(days=offset)).isoformat() for offset in range(days - 1, -1, -1)]
     since = datetime.combine(today - timedelta(days=days - 1), time.min, tzinfo=timezone.utc)
 
-    users = {user.email: user for user in db.query(User).all()}
+    if users is None:
+        users = {user.email: user for user in db.query(User).all()}
     stats: dict[str, dict] = defaultdict(lambda: {"assigned": 0, "completed_total": 0, "completed_by_day": defaultdict(int),
                                                   "points_by_day": defaultdict(int), "edits": 0, "qc_checked": 0, "qc_failed": 0,
                                                   "last_active": None})
@@ -194,15 +217,10 @@ def team_progress(project_id: str, days: int = Query(14, ge=1, le=90), u: User =
             entry["qc_failed"] += number in qc_failed
 
     # Activity in the period comes from the audit log, so points later deleted still count as work done.
-    for entry in (db.query(AuditLog).filter(AuditLog.action.in_(["CREATE_PRODUCTION_ANNOTATION", "UPDATE_PRODUCTION_ANNOTATION", "RESTORE_PRODUCTION_ANNOTATION"]),
-                                             AuditLog.created_at >= since).all()):
-        try:
-            detail = json.loads(entry.detail_json or "{}")
-        except ValueError:
-            continue
-        project_of = detail.get("project_id") or (detail.get("before") or {}).get("project_id")
-        if project_of != production.id:
-            continue
+    if audit_rows is None:
+        audit_rows = [entry for entry in db.query(AuditLog).filter(AuditLog.action.in_(TEAM_ACTIONS), AuditLog.created_at >= since).all()
+                      if audit_project(entry) == production.id]
+    for entry in audit_rows:
         if entry.action == "CREATE_PRODUCTION_ANNOTATION":
             day = _day(entry.created_at)
             if day in day_list:
@@ -211,11 +229,13 @@ def team_progress(project_id: str, days: int = Query(14, ge=1, le=90), u: User =
             stats[entry.actor]["edits"] += 1
         touch(entry.actor, entry.created_at)
 
-    for user in users.values():
+    for user in users.values() if include_idle else ():
         if user.is_active and (user.role or "").upper() == "USER":
             stats[user.email]  # every active user appears, even with no work yet
     out = []
     for email, entry in stats.items():
+        if email in hidden:
+            continue
         user = users.get(email)
         checked = entry["qc_checked"]
         out.append({
@@ -232,9 +252,40 @@ def team_progress(project_id: str, days: int = Query(14, ge=1, le=90), u: User =
         })
     out.sort(key=lambda row: (-row["completed_period"], -row["points_period"], row["username"].lower()))
     poles_total = len(pole_numbers)
+    # Completion counts only what this viewer may see, so hidden people's poles do not leak through the totals.
+    visible_completed = sum(1 for points in by_pole.values() if points["base"] and points["top"]
+                            and max(points["base"], points["top"], key=saved_order).created_by not in hidden)
     return {
         "production": {"id": production.id, "name": production.name}, "qc": {"id": qc.id, "name": qc.name} if qc else None,
         "days": day_list, "poles_total": poles_total,
-        "poles_completed": sum(1 for points in by_pole.values() if points["base"] and points["top"]),
+        "poles_completed": visible_completed,
         "poles_assigned": sum(row["assigned"] for row in out), "users": out,
+    }
+
+
+def merge_team_progress(parts: list[dict], days: int) -> dict:
+    """Sum several datasets' Team progress into one view (same day window), person by person."""
+    today = datetime.now(timezone.utc).date()
+    day_list = [(today - timedelta(days=offset)).isoformat() for offset in range(days - 1, -1, -1)]
+    people: dict[str, dict] = {}
+    for part in parts:
+        for row in part["users"]:
+            merged = people.get(row["email"])
+            if merged is None:
+                people[row["email"]] = {**row, "completed_by_day": list(row["completed_by_day"]), "points_by_day": list(row["points_by_day"])}
+                continue
+            for key in ("assigned", "completed_total", "completed_period", "points_period", "edits_period", "qc_checked", "qc_failed"):
+                merged[key] += row[key]
+            merged["completed_by_day"] = [a + b for a, b in zip(merged["completed_by_day"], row["completed_by_day"])]
+            merged["points_by_day"] = [a + b for a, b in zip(merged["points_by_day"], row["points_by_day"])]
+            if row["last_active"] and (merged["last_active"] is None or row["last_active"] > merged["last_active"]):
+                merged["last_active"] = row["last_active"]
+    for row in people.values():
+        row["qc_fail_rate"] = round(row["qc_failed"] / row["qc_checked"], 4) if row["qc_checked"] else None
+    users = sorted(people.values(), key=lambda row: (-row["completed_period"], -row["points_period"], row["username"].lower()))
+    return {
+        "production": {"id": "all", "name": f"All Production datasets ({len(parts)})"}, "qc": None, "scope": "all",
+        "datasets": [part["production"] for part in parts], "days": day_list,
+        "poles_total": sum(part["poles_total"] for part in parts), "poles_completed": sum(part["poles_completed"] for part in parts),
+        "poles_assigned": sum(row["assigned"] for row in users), "users": users,
     }
