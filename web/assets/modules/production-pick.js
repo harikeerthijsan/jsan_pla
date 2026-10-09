@@ -1,11 +1,11 @@
 // Point picking, editing, saving, deleting and edit-conflict handling.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, esc, state, toast } from "./core.js?v=20261009-warp-centred";
-import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261009-warp-centred";
-import { downloadProductionAnnotations } from "./production-data.js?v=20261009-warp-centred";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261009-warp-centred";
-import { cancelProductionBox } from "./production-view.js?v=20261009-warp-centred";
-import { can } from "./workspace.js?v=20261009-warp-centred";
+import { $, api, esc, state, toast } from "./core.js?v=20261009-directory-422";
+import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261009-directory-422";
+import { downloadProductionAnnotations } from "./production-data.js?v=20261009-directory-422";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261009-directory-422";
+import { cancelProductionBox } from "./production-view.js?v=20261009-directory-422";
+import { can } from "./workspace.js?v=20261009-directory-422";
 
 // Saved-point quick actions: click a point in the 3D view (or the list / checklist buttons) to edit or remove it.
 export function removeSavedPoint(id){const row=state.productionAnnotations.find(item=>item.id===id);if(!row||!can("production.annotate"))return;closePointMenu();editProductionAnnotation(row);$("annotationDeleteBtn").click()}

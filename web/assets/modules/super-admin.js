@@ -1,17 +1,18 @@
 // Super admin page: every account with its access and work, and a timeline of everyone's actions.
 // Only shown to accounts with the super.view permission; the server enforces it on every route.
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-warp-centred";
-import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261009-warp-centred";
-import { teamAgo, teamAvatar } from "./team-progress.js?v=20261009-warp-centred";
-import { openTeamPage } from "./team.js?v=20261009-warp-centred";
-import { applyWorkspace } from "./workspace.js?v=20261009-warp-centred";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-directory-422";
+import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261009-directory-422";
+import { teamAgo, teamAvatar } from "./team-progress.js?v=20261009-directory-422";
+import { openTeamPage } from "./team.js?v=20261009-directory-422";
+import { loadDirectory } from "./employee-directory.js?v=20261009-directory-422";
+import { applyWorkspace } from "./workspace.js?v=20261009-directory-422";
 
 const ROLES=["USER","ADMIN","SUPER_ADMIN"];
 const GROUPS={production:"Production",qc:"QC",data:"Data",delivery:"Delivery",accounts:"Accounts",other:"Other"};
 
 export function openSuperPage(tab=state.superAdmin.tab){for(const id of ["productionWorkspace","deliveryWorkspace","qcWorkspace","qcKpis","profilePage","teamPage"])$(id).classList.add("hidden");$("superPage").classList.remove("hidden");showTab(tab);loadPeople()}
 
-function showTab(tab){state.superAdmin.tab=tab;rememberPage("super",{tab});document.querySelectorAll("[data-super-tab]").forEach(b=>{const on=b.dataset.superTab===tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",String(on))});$("superPeopleView").classList.toggle("hidden",tab!=="people");$("superActivityView").classList.toggle("hidden",tab!=="activity");if(tab==="activity"&&!state.superAdmin.activity.loaded)loadActivity(true)}
+function showTab(tab){state.superAdmin.tab=tab;rememberPage("super",{tab});document.querySelectorAll("[data-super-tab]").forEach(b=>{const on=b.dataset.superTab===tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",String(on))});$("superPeopleView").classList.toggle("hidden",tab!=="people");$("superActivityView").classList.toggle("hidden",tab!=="activity");$("superDirectoryView").classList.toggle("hidden",tab!=="directory");if(tab==="directory")loadDirectory();if(tab==="activity"&&!state.superAdmin.activity.loaded)loadActivity(true)}
 
 async function loadPeople(){const root=$("superPeople");root.innerHTML='<div class="team-skeleton-block short"></div>';try{const people=await api(`/api/super/people?days=${state.superAdmin.days}`);people.sort((a,b)=>ROLES.indexOf(String(b.role).toUpperCase())-ROLES.indexOf(String(a.role).toUpperCase())||String(a.username||a.email).localeCompare(String(b.username||b.email),undefined,{numeric:true}));state.superAdmin.people=people;renderPeople();fillActivityFilters()}catch(e){root.innerHTML=`<div class="team-empty error"><b>People could not load</b><small>${esc(e.message)}</small></div>`}}
 

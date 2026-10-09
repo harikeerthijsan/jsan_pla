@@ -445,3 +445,26 @@ def test_brand_line_decodes_engineering():
     assert 'LiDAR Utility <span class="brand-engineering-wrap"><span id="brandEngineering"' in html and ">ENGINEERING</span></span> Platform</div>" in html
     assert 'const WORD = "ENGINEERING"' in brand and "prefers-reduced-motion: reduce" in brand
     assert ".brand-engineering{" in css and "@keyframes brandShimmer" in css
+
+
+def test_super_admin_directory_tab_is_wired():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    module = (ROOT / "web" / "assets" / "modules" / "employee-directory.js").read_text(encoding="utf-8")
+    super_admin = (ROOT / "web" / "assets" / "modules" / "super-admin.js").read_text(encoding="utf-8")
+    assert 'data-super-tab="directory"' in html and 'id="superDirectoryView"' in html
+    for element in ("dirSearch", "dirAccess", "dirRole", "dirDept", "dirDesig", "dirHrRole", "dirBulkGrant", "dirGrantDialog", "dirCredsDialog", "dirEditDialog", "dirImportFile"):
+        assert f'id="{element}"' in html, element
+    # All three roles can be granted from the directory, one at a time or in bulk.
+    assert html.count('value="SUPER_ADMIN"') >= 3
+    assert 'if(tab==="directory")loadDirectory()' in super_admin
+    # Account changes reuse the guarded account route; temporary passwords are dropped when the dialog closes.
+    assert "/api/users/${encodeURIComponent(e.account.id)}" in module and 'dir.creds = []; $("dirCredsBody").innerHTML = ""' in module
+
+
+def test_validation_errors_are_readable_and_username_patterns_are_valid_for_chrome():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    core = (ROOT / "web" / "assets" / "modules" / "core.js").read_text(encoding="utf-8")
+    # An unescaped trailing "-" makes Chrome (v-flag patterns) ignore the rule, letting bad usernames reach the API.
+    assert 'pattern="[A-Za-z0-9._-]' not in html and html.count('pattern="[A-Za-z0-9._\\-]') == 4
+    assert "export function errorText(detail)" in core and "new Error(errorText(data?.detail)" in core
+    assert 'string_pattern_mismatch"?"may use only letters, numbers, dot, dash and underscore (no spaces)"' in core

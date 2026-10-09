@@ -1,13 +1,13 @@
 // MicroStation-style profile section and its overlay.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, state, toast } from "./core.js?v=20261009-warp-centred";
-import { addProductionMeasurement, selectedPoleAnnotations } from "./production-annotations.js?v=20261009-warp-centred";
-import { clearProductionClip } from "./production-data.js?v=20261009-warp-centred";
-import { renderProductionGeoOverlay } from "./production-geo.js?v=20261009-warp-centred";
-import { cancelProductionPick } from "./production-pick.js?v=20261009-warp-centred";
-import { cancelProductionBox, markProductionView, productionOrthoWorld, productionUnitLabel, restoreProductionCamera, saveProductionCamera, setProductionView } from "./production-view.js?v=20261009-warp-centred";
-import { range } from "./qc-analysis.js?v=20261009-warp-centred";
-import { can } from "./workspace.js?v=20261009-warp-centred";
+import { $, state, toast } from "./core.js?v=20261009-directory-422";
+import { addProductionMeasurement, selectedPoleAnnotations } from "./production-annotations.js?v=20261009-directory-422";
+import { clearProductionClip } from "./production-data.js?v=20261009-directory-422";
+import { renderProductionGeoOverlay } from "./production-geo.js?v=20261009-directory-422";
+import { cancelProductionPick } from "./production-pick.js?v=20261009-directory-422";
+import { cancelProductionBox, markProductionView, productionOrthoWorld, productionUnitLabel, restoreProductionCamera, saveProductionCamera, setProductionView } from "./production-view.js?v=20261009-directory-422";
+import { range } from "./qc-analysis.js?v=20261009-directory-422";
+import { can } from "./workspace.js?v=20261009-directory-422";
 
 export function productionPointAt(px,py){const v=state.productionViewer,I=Potree.Utils.getMousePointCloudIntersection({x:px,y:py},v.scene.getActiveCamera(),v,v.scene.pointclouds);if(I)return I.location.clone();if(v.scene.cameraMode===Potree.CameraMode.ORTHOGRAPHIC&&Math.abs(v.scene.view.pitch+Math.PI/2)<.01){const p=productionOrthoWorld(px,py),bounds=v.getBoundingBox(v.scene.pointclouds);p.z=(bounds.min.z+bounds.max.z)/2;return p}return null}
 export function cancelProductionProfileLine(){const line=state.productionProfileLine;if(!line)return;state.productionProfileLine=null;line.cancel();$("productionProfileBtn").textContent="Profile";if(!state.productionProfile)$("productionProfileBtn").classList.remove("active")}

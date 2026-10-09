@@ -22,6 +22,7 @@ from .pipeline import pipeline as pipeline_snapshot, production_project_ids
 from .team import router as team_router, hidden_authors
 from .super_admin import router as super_admin_router
 from .email_login import router as email_login_router
+from .employee_directory import router as employee_directory_router
 from .signin import complete_sign_in
 from . import mailer
 from .notifications import router as notifications_router, safely, notify_correction_requested, notify_correction_resolved, notify_version_approved
@@ -84,6 +85,7 @@ app.include_router(team_router)
 app.include_router(notifications_router)
 app.include_router(super_admin_router)
 app.include_router(email_login_router)
+app.include_router(employee_directory_router)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag'])
 

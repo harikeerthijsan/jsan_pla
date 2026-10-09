@@ -9,8 +9,8 @@
   <link rel="stylesheet" href="potree/libs/openlayers3/ol.css" />
   <link rel="stylesheet" href="potree/libs/spectrum/spectrum.css" />
   <link rel="stylesheet" href="potree/libs/jstree/themes/mixed/style.css" />
-  <link rel="stylesheet" href="assets/app.css?v=20261009-warp-centred" />
-  <link rel="stylesheet" href="assets/login-lidar.css?v=20261009-warp-centred" />
+  <link rel="stylesheet" href="assets/app.css?v=20261009-directory-422" />
+  <link rel="stylesheet" href="assets/login-lidar.css?v=20261009-directory-422" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -98,7 +98,7 @@
           <form id="profileCreateUserForm" class="profile-form profile-create-user">
             <div class="profile-create-title"><b>Create an account</b><button type="button" id="profileGeneratePassword" class="profile-link-btn">Generate temporary password</button></div>
             <div class="profile-create-grid">
-              <label>Username<input id="profileCreateUsername" required minlength="2" maxlength="80" pattern="[A-Za-z0-9._-]+" autocomplete="off" placeholder="JSAN021" /></label>
+              <label>Username<input id="profileCreateUsername" required minlength="2" maxlength="80" pattern="[A-Za-z0-9._\-]+" title="Letters, numbers, dot, dash and underscore only (no spaces)" autocomplete="off" placeholder="JSAN021" /></label>
               <label>Display name<input id="profileCreateName" required minlength="2" maxlength="255" autocomplete="off" placeholder="Employee name" /></label>
               <label>Email<input id="profileCreateEmail" type="email" required maxlength="255" autocomplete="off" placeholder="name@example.com" /></label>
               <label>Role<select id="profileCreateRole" required><option value="USER">User</option><option value="ADMIN">Admin</option></select></label>
@@ -117,7 +117,7 @@
       <header class="team-hero">
         <div class="team-hero-text"><span class="team-eyebrow">Super admin</span><h2 id="superTitle">Everyone's work</h2><p>Accounts, access and activity across every dataset. Only super admins can open this page, and only super admins can see super admins' work.</p></div>
         <div class="team-hero-actions">
-          <div class="team-segment" role="tablist" aria-label="Super admin views"><button type="button" role="tab" data-super-tab="people" class="active" aria-selected="true">People</button><button type="button" role="tab" data-super-tab="activity" aria-selected="false">Activity</button></div>
+          <div class="team-segment" role="tablist" aria-label="Super admin views"><button type="button" role="tab" data-super-tab="people" class="active" aria-selected="true">People</button><button type="button" role="tab" data-super-tab="activity" aria-selected="false">Activity</button><button type="button" role="tab" data-super-tab="directory" aria-selected="false">Directory</button></div>
           <button type="button" id="superTeamBtn" class="team-ghost">Team progress · all datasets</button>
           <button type="button" id="superBackBtn" class="team-ghost">Back</button>
         </div>
@@ -126,7 +126,7 @@
         <article class="team-panel">
           <div class="team-panel-head"><div><h3>Create an account</h3><small>Only super admins can create admins and super admins. The temporary password must be changed at first sign-in.</small></div></div>
           <form id="superCreateForm" class="super-create" autocomplete="off">
-            <label>Username<input id="superCreateUsername" maxlength="80" pattern="[A-Za-z0-9._-]*" placeholder="e.g. JSAN021" required></label>
+            <label>Username<input id="superCreateUsername" maxlength="80" pattern="[A-Za-z0-9._\-]*" title="Letters, numbers, dot, dash and underscore only (no spaces)" placeholder="e.g. JSAN021" required></label>
             <label>Full name<input id="superCreateName" minlength="2" maxlength="255" required></label>
             <label>Email<input id="superCreateEmail" type="email" maxlength="255" required></label>
             <label>Role<select id="superCreateRole"><option value="USER">User</option><option value="ADMIN">Admin</option><option value="SUPER_ADMIN">Super admin</option></select></label>
@@ -147,6 +147,81 @@
           <div id="superActivity" class="super-activity"></div>
           <div class="super-more"><button type="button" id="superActivityMore" class="team-ghost hidden">Load more</button></div>
         </article>
+      </div>
+      <div id="superDirectoryView" class="hidden">
+        <article class="team-panel dir-panel">
+          <div class="dir-head">
+            <div><h3>Employee directory</h3><small id="dirMeta">Loading…</small></div>
+            <div class="dir-head-actions"><button type="button" id="dirImportBtn" class="team-ghost" title="Import or refresh employees from an HR export (.csv)">Import CSV</button><input type="file" id="dirImportFile" accept=".csv,text/csv" hidden><button type="button" id="dirAddBtn" class="primary">Add employee</button></div>
+          </div>
+          <div id="dirKpis" class="dir-kpis" role="group" aria-label="Access summary"></div>
+          <div class="dir-toolbar">
+            <label class="dir-search"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 14 15.5l.27.28v.79l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Z"/></svg><input id="dirSearch" type="search" placeholder="Search name, JSAN ID, employee ID, email, department, designation" aria-label="Search employees"></label>
+            <select id="dirAccess" aria-label="Access"><option value="">All access</option><option value="none">No access yet</option><option value="active">Active</option><option value="pending">Must change password</option><option value="inactive">Deactivated</option></select>
+            <select id="dirRole" aria-label="App role"><option value="">Any app role</option><option value="USER">User</option><option value="ADMIN">Admin</option><option value="SUPER_ADMIN">Super admin</option></select>
+            <select id="dirDept" aria-label="Department"><option value="">All departments</option></select>
+            <select id="dirDesig" aria-label="Designation"><option value="">All designations</option></select>
+            <select id="dirHrRole" aria-label="HR role"><option value="">Any HR role</option></select>
+            <button type="button" id="dirClear" class="team-ghost">Clear filters</button>
+          </div>
+          <div id="dirBulk" class="dir-bulk hidden" role="region" aria-label="Selected employees">
+            <b id="dirSelCount">0 selected</b>
+            <span class="dir-bulk-group">Grant access as<select id="dirBulkRole" aria-label="Role for selected"><option value="USER">User</option><option value="ADMIN">Admin</option><option value="SUPER_ADMIN">Super admin</option></select><select id="dirBulkAccess" aria-label="Works from"><option value="">Default works-from</option><option value="office">Office networks only</option><option value="anywhere">Anywhere</option></select><button type="button" id="dirBulkGrant" class="primary">Grant access</button></span>
+            <button type="button" id="dirBulkActivate" class="team-ghost">Activate</button>
+            <button type="button" id="dirBulkDeactivate" class="team-ghost dir-danger">Deactivate</button>
+            <button type="button" id="dirBulkClear" class="dir-link">Clear selection</button>
+          </div>
+          <div id="dirTable" class="team-table-wrap dir-table-wrap"></div>
+          <div class="dir-foot"><small id="dirShowing"></small><button type="button" id="dirMore" class="team-ghost hidden">Show more</button></div>
+        </article>
+        <dialog id="dirGrantDialog" class="dir-dialog" aria-labelledby="dirGrantTitle">
+          <form method="dialog" id="dirGrantForm">
+            <h3 id="dirGrantTitle">Give access</h3>
+            <p id="dirGrantWho" class="dir-dialog-sub"></p>
+            <fieldset class="dir-roles"><legend>Role in PoleGrid</legend>
+              <label><input type="radio" name="dirGrantRole" value="USER" checked><span><b>User</b><small>Production work on assigned poles</small></span></label>
+              <label><input type="radio" name="dirGrantRole" value="ADMIN"><span><b>Admin</b><small>Manages datasets, QC, delivery and users</small></span></label>
+              <label><input type="radio" name="dirGrantRole" value="SUPER_ADMIN"><span><b>Super admin</b><small>Everything, including admins and this directory</small></span></label>
+            </fieldset>
+            <div class="dir-form-grid">
+              <label>Username<input id="dirGrantUsername" maxlength="80" pattern="[A-Za-z0-9._\-]+" title="Letters, numbers, dot, dash and underscore only (no spaces)" autocomplete="off"></label>
+              <label>Works from<select id="dirGrantAccess"><option value="">Default for the role</option><option value="office">Office networks only</option><option value="anywhere">Anywhere</option></select></label>
+            </div>
+            <p class="dir-note">A temporary password is created and shown once. They must change it at their first sign-in.</p>
+            <p id="dirGrantError" class="error" role="alert"></p>
+            <div class="dir-dialog-actions"><button type="button" class="team-ghost" data-dir-close>Cancel</button><button type="submit" id="dirGrantSubmit" class="primary">Grant access</button></div>
+          </form>
+        </dialog>
+        <dialog id="dirCredsDialog" class="dir-dialog dir-creds" aria-labelledby="dirCredsTitle">
+          <h3 id="dirCredsTitle">Access granted</h3>
+          <p class="dir-dialog-sub">Share these sign-in details privately. Temporary passwords are shown only now; each person must change theirs at first sign-in.</p>
+          <div id="dirCredsBody"></div>
+          <div class="dir-dialog-actions"><button type="button" id="dirCredsCopy" class="team-ghost">Copy all</button><button type="button" id="dirCredsCsv" class="team-ghost">Download CSV</button><button type="button" class="primary" data-dir-close>Done</button></div>
+        </dialog>
+        <dialog id="dirEditDialog" class="dir-dialog" aria-labelledby="dirEditTitle">
+          <form method="dialog" id="dirEditForm">
+            <h3 id="dirEditTitle">Edit employee</h3>
+            <div class="dir-form-grid">
+              <label class="wide">Full name<input id="dirEditName" minlength="2" maxlength="255" required></label>
+              <label class="wide">Email<input id="dirEditEmail" type="email" maxlength="255" required></label>
+              <label>JSAN ID<input id="dirEditJsan" maxlength="80" pattern="[A-Za-z0-9._\-]+" title="Letters, numbers, dot, dash and underscore only (no spaces)"></label>
+              <label>Employee ID<input id="dirEditEmp" maxlength="80"></label>
+              <label>Department<input id="dirEditDept" maxlength="120" list="dirDeptList"></label>
+              <label>Designation<input id="dirEditDesig" maxlength="160" list="dirDesigList"></label>
+              <label>Date of joining<input id="dirEditDoj" type="date"></label>
+              <label>Years of experience<input id="dirEditExp" type="number" min="0" max="80" step="0.5"></label>
+            </div>
+            <datalist id="dirDeptList"></datalist><datalist id="dirDesigList"></datalist>
+            <p id="dirEditNote" class="dir-note"></p>
+            <p id="dirEditError" class="error" role="alert"></p>
+            <div class="dir-dialog-actions"><button type="button" class="team-ghost" data-dir-close>Cancel</button><button type="submit" id="dirEditSubmit" class="primary">Save</button></div>
+          </form>
+        </dialog>
+        <dialog id="dirImportDialog" class="dir-dialog" aria-labelledby="dirImportTitle">
+          <h3 id="dirImportTitle">Import finished</h3>
+          <div id="dirImportBody"></div>
+          <div class="dir-dialog-actions"><button type="button" class="primary" data-dir-close>Done</button></div>
+        </dialog>
       </div>
     </section>
 
@@ -295,7 +370,7 @@
   <dialog id="decisionDialog"><form method="dialog" id="decisionForm"><h3 id="decisionTitle">Review finding</h3><input type="hidden" id="decisionFindingId" /><label>Decision<select id="decisionValue"><option value="CONFIRMED_FAIL">Confirm fail</option><option value="ACCEPTED_EXCEPTION">Accept exception</option><option value="NEEDS_FIELD_REVIEW">Needs field review</option><option value="CORRECTED">Corrected</option><option value="OPEN">Re-open</option></select></label><label>Reviewer comment<textarea id="decisionComment" rows="4" placeholder="Evidence / correction note"></textarea></label><div class="dialog-actions"><button value="cancel">Cancel</button><button id="saveDecision" value="default" class="primary">Save decision</button></div></form></dialog>
 
   <script src="potree/libs/jquery/jquery-3.1.1.min.js"></script><script src="potree/libs/spectrum/spectrum.js"></script><script src="potree/libs/jquery-ui/jquery-ui.min.js"></script><script src="potree/libs/other/BinaryHeap.js"></script><script src="potree/libs/tween/tween.min.js"></script><script src="potree/libs/d3/d3.js"></script><script src="potree/libs/proj4/proj4.js"></script><script src="potree/libs/openlayers3/ol.js"></script><script src="potree/libs/i18next/i18next.js"></script><script src="potree/libs/jstree/jstree.js"></script><script src="potree/libs/copc/index.js"></script><script src="potree/build/potree/potree.js"></script><script src="potree/libs/plasio/js/laslaz.js"></script>
-  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261009-warp-centred"></script>
+  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261009-directory-422"></script>
 <div id="toastStack" class="toast-stack" aria-live="polite"></div>
 </body>
 </html>

@@ -1,5 +1,5 @@
-from datetime import datetime, timezone
-from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey, UniqueConstraint, BigInteger, Boolean, false, true
+from datetime import date, datetime, timezone
+from sqlalchemy import String, Integer, Float, Text, Date, DateTime, ForeignKey, UniqueConstraint, BigInteger, Boolean, false, true
 from sqlalchemy.orm import Mapped, mapped_column
 from .db import Base
 
@@ -251,6 +251,29 @@ class EmailLoginCode(Base):
     attempts: Mapped[int]=mapped_column(Integer, default=0, server_default='0')
     used_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
     request_ip: Mapped[str|None]=mapped_column(String(64), nullable=True)
+
+class EmployeeRecord(Base):
+    """One employee from the HR export. user_id links the application account once a super admin grants access."""
+    __tablename__='employee_directory'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    name: Mapped[str]=mapped_column(String(255))
+    jsan_id: Mapped[str|None]=mapped_column(String(80), unique=True, index=True, nullable=True)
+    employee_id: Mapped[str|None]=mapped_column(String(80), nullable=True)
+    email: Mapped[str]=mapped_column(String(255), unique=True, index=True)
+    department: Mapped[str|None]=mapped_column(String(120), nullable=True)
+    designation: Mapped[str|None]=mapped_column(String(160), nullable=True)
+    date_of_joining: Mapped[date|None]=mapped_column(Date, nullable=True)
+    experience_years: Mapped[float|None]=mapped_column(Float, nullable=True)
+    # Reference columns from the HR system (not used for access in this application).
+    source_role: Mapped[str|None]=mapped_column(String(40), nullable=True)
+    source_password_set: Mapped[bool|None]=mapped_column(Boolean, nullable=True)
+    source_last_sign_in: Mapped[date|None]=mapped_column(Date, nullable=True)
+    submission_status: Mapped[str|None]=mapped_column(String(40), nullable=True)
+    user_id: Mapped[int|None]=mapped_column(ForeignKey('users.id'), unique=True, index=True, nullable=True)
+    source: Mapped[str|None]=mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+    updated_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
+    updated_by: Mapped[str|None]=mapped_column(String(255), nullable=True)
 
 class Notification(Base):
     """In-app notification for one user; read_at is set when they open or dismiss it."""

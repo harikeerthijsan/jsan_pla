@@ -31,7 +31,9 @@ ACTION_GROUPS = {
     "delivery": {"APPROVE_DATASET_VERSION", "BUILD_DELIVERABLE_PACKAGE", "DOWNLOAD_DELIVERABLE_PACKAGE"},
     "accounts": {"CREATE_USER", "UPDATE_USER", "CHANGE_ROLE", "DEACTIVATE_USER", "REACTIVATE_USER", "ALLOW_REMOTE_ACCESS",
                  "REVOKE_REMOTE_ACCESS", "UPDATE_NETWORK_POLICY", "CHANGE_OWN_PASSWORD", "UPDATE_OWN_PROFILE",
-                 "PROMOTE_SUPER_ADMIN", "SEED_STAFF_ACCOUNT", "LOGIN_BLOCKED_NETWORK"},
+                 "PROMOTE_SUPER_ADMIN", "SEED_STAFF_ACCOUNT", "LOGIN_BLOCKED_NETWORK", "RESET_PASSWORD",
+                 "IMPORT_EMPLOYEE_DIRECTORY", "CREATE_EMPLOYEE", "UPDATE_EMPLOYEE", "DELETE_EMPLOYEE", "GRANT_EMPLOYEE_ACCESS",
+                 "LINK_EMPLOYEE_ACCOUNT"},
 }
 GROUP_OF = {action: group for group, actions in ACTION_GROUPS.items() for action in actions}
 LABELS = {
@@ -45,7 +47,10 @@ LABELS = {
     "REJECT_PRODUCTION_WORKBOOK": "Excel replacement rejected", "CREATE_DATASET_REVISION": "Created a dataset revision",
     "BASELINE_DATASET_VERSION": "Baselined a dataset version", "APPROVE_DATASET_VERSION": "Approved a dataset version",
     "BUILD_DELIVERABLE_PACKAGE": "Built a deliverable package", "DOWNLOAD_DELIVERABLE_PACKAGE": "Downloaded a deliverable package",
-    "CREATE_USER": "Created an account", "UPDATE_USER": "Updated an account", "CHANGE_ROLE": "Changed a role",
+    "CREATE_USER": "Created an account", "RESET_PASSWORD": "Reset a password",
+    "IMPORT_EMPLOYEE_DIRECTORY": "Imported the employee directory", "CREATE_EMPLOYEE": "Added an employee",
+    "UPDATE_EMPLOYEE": "Edited an employee", "DELETE_EMPLOYEE": "Removed an employee", "GRANT_EMPLOYEE_ACCESS": "Gave an employee access",
+    "LINK_EMPLOYEE_ACCOUNT": "Linked an employee to an account", "UPDATE_USER": "Updated an account", "CHANGE_ROLE": "Changed a role",
     "DEACTIVATE_USER": "Deactivated an account", "REACTIVATE_USER": "Reactivated an account",
     "ALLOW_REMOTE_ACCESS": "Allowed access from anywhere", "REVOKE_REMOTE_ACCESS": "Limited access to the office",
     "UPDATE_NETWORK_POLICY": "Changed office networks", "CHANGE_OWN_PASSWORD": "Changed own password",
