@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, text
 from .db import Base, engine, get_db, SessionLocal, initialize_schema
-from .models import iso_utc,User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog,PoleAssignment,PolePresence,Notification
+from .models import iso_utc,User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog,PoleAssignment,PolePresence,Notification,EmailLoginCode
 from .geojson_import import geo_feature_dict, pole_locations
 from .auth import current_user, verify_password, create_token, hash_password
 from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission, normalize_role, is_admin_role, is_super_admin
@@ -21,6 +21,9 @@ from .ingest import parse_workbook
 from .pipeline import pipeline as pipeline_snapshot, production_project_ids
 from .team import router as team_router, hidden_authors
 from .super_admin import router as super_admin_router
+from .email_login import router as email_login_router
+from .signin import complete_sign_in
+from . import mailer
 from .notifications import router as notifications_router, safely, notify_correction_requested, notify_correction_resolved, notify_version_approved
 from .deliverables import build_package, ensure_package
 from .network_access import client_ip, get_network_policy, ip_on_listed_network, set_network_policy, user_network_allowed
@@ -33,6 +36,7 @@ APP_ENV=os.getenv('APP_ENV','development').lower()
 APP_VERSION=os.getenv('APP_VERSION','3.4.1-operational')
 # Staging is production-like: it gets the same startup guard so misconfiguration is caught before promotion.
 STRICT_ENVIRONMENTS={'production','staging'}
+EMAIL_PATTERN=re.compile(r'[^@\s]+@[^@\s]+\.[^@\s]+')
 DEFAULT_JWT_SECRETS={'dev-only-change-me','replace-with-a-long-random-secret','replace-with-at-least-32-random-characters'}
 DEFAULT_ADMIN_PASSWORDS={'ChangeMe123!','replace-with-a-unique-password-of-12-or-more-characters'}
 
@@ -58,6 +62,8 @@ def validate_runtime_environment():
     if railway_env:
         if APP_ENV=='production' and railway_env!=production_name: errors.append(f"APP_ENV=production but Railway environment is '{railway_env}'; set APP_ENV for this environment")
         if APP_ENV!='production' and railway_env==production_name: errors.append(f"Railway environment '{railway_env}' is production but APP_ENV={APP_ENV}")
+    if mailer.provider()=='console': errors.append('EMAIL_PROVIDER=console only prints codes to the log; use brevo or smtp')
+    errors.extend(mailer.configuration_errors())
     if errors: raise RuntimeError(f'Unsafe {APP_ENV} configuration: '+'; '.join(errors))
 
 @asynccontextmanager
@@ -77,6 +83,7 @@ app=FastAPI(title='JSAN PLA Quality Validation API',version=APP_VERSION,lifespan
 app.include_router(team_router)
 app.include_router(notifications_router)
 app.include_router(super_admin_router)
+app.include_router(email_login_router)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
 app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag'])
 
@@ -101,6 +108,7 @@ class UserCreateIn(BaseModel):
     username:str|None=Field(default=None,max_length=80,pattern=r'^[A-Za-z0-9._-]*$'); remote_access:bool|None=None
 class UserUpdateIn(BaseModel):
     name:str|None=None; role:str|None=None; password:str|None=Field(default=None,min_length=12,max_length=256); active:bool|None=None; remote_access:bool|None=None
+    sign_in_email:str|None=Field(default=None,max_length=255)  # where email sign-in codes go; '' clears it
 class NetworkEntryIn(BaseModel):
     cidr:str=Field(min_length=2,max_length=64); label:str=Field(default='',max_length=80)
 class NetworkPolicyIn(BaseModel):
@@ -186,7 +194,7 @@ def project_dict(p): return {'id':p.id,'name':p.name,'customer':p.customer,'stat
 def is_production_dataset(db:Session,project_id:str)->bool:
     # Datasets imported in Production run LIDAR_INGEST; they are QC-checked through a linked QC dataset with its own Excel.
     return db.query(ProcessingJob.id).filter_by(project_id=project_id,job_type='LIDAR_INGEST').first() is not None
-def user_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password),'active':bool(u.is_active),'remote_access':bool(u.remote_access),**sign_in_dict(u),'created_at':u.created_at.isoformat() if u.created_at else None}
+def user_dict(u): return {'id':u.id,'email':u.email,'username':u.username,'name':u.name,'role':u.role,'must_change_password':bool(u.must_change_password),'active':bool(u.is_active),'remote_access':bool(u.remote_access),'sign_in_email':u.sign_in_email,'email_code_ready':mailer.deliverable(u.sign_in_email) or mailer.deliverable(u.email),**sign_in_dict(u),'created_at':u.created_at.isoformat() if u.created_at else None}
 def sign_in_dict(u):
     shared=u.last_login_location_status=='shared' and u.last_login_latitude is not None
     return {'last_login_at':iso_utc(u.last_login_at),'last_login_ip':u.last_login_ip,
@@ -251,15 +259,7 @@ def login(body:LoginIn,request:Request,db:Session=Depends(get_db)):
     if not u or not verify_password(body.password,u.password_hash):
         LOGIN_FAILURES.setdefault(key,[]).append(time.time()); raise HTTPException(401,'Invalid username or password')
     LOGIN_FAILURES.pop(key,None)
-    if not u.is_active: raise HTTPException(403,'This account is deactivated. Ask an admin to reactivate it.')
-    ip=client_ip(request)
-    if not user_network_allowed(db,u,ip):
-        db.add(AuditLog(actor=u.email,action='LOGIN_BLOCKED_NETWORK',entity_type='user',entity_id=str(u.id),detail_json=json.dumps({'ip':ip}))); db.commit()
-        raise HTTPException(403,'This account can only be used from the office network. Ask an admin to allow access from anywhere.')
-    # Only the latest sign-in is kept. The browser reports its location separately, if the person allows it.
-    u.last_login_at=datetime.now(timezone.utc); u.last_login_ip=ip; u.last_login_location_status='pending'
-    u.last_login_latitude=u.last_login_longitude=u.last_login_accuracy=None; u.last_login_location_at=None
-    db.commit()
+    complete_sign_in(db,u,request,'password')
     return {'token':create_token(u),'user':account_dict(u)}
 @app.get('/api/auth/me')
 def me(u:User=Depends(current_user)): return {**account_dict(u),'workspaces':workspaces_for(u)}
@@ -344,6 +344,17 @@ def update_user(user_id:int,body:UserUpdateIn,u:User=Depends(require_permission(
     # password or deactivating an account ends that account's existing sign-ins.
     if body.password is not None:
         row.password_hash=hash_password(body.password); row.must_change_password=row.id!=u.id; row.token_version=(row.token_version or 0)+1
+    if body.sign_in_email is not None:
+        address=body.sign_in_email.strip().lower() or None
+        if address and not EMAIL_PATTERN.fullmatch(address): raise HTTPException(422,'Enter a valid email address')
+        if address and not mailer.deliverable(address): raise HTTPException(422,'That address cannot receive email (test or local domain)')
+        if address and db.query(User.id).filter(User.id!=row.id,or_(func.lower(User.sign_in_email)==address,func.lower(User.email)==address)).first():
+            raise HTTPException(409,'Another account already uses that email address')
+        if address!=row.sign_in_email:
+            db.add(AuditLog(actor=u.email,action='CHANGE_SIGN_IN_EMAIL',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'username':row.username,'email':row.email,'from':row.sign_in_email,'to':address})))
+            row.sign_in_email=address
+            # Codes already sent to the old address stop working.
+            db.query(EmailLoginCode).filter(EmailLoginCode.user_id==row.id,EmailLoginCode.used_at.is_(None)).update({EmailLoginCode.used_at:datetime.now(timezone.utc)},synchronize_session=False)
     if body.remote_access is not None and body.remote_access!=bool(row.remote_access):
         row.remote_access=body.remote_access
         db.add(AuditLog(actor=u.email,action='ALLOW_REMOTE_ACCESS' if body.remote_access else 'REVOKE_REMOTE_ACCESS',entity_type='user',entity_id=str(row.id),detail_json=json.dumps({'username':row.username,'email':row.email})))

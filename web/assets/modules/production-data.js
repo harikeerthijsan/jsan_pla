@@ -1,13 +1,13 @@
 // Production dataset loading, LiDAR blocks and clip/measurement helpers.
-import { $, api, esc, state, toast } from "./core.js?v=20261008-project-delete-2";
-import { fillProductionCatalogue, fillProductionPoles, renderProductionAnnotationMarkers, renderProductionAnnotations, resetAnnotationForm } from "./production-annotations.js?v=20261008-project-delete-2";
-import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261008-project-delete-2";
-import { cancelProductionPick } from "./production-pick.js?v=20261008-project-delete-2";
-import { renderProductionChecklist, selectProductionPole } from "./production-poles.js?v=20261008-project-delete-2";
-import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261008-project-delete-2";
-import { cancelProductionBox } from "./production-view.js?v=20261008-project-delete-2";
-import { presenceTick, setPoleAssignments } from "./team.js?v=20261008-project-delete-2";
-import { can, currentProject } from "./workspace.js?v=20261008-project-delete-2";
+import { $, api, esc, state, toast } from "./core.js?v=20261009-login-premium";
+import { fillProductionCatalogue, fillProductionPoles, renderProductionAnnotationMarkers, renderProductionAnnotations, resetAnnotationForm } from "./production-annotations.js?v=20261009-login-premium";
+import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261009-login-premium";
+import { cancelProductionPick } from "./production-pick.js?v=20261009-login-premium";
+import { renderProductionChecklist, selectProductionPole } from "./production-poles.js?v=20261009-login-premium";
+import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261009-login-premium";
+import { cancelProductionBox } from "./production-view.js?v=20261009-login-premium";
+import { presenceTick, setPoleAssignments } from "./team.js?v=20261009-login-premium";
+import { can, currentProject } from "./workspace.js?v=20261009-login-premium";
 
 export function productionProgress(p,msg){$("productionUploadProgress").classList.remove("hidden");$("productionUploadBar").style.width=`${Math.max(0,Math.min(100,p))}%`;$("productionUploadMessage").textContent=msg}
 export function humanBytes(value){const n=Number(value||0);if(!n)return "0 B";const units=["B","KB","MB","GB","TB"],i=Math.min(units.length-1,Math.floor(Math.log(n)/Math.log(1024)));return `${(n/Math.pow(1024,i)).toFixed(i>1?1:0)} ${units[i]}`}
@@ -23,7 +23,7 @@ export function renderProduction(){
   renderProductionContext(files,blocks);
   const button=$("productionReplaceExcelBtn"),reason=!(can("upload.create")&&can("processing.run"))?"Your role can't replace the Excel":currentProject().source_project_id?"This is a QC dataset; it uses its own QC Excel":!state.productionFiles.some(file=>file.role==="WORKBOOK"&&file.status==="UPLOADED")?"This dataset has no Production Excel to replace":"";
   button.disabled=Boolean(reason);button.title=reason||"Uploaded the wrong Excel? Replace it with the correct one";button.classList.toggle("hidden",!can("upload.create"));
-  $("productionManageLidarBtn").disabled=!files.length;$("productionFileCount").textContent=files.length;$("productionBlockCount").textContent=blocks.length;$("productionPointCount").textContent=humanCount(blocks.reduce((sum,block)=>sum+Number(block.point_count||0),0));
+  $("productionFileCount").textContent=files.length;$("productionBlockCount").textContent=blocks.length;$("productionPointCount").textContent=humanCount(blocks.reduce((sum,block)=>sum+Number(block.point_count||0),0));
   const root=$("productionLidarList");root.innerHTML="";
   if(!files.length){root.innerHTML='<div class="empty-workflow">No LiDAR files have been uploaded for this project.</div>';return}
   if(blocks.length){
@@ -46,5 +46,4 @@ export async function selectAllProductionBlocks(){const blocks=state.productionB
 
 // One-time setup (original statements 115–129); called by app.js in the original order.
 export function init() {
-  $("productionManageLidarBtn").onclick=()=>{const sources=document.querySelector(".production-sources"),catalogue=sources?.closest(".production-catalogue");if(!sources||!catalogue)return;sources.open=true;requestAnimationFrame(()=>{catalogue.scrollTop=catalogue.scrollHeight})};
 }

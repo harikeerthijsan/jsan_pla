@@ -1,17 +1,17 @@
 // Super admin page: every account with its access and work, and a timeline of everyone's actions.
 // Only shown to accounts with the super.view permission; the server enforces it on every route.
-import { $, api, esc, state, toast } from "./core.js?v=20261008-project-delete-2";
-import { roleLabel, signInCell } from "./profile.js?v=20261008-project-delete-2";
-import { teamAgo, teamAvatar } from "./team-progress.js?v=20261008-project-delete-2";
-import { openTeamPage } from "./team.js?v=20261008-project-delete-2";
-import { applyWorkspace } from "./workspace.js?v=20261008-project-delete-2";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-login-premium";
+import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261009-login-premium";
+import { teamAgo, teamAvatar } from "./team-progress.js?v=20261009-login-premium";
+import { openTeamPage } from "./team.js?v=20261009-login-premium";
+import { applyWorkspace } from "./workspace.js?v=20261009-login-premium";
 
 const ROLES=["USER","ADMIN","SUPER_ADMIN"];
 const GROUPS={production:"Production",qc:"QC",data:"Data",delivery:"Delivery",accounts:"Accounts",other:"Other"};
 
 export function openSuperPage(tab=state.superAdmin.tab){for(const id of ["productionWorkspace","deliveryWorkspace","qcWorkspace","qcKpis","profilePage","teamPage"])$(id).classList.add("hidden");$("superPage").classList.remove("hidden");showTab(tab);loadPeople()}
 
-function showTab(tab){state.superAdmin.tab=tab;document.querySelectorAll("[data-super-tab]").forEach(b=>{const on=b.dataset.superTab===tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",String(on))});$("superPeopleView").classList.toggle("hidden",tab!=="people");$("superActivityView").classList.toggle("hidden",tab!=="activity");if(tab==="activity"&&!state.superAdmin.activity.loaded)loadActivity(true)}
+function showTab(tab){state.superAdmin.tab=tab;rememberPage("super",{tab});document.querySelectorAll("[data-super-tab]").forEach(b=>{const on=b.dataset.superTab===tab;b.classList.toggle("active",on);b.setAttribute("aria-selected",String(on))});$("superPeopleView").classList.toggle("hidden",tab!=="people");$("superActivityView").classList.toggle("hidden",tab!=="activity");if(tab==="activity"&&!state.superAdmin.activity.loaded)loadActivity(true)}
 
 async function loadPeople(){const root=$("superPeople");root.innerHTML='<div class="team-skeleton-block short"></div>';try{const people=await api(`/api/super/people?days=${state.superAdmin.days}`);people.sort((a,b)=>ROLES.indexOf(String(b.role).toUpperCase())-ROLES.indexOf(String(a.role).toUpperCase())||String(a.username||a.email).localeCompare(String(b.username||b.email),undefined,{numeric:true}));state.superAdmin.people=people;renderPeople();fillActivityFilters()}catch(e){root.innerHTML=`<div class="team-empty error"><b>People could not load</b><small>${esc(e.message)}</small></div>`}}
 
@@ -23,7 +23,7 @@ export function renderPeople(){const root=$("superPeople"),q=($("superPeopleSear
   const counts=ROLES.map(r=>{const n=people.filter(u=>String(u.role).toUpperCase()===r).length;return `${n} ${roleLabel(r).toLowerCase()}${n===1?"":"s"}`});$("superPeopleMeta").textContent=`${people.length} accounts · ${counts.join(" · ")} · work in the last ${days} days`;
   const rows=people.filter(u=>!q||`${u.username||""} ${u.name||""} ${u.email||""} ${u.role||""}`.toLowerCase().includes(q));
   if(!rows.length){root.innerHTML='<div class="team-empty"><b>No accounts match</b><small>Try another search.</small></div>';return}
-  root.innerHTML=`<table class="profile-users-table super-people-table"><thead><tr><th>Person</th><th>Role</th><th>Status</th><th>Access from</th><th>Last sign-in</th><th>Work (${days} days)</th><th>All time</th><th>Last active</th><th></th></tr></thead><tbody>${rows.map((u,i)=>{const mine=u.id===state.user?.id,off=u.active===false;return `<tr class="${off?"off":u.must_change_password?"pending":"active"}" style="--i:${Math.min(i,20)}"><td><div class="team-user">${teamAvatar(u)}<span><b>${esc(u.username||u.email)}${mine?'<em class="profile-you">You</em>':""}</b><small>${esc(u.name)}${u.email&&u.email!==u.username?` · ${esc(u.email)}`:""}</small></span></div></td><td>${roleCell(u,mine)}</td><td>${off?'<span class="profile-status off">Deactivated</span>':u.must_change_password?'<span class="profile-status pending">Must change password</span>':'<span class="profile-status">Active</span>'}</td><td>${accessCell(u)}</td><td>${signInCell(u)}</td><td class="super-work"><b>${u.points_period}</b> points · <b>${u.edits_period}</b> edits · <b>${u.deletes_period}</b> deleted<br><b>${u.qc_decisions_period}</b> QC decisions</td><td class="super-work"><b>${u.poles_completed_total}</b> poles completed<br><b>${u.points_total}</b> points · <b>${u.qc_decisions_total}</b> QC</td><td title="${esc(u.last_active||"")}">${esc(teamAgo(u.last_active))}</td><td>${mine?'<small class="muted">Your account</small>':`<button type="button" class="compact-btn${off?"":" danger-btn"}" data-super-active="${off?"true":"false"}" data-super-user="${esc(u.id)}" data-name="${esc(u.username||u.email)}">${off?"Reactivate":"Deactivate"}</button>`}</td></tr>`}).join("")}</tbody></table>`}
+  root.innerHTML=`<table class="profile-users-table super-people-table"><thead><tr><th>Person</th><th>Role</th><th>Status</th><th>Access from</th><th>Last sign-in</th><th>Work (${days} days)</th><th>All time</th><th>Last active</th><th></th></tr></thead><tbody>${rows.map((u,i)=>{const mine=u.id===state.user?.id,off=u.active===false;return `<tr class="${off?"off":u.must_change_password?"pending":"active"}" style="--i:${Math.min(i,20)}"><td><div class="team-user">${teamAvatar(u)}<span><b>${esc(u.username||u.email)}${mine?'<em class="profile-you">You</em>':""}</b><small>${esc(u.name)}${u.email&&u.email!==u.username?` · ${esc(u.email)}`:""}</small>${signInEmailLine(u)}</span></div></td><td>${roleCell(u,mine)}</td><td>${off?'<span class="profile-status off">Deactivated</span>':u.must_change_password?'<span class="profile-status pending">Must change password</span>':'<span class="profile-status">Active</span>'}</td><td>${accessCell(u)}</td><td>${signInCell(u)}</td><td class="super-work"><b>${u.points_period}</b> points · <b>${u.edits_period}</b> edits · <b>${u.deletes_period}</b> deleted<br><b>${u.qc_decisions_period}</b> QC decisions</td><td class="super-work"><b>${u.poles_completed_total}</b> poles completed<br><b>${u.points_total}</b> points · <b>${u.qc_decisions_total}</b> QC</td><td title="${esc(u.last_active||"")}">${esc(teamAgo(u.last_active))}</td><td>${mine?'<small class="muted">Your account</small>':`<button type="button" class="compact-btn${off?"":" danger-btn"}" data-super-active="${off?"true":"false"}" data-super-user="${esc(u.id)}" data-name="${esc(u.username||u.email)}">${off?"Reactivate":"Deactivate"}</button>`}</td></tr>`}).join("")}</tbody></table>`}
 
 async function updateAccount(id,body,message){await api(`/api/users/${encodeURIComponent(id)}`,{method:"PUT",body:JSON.stringify(body)});toast(message,"success");await loadPeople()}
 
@@ -47,6 +47,8 @@ export function init(){
   for(const id of ["superActivityPerson","superActivityGroup","superActivityDataset"])$(id).onchange=()=>loadActivity(true);
   $("superActivityMore").onclick=()=>loadActivity(false);
   $("superPeople").addEventListener("click",async event=>{
+    const signInEmail=event.target.closest("[data-set-signin-email]");
+    if(signInEmail){promptSignInEmail(signInEmail,loadPeople);return}
     const access=event.target.closest("[data-super-remote]");
     if(access){const allow=access.dataset.remote==="true";access.disabled=true;try{await updateAccount(access.dataset.superRemote,{remote_access:allow},allow?`${access.dataset.name} can work from anywhere`:`${access.dataset.name} can now work only from the office networks`)}catch(e){access.disabled=false;toast(e.message,"error")}return}
     const active=event.target.closest("[data-super-active]");

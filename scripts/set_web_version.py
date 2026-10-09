@@ -16,12 +16,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "web" / "assets"
 VERSION_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
-# index.html references app.css/app.js; app.js and the modules reference ./modules/*.js and ./<module>.js.
-SPECIFIER = re.compile(r"""((?:assets/app\.(?:css|js)|\./modules/[\w-]+\.js|\./[\w-]+\.js)\?v=)[A-Za-z0-9._-]+""")
+# index.html references versioned CSS/JS; top-level scripts and modules reference one another.
+SPECIFIER = re.compile(r"""((?:assets/[\w-]+\.(?:css|js)|\./modules/[\w-]+\.js|\./[\w-]+\.js)\?v=)[A-Za-z0-9._-]+""")
 
 
 def targets() -> list[Path]:
-    return [ROOT / "web" / "index.html", ASSETS / "app.js", *sorted((ASSETS / "modules").glob("*.js"))]
+    return [
+        ROOT / "web" / "index.html",
+        *sorted(ASSETS.glob("*.js")),
+        *sorted((ASSETS / "modules").glob("*.js")),
+    ]
 
 
 def set_version(version: str) -> int:

@@ -1,13 +1,15 @@
 // Production full screen, profile/pick buttons, import and Replace Excel dialogs.
-import { $, api, state, toast } from "./core.js?v=20261008-project-delete-2";
-import { loadProduction, productionProgress } from "./production-data.js?v=20261008-project-delete-2";
-import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261008-project-delete-2";
-import { startProductionPick } from "./production-pick.js?v=20261008-project-delete-2";
-import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261008-project-delete-2";
-import { setDialogProgress } from "./qc-run.js?v=20261008-project-delete-2";
-import { sendFile } from "./uploads.js?v=20261008-project-delete-2";
-import { bootstrap, currentProject } from "./workspace.js?v=20261008-project-delete-2";
+import { $, api, state, toast } from "./core.js?v=20261009-login-premium";
+import { loadProduction, productionProgress } from "./production-data.js?v=20261009-login-premium";
+import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261009-login-premium";
+import { startProductionPick } from "./production-pick.js?v=20261009-login-premium";
+import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261009-login-premium";
+import { setDialogProgress } from "./qc-run.js?v=20261009-login-premium";
+import { sendFile } from "./uploads.js?v=20261009-login-premium";
+import { bootstrap, currentProject } from "./workspace.js?v=20261009-login-premium";
 
+// In full screen the pole panel is a drawer over the LiDAR: closed at first, opened by choosing a pole.
+export function setProductionDrawer(open){const layout=document.querySelector(".production-layout");if(!layout.classList.contains("is-fullscreen"))return;layout.classList.toggle("drawer-open",open);const button=$("productionPanelToggleBtn");button.textContent=open?"Close panel":"Open panel";button.classList.toggle("active",open);button.setAttribute("aria-expanded",String(open))}
 export function toggleProductionFullscreen(){const layout=document.querySelector(".production-layout");if(document.fullscreenElement)document.exitFullscreen?.();else layout.requestFullscreen?.().catch(e=>toast(`Full screen is not available: ${e.message}`,"error",4200))}
 export const productionPickPresets={base:{label:"Pole base",family:"poles",feature:"Pole_Base"},top:{label:"Pole top",family:"poles",feature:"Pole_Top"},attachment:{label:"Attachment",family:"attachments_comm"}};
 export async function checkGeojsonFile(file){if(file.size>50*1024*1024)throw new Error("GeoJSON exceeds the 50 MB limit");let geo;try{geo=JSON.parse(await file.text())}catch{throw new Error(`${file.name} is not valid JSON`)}const features=geo?.type==="FeatureCollection"&&Array.isArray(geo.features)?geo.features:geo?.type==="Feature"?[geo]:null;if(!features)throw new Error(`${file.name} is not a GeoJSON FeatureCollection`);if(!features.some(f=>f?.geometry))throw new Error(`${file.name} contains no located features`)}
@@ -15,8 +17,11 @@ export async function checkGeojsonFile(file){if(file.size>50*1024*1024)throw new
 // One-time setup (original statements 230–249); called by app.js in the original order.
 export function init() {
   $("productionFullscreenBtn").onclick=toggleProductionFullscreen;
-  $("productionPanelToggleBtn").onclick=()=>{const hidden=document.querySelector(".production-layout").classList.toggle("panel-hidden");$("productionPanelToggleBtn").textContent=hidden?"Show panel":"Hide panel"};
-  document.addEventListener("fullscreenchange",()=>{const layout=document.querySelector(".production-layout"),active=document.fullscreenElement===layout,button=$("productionFullscreenBtn");button.textContent=active?"Exit full screen":"Full screen";button.classList.toggle("active",active);layout.classList.toggle("is-fullscreen",active);document.querySelector(".production-viewer").classList.toggle("is-fullscreen",active);if(!active){layout.classList.remove("panel-hidden");$("productionPanelToggleBtn").textContent="Hide panel"}$("productionPanelToggleBtn").classList.toggle("hidden",!active);(active?layout:document.body).appendChild($("toastStack"))});
+  $("productionPanelToggleBtn").onclick=()=>setProductionDrawer(!document.querySelector(".production-layout").classList.contains("drawer-open"));
+  $("productionDrawerClose").onclick=()=>setProductionDrawer(false);
+  document.addEventListener("production:pole-chosen",()=>setProductionDrawer(true));
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&document.querySelector(".production-layout.is-fullscreen.drawer-open")&&!document.querySelector("dialog[open]")){event.preventDefault();setProductionDrawer(false)}});
+  document.addEventListener("fullscreenchange",()=>{const layout=document.querySelector(".production-layout"),active=document.fullscreenElement===layout,button=$("productionFullscreenBtn");button.textContent=active?"Exit full screen":"Full screen";button.classList.toggle("active",active);layout.classList.toggle("is-fullscreen",active);document.querySelector(".production-viewer").classList.toggle("is-fullscreen",active);layout.classList.remove("drawer-open");if(active)setProductionDrawer(false);$("productionPanelToggleBtn").classList.toggle("hidden",!active);(active?layout:document.body).appendChild($("toastStack"))});
   $("productionGeoToggleBtn").onclick=()=>{state.productionGeoVisible=!state.productionGeoVisible;if(state.productionGeoVisible)renderProductionGeoOverlay();else closeProductionGeoCard()};
   document.querySelectorAll("[data-profile-pick]").forEach(btn=>btn.onclick=()=>startProductionPick(productionPickPresets[btn.dataset.profilePick]));
   $("productionProfileBtn").onclick=()=>{if(state.productionProfileLine)cancelProductionProfileLine();else if(state.productionProfile)exitProductionProfile(true);else startProductionProfileLine()};

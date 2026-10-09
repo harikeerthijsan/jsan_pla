@@ -1,12 +1,12 @@
 // GeoJSON overlay, pole markers and the GeoJSON pole card.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, esc, state, toast } from "./core.js?v=20261008-project-delete-2";
-import { fillProductionPoles } from "./production-annotations.js?v=20261008-project-delete-2";
-import { productionBlockForCoordinates } from "./production-pick.js?v=20261008-project-delete-2";
-import { productionProfileFrame } from "./production-profile.js?v=20261008-project-delete-2";
-import { productionUnitLabel } from "./production-view.js?v=20261008-project-delete-2";
-import { clearThreeGroup } from "./qc-scene.js?v=20261008-project-delete-2";
-import { can } from "./workspace.js?v=20261008-project-delete-2";
+import { $, esc, state, toast } from "./core.js?v=20261009-login-premium";
+import { fillProductionPoles } from "./production-annotations.js?v=20261009-login-premium";
+import { productionBlockForCoordinates } from "./production-pick.js?v=20261009-login-premium";
+import { productionProfileFrame } from "./production-profile.js?v=20261009-login-premium";
+import { productionUnitLabel } from "./production-view.js?v=20261009-login-premium";
+import { clearThreeGroup } from "./qc-scene.js?v=20261009-login-premium";
+import { can } from "./workspace.js?v=20261009-login-premium";
 
 export const productionGeoColors={ID:0x53d9ff,NEAREST:0xffb347,CONFLICT:0xff4055,NONE:0xff5fd2};
 export function productionGeoPoleRange(feature){const pole=state.productionPoles.find(p=>p.internal_id===feature.pole_internal_id),feet=productionUnitLabel()==="ft";if(pole?.verified_bottom_elevation!=null&&pole?.verified_top_elevation!=null)return [Number(pole.verified_bottom_elevation),Number(pole.verified_top_elevation),"LiDAR-verified base/top"];if(feature.z!=null&&Number.isFinite(Number(feature.z)))return [Number(feature.z),Number(feature.z),"GeoJSON Z"];if(feet&&pole?.bottom_elev_ft!=null&&pole?.top_elev_ft!=null)return [Number(pole.bottom_elev_ft),Number(pole.top_elev_ft),"workbook bottom/top"];const block=productionBlockForCoordinates({x:feature.x,y:feature.y,z:NaN});if(block?.bounds?.z_min!=null&&block?.bounds?.z_max!=null)return [Number(block.bounds.z_min),Number(block.bounds.z_max),"LiDAR file height range"];const mins=state.productionBlocks.map(b=>b.bounds?.z_min).filter(v=>v!=null),maxs=state.productionBlocks.map(b=>b.bounds?.z_max).filter(v=>v!=null);return mins.length&&maxs.length?[Math.min(...mins),Math.max(...maxs),"LiDAR height range"]:[0,40,"default height"]}
@@ -37,7 +37,7 @@ export function selectProductionGeoAt(px,py){const v=state.productionViewer;if(!
 export function closeProductionGeoCard(){state.productionGeoSelected=null;$("productionGeoCard").classList.add("hidden");renderProductionGeoOverlay()}
 export function zoomProductionGeo(pin){const v=state.productionViewer;if(!v||!pin)return;const view=v.scene.view,target=new THREE.Vector3(pin.x,pin.y,(pin.z0+pin.z1)/2);view.radius=Math.min(view.radius,productionUnitLabel()==="ft"?80:25);view.position.copy(target).sub(view.direction.multiplyScalar(view.radius));v.orbitControls.stop()}
 export function productionWorkbookPoleForGeoFeature(feature){return feature.match_method==="ID"?state.productionPoles.find(pole=>pole.internal_id===feature.pole_internal_id)||null:null}
-export function chooseProductionPole(pole,announce=false){if(!pole)return;fillProductionPoles(String(pole.internal_id));$("annotationPoleId").dispatchEvent(new Event("change",{bubbles:true}));if(announce)toast(`Pole ${pole.pole_number||pole.internal_id} selected in the attribute form.`,"success")}
+export function chooseProductionPole(pole,announce=false){if(!pole)return;fillProductionPoles(String(pole.internal_id));$("annotationPoleId").dispatchEvent(new Event("change",{bubbles:true}));document.dispatchEvent(new CustomEvent("production:pole-chosen",{detail:{internal_id:pole.internal_id}}));if(announce)toast(`Pole ${pole.pole_number||pole.internal_id} selected in the attribute form.`,"success")}
 export function openProductionGeoCard(feature){state.productionGeoSelected=feature.id;renderProductionGeoOverlay();const exactWorkbookPole=productionWorkbookPoleForGeoFeature(feature),pole=exactWorkbookPole||state.productionPoles.find(p=>p.internal_id===feature.pole_internal_id),pin=state.productionGeoPins.find(x=>x.feature.id===feature.id),unit=productionUnitLabel(),num=(v,d=3)=>v==null||!Number.isFinite(Number(v))?"—":Number(v).toFixed(d),len=v=>v==null||!Number.isFinite(Number(v))?"—":`${Number(v).toFixed(2)} ${unit}`,source=feature.source_geometry?.coordinates||[],card=$("productionGeoCard");if(exactWorkbookPole)chooseProductionPole(exactWorkbookPole);
   const match=feature.match_method==="ID"?`Matched by ID (${esc(feature.match_property)})`:feature.match_method==="NEAREST"?`Matched to nearest pole (${len(feature.match_distance)} away)`:feature.match_method==="CONFLICT"?"GeoJSON pole identities conflict":"Not matched to a workbook pole";
   const properties=Object.entries(feature.properties||{}).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v!==null&&typeof v==="object"?JSON.stringify(v):v)}</dd>`).join("")||'<dd>No properties</dd>';

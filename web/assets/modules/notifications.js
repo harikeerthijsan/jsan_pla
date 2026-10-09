@@ -1,7 +1,7 @@
 // Notification bell, panel and polling.
-import { $, api, esc, state, toast } from "./core.js?v=20261008-project-delete-2";
-import { openInProduction, openInQc } from "./delivery.js?v=20261008-project-delete-2";
-import { applyWorkspace } from "./workspace.js?v=20261008-project-delete-2";
+import { $, api, esc, state, toast } from "./core.js?v=20261009-login-premium";
+import { openInProduction, openInQc } from "./delivery.js?v=20261009-login-premium";
+import { applyWorkspace } from "./workspace.js?v=20261009-login-premium";
 
 export const NOTIFY_ICONS={QC_ISSUES_ON_YOUR_POLES:"!",QC_FINISHED:"✓",QC_FAILED:"×",CORRECTION_REQUESTED:"↺",CORRECTION_RESOLVED:"✓",VERSION_APPROVED:"★",POLES_ASSIGNED:"→"};
 export function notifyAgo(iso){const s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);if(s<60)return "just now";if(s<3600)return `${Math.floor(s/60)} min ago`;if(s<86400)return `${Math.floor(s/3600)} h ago`;return new Date(iso).toLocaleDateString()}

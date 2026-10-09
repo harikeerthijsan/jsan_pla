@@ -1,13 +1,13 @@
 // MicroStation-style profile section and its overlay.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, state, toast } from "./core.js?v=20261008-project-delete-2";
-import { addProductionMeasurement, selectedPoleAnnotations } from "./production-annotations.js?v=20261008-project-delete-2";
-import { clearProductionClip } from "./production-data.js?v=20261008-project-delete-2";
-import { renderProductionGeoOverlay } from "./production-geo.js?v=20261008-project-delete-2";
-import { cancelProductionPick } from "./production-pick.js?v=20261008-project-delete-2";
-import { cancelProductionBox, markProductionView, productionOrthoWorld, productionUnitLabel, restoreProductionCamera, saveProductionCamera, setProductionView } from "./production-view.js?v=20261008-project-delete-2";
-import { range } from "./qc-analysis.js?v=20261008-project-delete-2";
-import { can } from "./workspace.js?v=20261008-project-delete-2";
+import { $, state, toast } from "./core.js?v=20261009-login-premium";
+import { addProductionMeasurement, selectedPoleAnnotations } from "./production-annotations.js?v=20261009-login-premium";
+import { clearProductionClip } from "./production-data.js?v=20261009-login-premium";
+import { renderProductionGeoOverlay } from "./production-geo.js?v=20261009-login-premium";
+import { cancelProductionPick } from "./production-pick.js?v=20261009-login-premium";
+import { cancelProductionBox, markProductionView, productionOrthoWorld, productionUnitLabel, restoreProductionCamera, saveProductionCamera, setProductionView } from "./production-view.js?v=20261009-login-premium";
+import { range } from "./qc-analysis.js?v=20261009-login-premium";
+import { can } from "./workspace.js?v=20261009-login-premium";
 
 export function productionPointAt(px,py){const v=state.productionViewer,I=Potree.Utils.getMousePointCloudIntersection({x:px,y:py},v.scene.getActiveCamera(),v,v.scene.pointclouds);if(I)return I.location.clone();if(v.scene.cameraMode===Potree.CameraMode.ORTHOGRAPHIC&&Math.abs(v.scene.view.pitch+Math.PI/2)<.01){const p=productionOrthoWorld(px,py),bounds=v.getBoundingBox(v.scene.pointclouds);p.z=(bounds.min.z+bounds.max.z)/2;return p}return null}
 export function cancelProductionProfileLine(){const line=state.productionProfileLine;if(!line)return;state.productionProfileLine=null;line.cancel();$("productionProfileBtn").textContent="Profile";if(!state.productionProfile)$("productionProfileBtn").classList.remove("active")}

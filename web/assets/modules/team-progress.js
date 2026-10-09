@@ -1,8 +1,8 @@
 // Team progress dashboard.
-import { openSuperPage } from "./super-admin.js?v=20261008-project-delete-2";
-import { $, api, esc, state, toast } from "./core.js?v=20261008-project-delete-2";
-import { openTeamPage } from "./team.js?v=20261008-project-delete-2";
-import { applyWorkspace, can } from "./workspace.js?v=20261008-project-delete-2";
+import { openSuperPage } from "./super-admin.js?v=20261009-login-premium";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-login-premium";
+import { openTeamPage } from "./team.js?v=20261009-login-premium";
+import { applyWorkspace, can } from "./workspace.js?v=20261009-login-premium";
 
 export const TEAM_REDUCED=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 export const TEAM_AVATAR_HUES=[206,152,262,28,340,188,96,226];
@@ -44,7 +44,7 @@ export function init() {
   state.team={days:14,data:null,sort:{key:"completed_period",dir:-1},query:"",showIdle:false,scope:"dataset",returnTo:null};
   $("teamProgressBtn").onclick=()=>{if(!state.projectId){toast("Select a Production dataset first","error");return}state.team.scope="dataset";state.team.returnTo=null;$("teamBackBtn").textContent="Back to Production";openTeamPage()};
   $("teamBackBtn").onclick=()=>{if(state.team.returnTo==="super"){state.team.returnTo=null;openSuperPage()}else applyWorkspace()};
-  document.querySelectorAll("[data-team-scope]").forEach(button=>button.onclick=()=>{state.team.scope=button.dataset.teamScope;loadTeamProgress()});
+  document.querySelectorAll("[data-team-scope]").forEach(button=>button.onclick=()=>{state.team.scope=button.dataset.teamScope;rememberPage("team",{scope:state.team.scope,returnTo:state.team.returnTo||null});loadTeamProgress()});
   $("teamRefreshBtn").onclick=loadTeamProgress;
   document.querySelectorAll("[data-team-days]").forEach(button=>button.onclick=()=>{state.team.days=Number(button.dataset.teamDays);document.querySelectorAll("[data-team-days]").forEach(b=>{const on=b===button;b.classList.toggle("active",on);b.setAttribute("aria-pressed",String(on))});loadTeamProgress()});
   $("teamTable").addEventListener("click",event=>{const button=event.target.closest("[data-team-sort]");if(!button)return;const k=button.dataset.teamSort;state.team.sort=state.team.sort.key===k?{key:k,dir:-state.team.sort.dir}:{key:k,dir:k==="username"?1:-1};renderTeamTable()});

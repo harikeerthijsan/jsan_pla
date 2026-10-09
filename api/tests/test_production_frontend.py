@@ -265,10 +265,8 @@ def test_profile_import_manager_is_grouped_and_lidar_source_list_is_view_only():
     assert 'method:"DELETE"' in javascript and 'encodeURIComponent(projectId)' in javascript
     assert 'LIDAR_SOURCE:"LiDAR"' in javascript and 'GEOJSON:"GeoJSON"' in javascript and 'WORKBOOK:"Excel"' in javascript
     assert ".profile-import-row" in css and ".profile-import-files" in css
-    assert 'id="productionManageLidarBtn"' in html
-    assert '$("productionManageLidarBtn").classList.toggle("hidden",!can("project.read"))' in javascript
-    assert '$("productionManageLidarBtn").onclick=' in javascript
-    assert "sources.open=true" in javascript and "catalogue.scrollTop=catalogue.scrollHeight" in javascript
+    # The Manage LiDAR shortcut was removed: imports are managed from the Profile page only.
+    assert "productionManageLidarBtn" not in html and "productionManageLidarBtn" not in javascript
     assert 'sources.querySelector(".lidar-delete-btn")' not in javascript
     assert "deleteProductionLidar" not in javascript
     assert "lidar-delete-btn" not in javascript
@@ -294,6 +292,36 @@ def test_login_page_has_brand_and_animated_background_without_api_url():
     assert "export function startLoginBackground(canvas)" in background
     assert "(prefers-reduced-motion: reduce)" in background
     assert "return function stop()" in background
+    lidar_background = (
+        Path(__file__).resolve().parents[2] / "web" / "assets" / "lidar-login-scene.js"
+    ).read_text(encoding="utf-8")
+    for feature in (
+        "buildLidarScene",
+        "drawPointCloud",
+        "drawInfrastructure",
+        "drawPoleGuides",
+        "drawPoleMeasurement",
+        "drawViewerChrome",
+    ):
+        assert f"function {feature}(" in lidar_background
+    assert "LIDAR CORRIDOR SCAN" in lidar_background
+    assert "LIVE POINT CLOUD" in lidar_background
+    assert "VIEWER TELEMETRY" in lidar_background
+    assert "VISIBLE RETURNS" in lidar_background
+    assert 'const modes = ["PLAN", "PROFILE", "CROSS", "3D"]' in lidar_background
+    assert "Recognisable trees" in lidar_background
+    assert "point-cloud building shells" in lidar_background
+    assert "cylindrical transformer" in lidar_background
+    assert "function drawScanPlane(" not in lidar_background
+    assert "function cameraInspectionState(" in lidar_background
+    assert "AUTO POLE ANALYSIS · LOCKED" in lidar_background
+    assert "POLE MEASUREMENT LOCK" in lidar_background
+    assert "const measuredHeight = topPoint.y - basePoint.y" in lidar_background
+    assert "requestAnimationFrame" in lidar_background
+    assert "ResizeObserver" in lidar_background
+    assert "<video" not in html
+    assert ".mp4" not in lidar_background
+    assert ".webm" not in lidar_background
 
 
 def test_team_progress_page_has_kpis_chart_leaders_and_sortable_table():
@@ -379,3 +407,18 @@ def test_network_access_controls_are_wired():
     # Users cut off mid-session are signed out with the reason; admins toggle per-user remote access.
     assert 'data?.detail==="network_not_allowed"){logout("Your account can only be used from the office network.' in javascript
     assert "data-remote-user=" in javascript and "remote_access:allow" in javascript
+
+
+def test_sign_in_page_extras_are_wired():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    login = (ROOT / "web" / "assets" / "modules" / "login-experience.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "login-lidar.css").read_text(encoding="utf-8")
+    scene = (ROOT / "web" / "assets" / "lidar-login-scene.js").read_text(encoding="utf-8")
+    for element in ('id="loginServerStatus"', 'id="passwordToggle"', 'id="capsLockNote"', 'class="login-spinner"', 'id="loginTicker"'):
+        assert element in html, element
+    # Enter submits, the button is busy while signing in, and the status comes from the public info endpoint.
+    assert '"/api/system/info"' in login and 'button.click()' in login and 'classList.add("busy")' in login
+    assert 'getModifierState("CapsLock")' in login
+    # The card moves aside on wide screens so the pole inspection stays visible, and motion is optional.
+    assert "place-items: center end" in css and "prefers-reduced-motion: reduce" in css
+    assert "function drawLaserSwath(" in scene and "function cardClearX(" in scene

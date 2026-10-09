@@ -59,12 +59,17 @@ def test_set_web_version_script_updates_every_specifier(tmp_path, monkeypatch):
     (web / "assets" / "modules").mkdir(parents=True)
     (web / "index.html").write_text((ROOT / "web" / "index.html").read_text(encoding="utf-8"), encoding="utf-8")
     (web / "assets" / "app.js").write_text((ASSETS / "app.js").read_text(encoding="utf-8"), encoding="utf-8")
+    for asset_name in ("login-background.js", "lidar-login-scene.js"):
+        (web / "assets" / asset_name).write_text(
+            (ASSETS / asset_name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
     for module in MODULES:
         (web / "assets" / "modules" / module.name).write_text(module.read_text(encoding="utf-8"), encoding="utf-8")
     monkeypatch.setattr(tool, "ROOT", tmp_path)
     monkeypatch.setattr(tool, "ASSETS", web / "assets")
     assert tool.set_version("test-bump") > len(MODULES)
-    for path in [web / "assets" / "app.js", *(web / "assets" / "modules").glob("*.js")]:
+    for path in [*(web / "assets").glob("*.js"), *(web / "assets" / "modules").glob("*.js")]:
         for value in re.findall(r'\./(?:modules/)?[\w-]+\.js\?v=([\w.-]+)', path.read_text(encoding="utf-8")):
             assert value == "test-bump", path.name
     assert 'assets/app.js?v=test-bump' in (web / "index.html").read_text(encoding="utf-8")
+    assert 'assets/login-lidar.css?v=test-bump' in (web / "index.html").read_text(encoding="utf-8")

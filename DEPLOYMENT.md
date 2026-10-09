@@ -94,6 +94,15 @@ WORKER_POLL_SECONDS=3
 # (LIDAR_MEMORY_BUDGET_GB, default 70% of free RAM). A tile too large to fit alone is split into
 # pieces (<tile>_1, <tile>_2 ...) with low-memory PDAL range filters; every point is kept.
 LIDAR_CONVERT_WORKERS=2
+
+# Email sign-in codes ("Email code" tab on the sign-in page). Leave EMAIL_PROVIDER empty to offer passwords only.
+# Railway Free/Trial/Hobby block outbound SMTP, so use Brevo's HTTPS API there (smtp works locally or on Railway Pro).
+# MAIL_FROM_EMAIL must be a sender/domain verified in Brevo. Set each person's sign-in email in the account tables.
+EMAIL_PROVIDER=brevo
+BREVO_API_KEY=<brevo-api-key>
+MAIL_FROM_EMAIL=<verified-sender@your-domain>
+MAIL_FROM_NAME=JSAN PoleGrid
+# SMTP alternative: EMAIL_PROVIDER=smtp with SMTP_HOST, SMTP_PORT=587, SMTP_USERNAME, SMTP_PASSWORD, SMTP_SECURITY=starttls (or ssl / none)
 DB_CONNECT_TIMEOUT=120
 ```
 

@@ -27,6 +27,8 @@ class User(Base):
     is_active: Mapped[bool]=mapped_column(Boolean, default=True, server_default=true())
     # USER accounts limited to office networks may be allowed to work from anywhere.
     remote_access: Mapped[bool]=mapped_column(Boolean, default=False, server_default=false())
+    # Where email sign-in codes go. Separate from email, which is the identity stored in tokens and work records.
+    sign_in_email: Mapped[str|None]=mapped_column(String(255), unique=True, index=True, nullable=True)
     # Latest sign-in only (no history): time, address and the browser location when the person shares it.
     last_login_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
     last_login_ip: Mapped[str|None]=mapped_column(String(64), nullable=True)
@@ -237,6 +239,18 @@ class PolePresence(Base):
     pole_internal_id: Mapped[int|None]=mapped_column(Integer, nullable=True)
     last_seen: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
     __table_args__=(UniqueConstraint('project_id','user_email',name='uq_pole_presence_user'),)
+
+class EmailLoginCode(Base):
+    """One-time sign-in code sent by email. Only an HMAC of the code is stored; a newer request replaces older codes."""
+    __tablename__='email_login_codes'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int]=mapped_column(ForeignKey('users.id'), index=True)
+    code_hash: Mapped[str]=mapped_column(String(128))
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc, index=True)
+    expires_at: Mapped[datetime]=mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int]=mapped_column(Integer, default=0, server_default='0')
+    used_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
+    request_ip: Mapped[str|None]=mapped_column(String(64), nullable=True)
 
 class Notification(Base):
     """In-app notification for one user; read_at is set when they open or dismiss it."""
