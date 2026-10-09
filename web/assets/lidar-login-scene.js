@@ -731,12 +731,14 @@ export function startLidarLoginBackground(canvas) {
   let lastFrame = 0;
   let stopped = false;
   let warpStart = null;
+  let baseFocus = 0.5;
 
   function resize() {
     const bounds = canvas.getBoundingClientRect();
     width = Math.max(1, Math.round(bounds.width));
     height = Math.max(1, Math.round(bounds.height));
-    viewFocus = width >= 1100 ? 0.4 : 0.5;
+    baseFocus = width >= 1100 ? 0.4 : 0.5;
+    viewFocus = baseFocus;
     const dpr = Math.min(window.devicePixelRatio || 1, DPR_CAP);
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
@@ -748,6 +750,8 @@ export function startLidarLoginBackground(canvas) {
     const inspection = cameraInspectionState(sceneTime, scene.poles);
     const warp = warpStart === null ? 0 : Math.min(1, Math.max(0, (time - warpStart) / WARP_MS));
     const travel = inspection.travel + Math.pow(warp, 3) * 230;
+    // The entrance is centred on screen, so the camera glides back to centre as it starts.
+    viewFocus = baseFocus + (0.5 - baseFocus) * smoothStep(warp * 3);
     const scanDepth = inspection.active
       ? wrappedDepth(inspection.pole.z, travel)
       : 22 + ((sceneTime * 0.047) % 150);
@@ -814,6 +818,6 @@ export function startLidarLoginBackground(canvas) {
     setTimeout(resolve, WARP_MS);
   });
   // Signed out again mid-entrance: return to the normal fly-through.
-  stop.leave = () => { warpStart = null; };
+  stop.leave = () => { warpStart = null; viewFocus = baseFocus; };
   return stop;
 }

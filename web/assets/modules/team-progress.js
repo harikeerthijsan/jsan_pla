@@ -1,8 +1,8 @@
 // Team progress dashboard.
-import { openSuperPage } from "./super-admin.js?v=20261009-brand-cyan";
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-brand-cyan";
-import { openTeamPage } from "./team.js?v=20261009-brand-cyan";
-import { applyWorkspace, can } from "./workspace.js?v=20261009-brand-cyan";
+import { openSuperPage } from "./super-admin.js?v=20261009-warp-centred";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-warp-centred";
+import { openTeamPage } from "./team.js?v=20261009-warp-centred";
+import { applyWorkspace, can } from "./workspace.js?v=20261009-warp-centred";
 
 export const TEAM_REDUCED=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 export const TEAM_AVATAR_HUES=[206,152,262,28,340,188,96,226];

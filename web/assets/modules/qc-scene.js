@@ -1,7 +1,7 @@
 // QC 3D scene: delivery overlay geometry, point clouds and evidence modes.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, state } from "./core.js?v=20261009-brand-cyan";
-import { renderAnalysisViews } from "./qc-analysis.js?v=20261009-brand-cyan";
+import { $, state } from "./core.js?v=20261009-warp-centred";
+import { renderAnalysisViews } from "./qc-analysis.js?v=20261009-warp-centred";
 
 export function clearThreeGroup(g){if(!g)return;while(g.children.length){const x=g.children.pop();x.geometry?.dispose?.();if(x.material){if(Array.isArray(x.material))x.material.forEach(m=>m.dispose?.());else x.material.dispose?.()}}}
 export function clearClouds(){if(!state.viewer)return;const scene=state.viewer.scene;const pcs=[...(scene.pointclouds||[])];for(const pc of pcs){try{const i=scene.pointclouds?.indexOf(pc)??-1;if(i>=0)scene.pointclouds.splice(i,1);scene.scenePointCloud?.remove?.(pc);scene.scene?.remove?.(pc);scene.dispatchEvent?.({type:"pointcloud_removed",pointcloud:pc})}catch(err){console.warn("Point cloud cleanup warning",err)}}state.pointclouds=[]}

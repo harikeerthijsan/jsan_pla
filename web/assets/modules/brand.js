@@ -1,6 +1,6 @@
 // Top-bar brand line: "ENGINEERING" decodes like a robot terminal, letter by letter,
 // on load and again every few seconds while the app is visible.
-import { $ } from "./core.js?v=20261009-brand-cyan";
+import { $ } from "./core.js?v=20261009-warp-centred";
 
 const WORD = "ENGINEERING";
 const GLYPHS = "01#<>/\\[]{}=+*%$&ABCDEFGHIJKLMNOPQRSTUVWXYZ";
