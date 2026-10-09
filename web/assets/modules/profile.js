@@ -1,7 +1,7 @@
 // Profile page: account, password, identity banner and user administration.
-import { $, api, esc, showApp, state, toast, rememberPage } from "./core.js?v=20261009-login-premium";
-import { teamAgo, teamAvatar, teamHue, teamInitials } from "./team-progress.js?v=20261009-login-premium";
-import { applyWorkspace, bootstrap, can, refreshProjects } from "./workspace.js?v=20261009-login-premium";
+import { $, api, esc, showApp, state, toast, rememberPage } from "./core.js?v=20261009-brand-cyan";
+import { teamAgo, teamAvatar, teamHue, teamInitials } from "./team-progress.js?v=20261009-brand-cyan";
+import { applyWorkspace, bootstrap, can, refreshProjects } from "./workspace.js?v=20261009-brand-cyan";
 
 // Last sign-in display: time plus the shared browser location, which opens Google Street View.
 export function signInAreaHtml(location){const s=location?.status;if(s==="shared"&&location.latitude!=null){const lat=Number(location.latitude),lon=Number(location.longitude),acc=location.accuracy!=null?` · ±${location.accuracy<1000?Math.round(location.accuracy)+" m":(location.accuracy/1000).toFixed(1)+" km"}`:"";return `<button type="button" class="signin-area" data-street-lat="${lat}" data-street-lon="${lon}" title="Open Google Street View at this sign-in location">📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}${acc}</button>`}return `<small class="signin-area-none">${{pending:"Location pending",denied:"Location not shared",unavailable:"Location unavailable"}[s]||"No location"}</small>`}

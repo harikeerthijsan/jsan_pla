@@ -10,6 +10,7 @@ const POLE_SPACING = 42;
 const INSPECTION_CYCLE_MS = 18000;
 const DPR_CAP = 1.75;
 const TARGET_FRAME_MS = 1000 / 30;
+const WARP_MS = 3000;
 
 const COLORS = {
   ground: "55, 164, 184",
@@ -496,25 +497,24 @@ function drawPoleMeasurement(context, inspection, width, height, pointer) {
   context.restore();
 
   if (width < 860) return;
-  const panelWidth = 226;
-  const panelHeight = pole.hasTransformer ? 164 : 148;
+  const panelWidth = 262;
+  const panelHeight = pole.hasTransformer ? 190 : 172;
   // Prefer the left of the pole; flip to its right when the left edge (status panels) is too close.
   const leftOfPole = poleTop.x - panelWidth - 62;
-  const panelX = Math.min(cardClearX(width) - panelWidth, leftOfPole >= 256 ? leftOfPole : poleTop.x + 62);
+  const panelX = Math.min(cardClearX(width) - panelWidth, leftOfPole >= 280 ? leftOfPole : poleTop.x + 62);
   const panelY = Math.max(224, Math.min(height - panelHeight - 90, poleTop.y - 18));
   context.save();
   context.globalAlpha = progress;
   drawPanel(context, panelX, panelY, panelWidth, panelHeight);
-  context.fillStyle = locked ? "rgba(88, 239, 174, 0.96)" : "rgba(121, 233, 248, 0.92)";
-  context.font = "700 10px Inter, system-ui, sans-serif";
-  context.fillText(locked ? "AUTO POLE ANALYSIS · LOCKED" : "AUTO POLE ANALYSIS · SCANNING", panelX + 14, panelY + 23);
-  context.strokeStyle = "rgba(91, 221, 241, 0.2)";
+  context.fillStyle = locked ? "rgba(98, 247, 186, 1)" : "rgba(140, 238, 252, 1)";
+  context.font = "800 12px Inter, system-ui, sans-serif";
+  context.fillText(locked ? "AUTO POLE ANALYSIS · LOCKED" : "AUTO POLE ANALYSIS · SCANNING", panelX + 16, panelY + 26);
+  context.strokeStyle = "rgba(110, 230, 248, 0.28)";
   context.beginPath();
-  context.moveTo(panelX + 14, panelY + 34);
-  context.lineTo(panelX + panelWidth - 14, panelY + 34);
+  context.moveTo(panelX + 16, panelY + 38);
+  context.lineTo(panelX + panelWidth - 16, panelY + 38);
   context.stroke();
-  context.font = "500 9px ui-monospace, SFMono-Regular, monospace";
-  context.fillStyle = "rgba(132, 229, 243, 0.64)";
+  context.font = "600 11px ui-monospace, SFMono-Regular, Consolas, monospace";
   const rows = [
     ["ASSET", `POLE ${String(pole.number).padStart(2, "0")}`],
     ["BASE Z", `${pole.base.toFixed(2)} m`],
@@ -523,21 +523,21 @@ function drawPoleMeasurement(context, inspection, width, height, pointer) {
     ["FEATURES", pole.hasTransformer ? "5 DETECTED" : "4 DETECTED"],
   ];
   rows.forEach(([label, value], index) => {
-    const rowY = panelY + 54 + index * 18;
-    context.fillStyle = "rgba(132, 229, 243, 0.58)";
+    const rowY = panelY + 60 + index * 21;
+    context.fillStyle = "rgba(150, 226, 240, 0.9)";
     context.textAlign = "left";
-    context.fillText(label, panelX + 14, rowY);
-    context.fillStyle = index === 3 ? "rgba(95, 242, 181, 0.98)" : "rgba(215, 248, 252, 0.88)";
+    context.fillText(label, panelX + 16, rowY);
+    context.fillStyle = index === 3 ? "rgba(98, 247, 186, 1)" : "rgba(240, 253, 255, 1)";
     context.textAlign = "right";
-    context.fillText(value, panelX + panelWidth - 14, rowY);
+    context.fillText(value, panelX + panelWidth - 16, rowY);
   });
   context.textAlign = "left";
-  context.fillStyle = "rgba(105, 219, 235, 0.48)";
-  context.font = "500 8px Inter, system-ui, sans-serif";
+  context.fillStyle = "rgba(160, 232, 245, 0.85)";
+  context.font = "700 10px Inter, system-ui, sans-serif";
   context.fillText(
     pole.hasTransformer ? "BASE · TOP · ARM · INSULATOR · TX" : "BASE · TOP · ARM · INSULATOR",
-    panelX + 14,
-    panelY + panelHeight - 13,
+    panelX + 16,
+    panelY + panelHeight - 15,
   );
   context.restore();
 }
@@ -564,13 +564,28 @@ function drawCornerFrame(context, width, height) {
 }
 
 function drawPanel(context, x, y, panelWidth, panelHeight) {
-  context.fillStyle = "rgba(2, 15, 22, 0.62)";
-  context.strokeStyle = "rgba(91, 221, 241, 0.24)";
-  context.lineWidth = 1;
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.55)";
+  context.shadowBlur = 18;
+  context.fillStyle = "rgba(3, 18, 27, 0.86)";
   context.beginPath();
-  context.roundRect(x, y, panelWidth, panelHeight, 8);
+  context.roundRect(x, y, panelWidth, panelHeight, 10);
   context.fill();
+  context.restore();
+  context.strokeStyle = "rgba(110, 230, 248, 0.42)";
+  context.lineWidth = 1;
   context.stroke();
+  context.fillStyle = "rgba(94, 230, 245, 0.75)";
+  context.fillRect(x + 14, y, 36, 2);
+}
+
+// Text on the HUD gets a soft dark halo so it stays legible over bright returns.
+function hudText(context, text, x, y) {
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.85)";
+  context.shadowBlur = 4;
+  context.fillText(text, x, y);
+  context.restore();
 }
 
 function drawViewerChrome(context, width, height, scanDepth, time, pointCount, inspection) {
@@ -578,42 +593,46 @@ function drawViewerChrome(context, width, height, scanDepth, time, pointCount, i
   context.save();
   drawCornerFrame(context, width, height);
 
-  context.font = "700 11px Inter, system-ui, sans-serif";
-  context.fillStyle = "rgba(183, 242, 249, 0.7)";
-  context.fillText("LIDAR CORRIDOR SCAN", 29, 108);
-  context.font = "500 9px ui-monospace, SFMono-Regular, monospace";
-  context.fillStyle = "rgba(101, 211, 228, 0.45)";
-  context.fillText("UTILITY ASSET CLASSIFICATION / QC", 29, 122);
+  context.font = "800 13px Inter, system-ui, sans-serif";
+  context.fillStyle = "rgba(225, 251, 255, 0.96)";
+  hudText(context, "LIDAR CORRIDOR SCAN", 30, 110);
+  context.font = "600 11px ui-monospace, SFMono-Regular, Consolas, monospace";
+  context.fillStyle = "rgba(140, 228, 242, 0.85)";
+  hudText(context, "UTILITY ASSET CLASSIFICATION / QC", 30, 126);
 
   // Live scan status.
-  drawPanel(context, 28, 134, 190, 72);
-  context.fillStyle = inspection.locked ? "rgba(255, 192, 89, 0.98)" : "rgba(76, 239, 181, 0.95)";
+  drawPanel(context, 28, 138, 236, 82);
+  const statusColor = inspection.locked ? "255, 192, 89" : "76, 239, 181";
+  context.fillStyle = `rgba(${statusColor}, 1)`;
+  context.shadowColor = `rgba(${statusColor}, 0.9)`;
+  context.shadowBlur = 8;
   context.beginPath();
-  context.arc(44, 153, 3.5, 0, TAU);
+  context.arc(46, 160, 4.5, 0, TAU);
   context.fill();
-  context.font = "700 10px Inter, system-ui, sans-serif";
-  context.fillStyle = "rgba(202, 248, 252, 0.9)";
-  context.fillText(inspection.locked ? "POLE MEASUREMENT LOCK" : "LIVE POINT CLOUD", 55, 156);
-  context.font = "500 9px ui-monospace, SFMono-Regular, monospace";
-  context.fillStyle = "rgba(132, 229, 243, 0.62)";
-  context.fillText(`FRAME  ${String(Math.floor(time / 33) % 10000).padStart(4, "0")}`, 42, 178);
-  context.fillText(`SCAN   ${scanDepth.toFixed(1).padStart(5, "0")} m`, 42, 192);
+  context.shadowBlur = 0;
+  context.font = "800 12px Inter, system-ui, sans-serif";
+  context.fillStyle = "rgba(235, 252, 255, 1)";
+  context.fillText(inspection.locked ? "POLE MEASUREMENT LOCK" : "LIVE POINT CLOUD", 58, 164);
+  context.font = "600 11px ui-monospace, SFMono-Regular, Consolas, monospace";
+  context.fillStyle = "rgba(170, 236, 247, 0.92)";
+  context.fillText(`FRAME  ${String(Math.floor(time / 33) % 10000).padStart(4, "0")}`, 44, 187);
+  context.fillText(`SCAN   ${scanDepth.toFixed(1).padStart(5, "0")} m`, 44, 205);
 
   // Point-cloud telemetry stacks under the scan status, on the side away from the sign-in card.
   if (width >= 1080 && height >= 560) {
     const panelX = 28;
-    const top = 220;
-    drawPanel(context, panelX, top, 210, 144);
-    context.font = "700 10px Inter, system-ui, sans-serif";
-    context.fillStyle = "rgba(202, 248, 252, 0.9)";
-    context.fillText("VIEWER TELEMETRY", panelX + 16, top + 22);
-    context.strokeStyle = "rgba(91, 221, 241, 0.18)";
+    const top = 232;
+    drawPanel(context, panelX, top, 236, 164);
+    context.font = "800 12px Inter, system-ui, sans-serif";
+    context.fillStyle = "rgba(235, 252, 255, 1)";
+    context.fillText("VIEWER TELEMETRY", panelX + 16, top + 26);
+    context.strokeStyle = "rgba(110, 230, 248, 0.28)";
     context.beginPath();
-    context.moveTo(panelX + 16, top + 33);
-    context.lineTo(panelX + 194, top + 33);
+    context.moveTo(panelX + 16, top + 38);
+    context.lineTo(panelX + 220, top + 38);
     context.stroke();
-    context.font = "500 9px ui-monospace, SFMono-Regular, monospace";
-    context.fillStyle = "rgba(132, 229, 243, 0.58)";
+    context.font = "600 11px ui-monospace, SFMono-Regular, Consolas, monospace";
+    context.fillStyle = "rgba(150, 226, 240, 0.9)";
     const rows = [
       ["VISIBLE RETURNS", pointCount.toLocaleString("en-US")],
       ["DISPLAY", "RGB / HEIGHT"],
@@ -622,13 +641,13 @@ function drawViewerChrome(context, width, height, scanDepth, time, pointCount, i
       ["SYNC", "4 VIEWS"],
     ];
     rows.forEach(([label, value], index) => {
-      const rowY = top + 54 + index * 17;
+      const rowY = top + 60 + index * 21;
       context.fillText(label, panelX + 16, rowY);
       context.textAlign = "right";
-      context.fillStyle = index === 4 ? "rgba(77, 239, 180, 0.86)" : "rgba(202, 248, 252, 0.82)";
-      context.fillText(value, panelX + 194, rowY);
+      context.fillStyle = index === 4 || (index === 3 && inspection.locked) ? "rgba(96, 245, 190, 1)" : "rgba(240, 253, 255, 1)";
+      context.fillText(value, panelX + 220, rowY);
       context.textAlign = "left";
-      context.fillStyle = "rgba(132, 229, 243, 0.58)";
+      context.fillStyle = "rgba(150, 226, 240, 0.9)";
     });
   }
 
@@ -636,24 +655,65 @@ function drawViewerChrome(context, width, height, scanDepth, time, pointCount, i
   const modes = ["PLAN", "PROFILE", "CROSS", "3D"];
   let modeX = 28;
   const modeY = height - 62;
-  context.font = "700 9px Inter, system-ui, sans-serif";
+  context.font = "800 11px Inter, system-ui, sans-serif";
   for (const mode of modes) {
-    const tabWidth = mode === "PROFILE" ? 72 : 52;
-    context.fillStyle = mode === "3D" ? "rgba(55, 204, 238, 0.34)" : "rgba(2, 15, 22, 0.56)";
-    context.strokeStyle = mode === "3D" ? "rgba(105, 239, 255, 0.72)" : "rgba(91, 221, 241, 0.2)";
+    const tabWidth = mode === "PROFILE" ? 84 : 60;
+    context.fillStyle = mode === "3D" ? "rgba(40, 190, 228, 0.55)" : "rgba(3, 18, 27, 0.84)";
+    context.strokeStyle = mode === "3D" ? "rgba(140, 244, 255, 0.95)" : "rgba(110, 230, 248, 0.4)";
     context.beginPath();
-    context.roundRect(modeX, modeY, tabWidth, 27, 5);
+    context.roundRect(modeX, modeY - 4, tabWidth, 31, 7);
     context.fill();
     context.stroke();
-    context.fillStyle = mode === "3D" ? "rgba(220, 250, 255, 0.96)" : "rgba(132, 229, 243, 0.58)";
-    context.fillText(mode, modeX + 10, modeY + 17);
-    modeX += tabWidth + 6;
+    context.fillStyle = mode === "3D" ? "rgba(255, 255, 255, 1)" : "rgba(180, 238, 248, 0.92)";
+    context.fillText(mode, modeX + 12, modeY + 16);
+    modeX += tabWidth + 8;
   }
-  context.font = "600 9px ui-monospace, SFMono-Regular, monospace";
+  context.font = "600 11px ui-monospace, SFMono-Regular, Consolas, monospace";
   context.textAlign = "right";
-  context.fillStyle = "rgba(132, 229, 243, 0.48)";
-  context.fillText(`EVIDENCE ${String(Math.floor(scanDepth * 47 + time * 0.012) % 9999).padStart(4, "0")}  •  CRS VERIFIED`, width - 30, height - 44);
+  context.fillStyle = "rgba(170, 236, 247, 0.85)";
+  hudText(context, `EVIDENCE ${String(Math.floor(scanDepth * 47 + time * 0.012) % 9999).padStart(4, "0")}  •  CRS VERIFIED`, width - 30, height - 44);
   context.restore();
+}
+
+// Entrance after sign-in: the camera accelerates down the corridor while light streaks
+// stream out of the vanishing point, ending in a soft cyan flash.
+const WARP_STREAKS = (() => {
+  const random = mulberry32(0x7e57a11);
+  return Array.from({ length: 140 }, () => ({ angle: random() * TAU, offset: random(), speed: 0.6 + random() * 0.9, width: 0.6 + random() * 1.6 }));
+})();
+
+function drawWarp(context, width, height, warp) {
+  if (warp <= 0) return;
+  const cx = width * viewFocus;
+  const cy = height * 0.39;
+  const reach = Math.hypot(Math.max(cx, width - cx), Math.max(cy, height - cy));
+  context.save();
+  context.globalCompositeOperation = "lighter";
+  context.lineCap = "round";
+  for (const streak of WARP_STREAKS) {
+    const t = (streak.offset + warp * streak.speed * 1.6) % 1;
+    const start = Math.pow(t, 2) * reach;
+    const length = 12 + warp * warp * 260 * streak.speed;
+    const dx = Math.cos(streak.angle);
+    const dy = Math.sin(streak.angle);
+    context.strokeStyle = `rgba(150, 240, 255, ${Math.min(0.75, warp * 0.9) * (0.35 + t * 0.65)})`;
+    context.lineWidth = streak.width * (0.6 + t * 1.4);
+    context.beginPath();
+    context.moveTo(cx + dx * start, cy + dy * start);
+    context.lineTo(cx + dx * (start + length), cy + dy * (start + length));
+    context.stroke();
+  }
+  const core = context.createRadialGradient(cx, cy, 0, cx, cy, reach * (0.15 + warp * 0.5));
+  core.addColorStop(0, `rgba(200, 250, 255, ${0.5 * warp})`);
+  core.addColorStop(1, "rgba(94, 230, 245, 0)");
+  context.fillStyle = core;
+  context.fillRect(0, 0, width, height);
+  context.restore();
+  const flash = smoothStep((warp - 0.82) / 0.18);
+  if (flash > 0) {
+    context.fillStyle = `rgba(214, 250, 255, ${flash * 0.9})`;
+    context.fillRect(0, 0, width, height);
+  }
 }
 
 export function startLidarLoginBackground(canvas) {
@@ -670,6 +730,7 @@ export function startLidarLoginBackground(canvas) {
   let frameId = 0;
   let lastFrame = 0;
   let stopped = false;
+  let warpStart = null;
 
   function resize() {
     const bounds = canvas.getBoundingClientRect();
@@ -685,7 +746,8 @@ export function startLidarLoginBackground(canvas) {
   function render(time = 0) {
     const sceneTime = reducedMotion ? 8000 : time;
     const inspection = cameraInspectionState(sceneTime, scene.poles);
-    const travel = inspection.travel;
+    const warp = warpStart === null ? 0 : Math.min(1, Math.max(0, (time - warpStart) / WARP_MS));
+    const travel = inspection.travel + Math.pow(warp, 3) * 230;
     const scanDepth = inspection.active
       ? wrappedDepth(inspection.pole.z, travel)
       : 22 + ((sceneTime * 0.047) % 150);
@@ -696,13 +758,20 @@ export function startLidarLoginBackground(canvas) {
     drawInfrastructure(context, scene.conductors, travel, width, height, pointer, scanDepth);
     drawPoleGuides(context, scene.poles, travel, width, height, pointer);
     drawLaserSwath(context, travel, width, height, pointer, scanDepth, sceneTime);
-    drawPoleMeasurement(context, inspection, width, height, pointer);
-    drawViewerChrome(context, width, height, scanDepth, sceneTime, scene.points.length + scene.conductors.length, inspection);
+    // The HUD dims away as the entrance starts.
+    context.save();
+    context.globalAlpha = 1 - smoothStep(warp * 3);
+    if (warp < 0.34) {
+      drawPoleMeasurement(context, inspection, width, height, pointer);
+      drawViewerChrome(context, width, height, scanDepth, sceneTime, scene.points.length + scene.conductors.length, inspection);
+    }
+    context.restore();
+    drawWarp(context, width, height, warp);
   }
 
   function animate(time) {
     if (stopped) return;
-    if (time - lastFrame >= TARGET_FRAME_MS) {
+    if (time - lastFrame >= (warpStart === null ? TARGET_FRAME_MS : 0)) {
       render(time);
       lastFrame = time;
     }
@@ -730,12 +799,21 @@ export function startLidarLoginBackground(canvas) {
     frameId = requestAnimationFrame(animate);
   }
 
-  return function stop() {
+  function stop() {
     stopped = true;
     cancelAnimationFrame(frameId);
     resizeObserver.disconnect();
     window.removeEventListener("pointermove", handlePointer);
     canvas.removeAttribute("data-ready");
     context.clearRect(0, 0, width, height);
-  };
+  }
+  // Starts the sign-in entrance; resolves when the warp has finished (at once with reduced motion).
+  stop.enter = () => new Promise(resolve => {
+    if (reducedMotion || stopped) { resolve(); return; }
+    warpStart = performance.now();
+    setTimeout(resolve, WARP_MS);
+  });
+  // Signed out again mid-entrance: return to the normal fly-through.
+  stop.leave = () => { warpStart = null; };
+  return stop;
 }

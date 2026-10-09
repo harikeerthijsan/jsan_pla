@@ -1,7 +1,7 @@
 // Configuration, shared state, DOM/API helpers and sign-in/sign-out.
-import { startLidarLoginBackground as startLoginBackground } from "../lidar-login-scene.js?v=20261009-login-premium";
-import { openProfilePage, roleLabel } from "./profile.js?v=20261009-login-premium";
-import { bootstrap } from "./workspace.js?v=20261009-login-premium";
+import { startLidarLoginBackground as startLoginBackground } from "../lidar-login-scene.js?v=20261009-brand-cyan";
+import { openProfilePage, roleLabel } from "./profile.js?v=20261009-brand-cyan";
+import { bootstrap } from "./workspace.js?v=20261009-brand-cyan";
 
 // After a real sign-in, ask the browser for its location (the person may refuse); only the latest is stored.
 export function captureSignInLocation(){const report=body=>api("/api/auth/sign-in-location",{method:"POST",body:JSON.stringify(body)}).then(result=>{state.user={...(state.user||{}),...result};localStorage.setItem("pla_user",JSON.stringify(state.user))}).catch(()=>{});if(!("geolocation" in navigator)){report({status:"unavailable"});return}navigator.geolocation.getCurrentPosition(p=>report({status:"shared",latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy}),error=>report({status:error.code===1?"denied":"unavailable"}),{enableHighAccuracy:true,timeout:15000,maximumAge:60000})}
@@ -15,8 +15,14 @@ export function savedPage(){try{return JSON.parse(localStorage.getItem("pla_page
 export function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
 export function toast(message,type="info",timeout=3200){const root=$("toastStack");if(!root)return;const el=document.createElement("div");el.className=`toast ${type}`;el.textContent=message;root.appendChild(el);setTimeout(()=>el.remove(),timeout)}
 export let stopLoginBackground=null;
-export function showLogin(message=""){appView.classList.add("hidden");loginView.classList.remove("hidden");$("loginError").textContent=message;if(!stopLoginBackground){try{stopLoginBackground=startLoginBackground($("loginBackground"))}catch(e){console.warn("Login background:",e.message)}}}
-export function showApp(){loginView.classList.add("hidden");if(stopLoginBackground){stopLoginBackground();stopLoginBackground=null}appView.classList.remove("hidden");$("userBadge").textContent=`${state.user?.name||state.user?.username||state.user?.email||"Reviewer"} · ${roleLabel(state.user?.role)}`}
+// The sign-in page can register an entrance animation that plays over the app while it loads.
+let entrance=null;
+export function setEntrance(play){entrance=play}
+export function showLogin(message=""){appView.classList.add("hidden");loginView.classList.remove("hidden","entering","leaving");stopLoginBackground?.leave?.();$("loginError").textContent=message;if(!stopLoginBackground){try{stopLoginBackground=startLoginBackground($("loginBackground"))}catch(e){console.warn("Login background:",e.message)}}}
+export function showApp(){const entering=Boolean(entrance&&stopLoginBackground?.enter&&!loginView.classList.contains("hidden"));
+  const finish=()=>{loginView.classList.add("hidden");loginView.classList.remove("entering","leaving");if(stopLoginBackground){stopLoginBackground();stopLoginBackground=null}};
+  if(entering){loginView.classList.add("entering");entrance({warp:stopLoginBackground.enter}).catch(()=>{}).then(()=>{if(loginView.classList.contains("entering"))finish()})}else finish();
+  appView.classList.remove("hidden");$("userBadge").textContent=`${state.user?.name||state.user?.username||state.user?.email||"Reviewer"} · ${roleLabel(state.user?.role)}`}
 export function logout(message=""){state.token="";state.user=null;localStorage.removeItem("pla_token");localStorage.removeItem("pla_user");showLogin(message)}
 
 // One-time setup (original statements 3–16); called by app.js in the original order.

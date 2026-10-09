@@ -1,6 +1,7 @@
 // Sign-in page polish: live server status, Enter-to-submit, busy button, show/hide password,
-// Caps Lock warning, error shake, a rotating feature line and a pointer spotlight on the card.
-import { $, state } from "./core.js?v=20261009-login-premium";
+// Caps Lock warning, error shake, a rotating feature line, a pointer spotlight on the card,
+// and the entrance played after a successful sign-in while the workspace loads underneath.
+import { $, state, setEntrance } from "./core.js?v=20261009-brand-cyan";
 
 const FEATURES = [
   "Synchronized Plan · Profile · Cross · 3D evidence",
@@ -20,10 +21,8 @@ function serverStatus() {
     try {
       const response = await fetch(state.apiBase.replace(/\/$/, "") + "/api/system/info", { cache: "no-store" });
       if (!response.ok) throw new Error(String(response.status));
-      const info = await response.json();
-      const where = info.app_env && info.app_env !== "production" ? ` · ${info.app_env}` : "";
       dot.className = "login-status-dot online";
-      text.textContent = `Server online · v${String(info.version || "").split("-")[0] || "—"}${where}`;
+      text.textContent = "Server online";
     } catch {
       dot.className = "login-status-dot offline";
       text.textContent = "Server unreachable — retrying";
@@ -92,8 +91,26 @@ function cardSpotlight() {
   }, { passive: true });
 }
 
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// Card dissolves, the corridor warps forward with a welcome and loading steps, then the
+// sign-in layer fades away to reveal the app (already loading underneath).
+async function playEntrance({ warp }) {
+  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  const user = state.user || {};
+  const first = String(user.name || user.username || "").trim().split(/\s+/)[0];
+  $("loginEnterHello").textContent = first ? `Welcome ${first}, now entering` : "Now entering";
+  await warp();
+  const app = $("appView");
+  app.classList.add("app-arrive");
+  $("loginView").classList.add("leaving");
+  await wait(reduced ? 0 : 900);
+  setTimeout(() => app.classList.remove("app-arrive"), 1200);
+}
+
 export function init() {
   if (!$("loginView")) return;
+  if ($("loginEnter")) setEntrance(playEntrance);
   serverStatus();
   busyButton();
   passwordTools();

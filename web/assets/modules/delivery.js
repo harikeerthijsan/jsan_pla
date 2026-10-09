@@ -1,7 +1,7 @@
 // Delivery pipeline, versions, revisions, approval and the deliverable package download.
-import { $, api, esc, state, toast } from "./core.js?v=20261009-login-premium";
-import { loadProject, openQcRunDialog } from "./qc-run.js?v=20261009-login-premium";
-import { applyWorkspace, can, currentProject } from "./workspace.js?v=20261009-login-premium";
+import { $, api, esc, state, toast } from "./core.js?v=20261009-brand-cyan";
+import { loadProject, openQcRunDialog } from "./qc-run.js?v=20261009-brand-cyan";
+import { applyWorkspace, can, currentProject } from "./workspace.js?v=20261009-brand-cyan";
 
 export async function loadWorkflow(){if(!state.projectId)return;try{state.pipeline=await api(`/api/projects/${state.projectId}/pipeline`);state.deliveryProjectId=state.pipeline.delivery?.project_id||state.projectId;state.workflow=await api(`/api/projects/${state.deliveryProjectId}/workflow`);renderWorkflow();renderDeliveryPipeline()}catch(e){state.workflow=null;if(state.workspace==="DELIVERY")toast(e.message,"error",4200)}}
 export function openInProduction(projectId,poleId=null){state.pendingProductionPole=poleId;state.projectId=projectId;localStorage.setItem("pla_project_id",projectId);state.workspace="PRODUCTION";localStorage.setItem("pla_workspace","PRODUCTION");applyWorkspace()}

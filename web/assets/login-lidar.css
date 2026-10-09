@@ -183,6 +183,42 @@
   #loginView.login-shell { place-items: center end; padding-right: clamp(48px, 7vw, 150px); }
 }
 
+/* ---- Entrance after sign-in ---------------------------------------------- */
+#loginView.entering { position: fixed; inset: 0; z-index: 10000; }
+#loginView.entering .login-card { animation: loginCardOut .6s cubic-bezier(.4, 0, .2, 1) forwards; pointer-events: none; }
+#loginView.entering .login-page-brand { animation: loginFadeOut .5s ease forwards; }
+#loginView.leaving { opacity: 0; transition: opacity .9s ease; }
+
+.login-enter { display: none; position: absolute; inset: 0; z-index: 3; place-content: center; justify-items: center; text-align: center; pointer-events: none; color: var(--lx-text); }
+#loginView.entering .login-enter { display: grid; }
+.login-enter > * { opacity: 0; animation: loginRise .7s cubic-bezier(.2, .8, .2, 1) forwards; }
+.login-enter-mark { animation-delay: .25s; width: 88px; height: 88px; display: grid; place-items: center; margin-bottom: 18px; border-radius: 50%; background: radial-gradient(circle, rgba(94, 230, 245, .22), rgba(3, 18, 27, .7) 70%); box-shadow: 0 0 0 1px rgba(110, 230, 248, .45), 0 0 50px rgba(94, 230, 245, .35); }
+.login-enter-mark svg { overflow: visible; }
+.login-enter-orbit { fill: none; stroke: rgba(94, 230, 245, .85); stroke-width: 1.6; stroke-dasharray: 46 136; transform-origin: 32px 32px; animation: loginSpin 1.4s linear infinite; }
+.login-enter-pole { fill: none; stroke: #e8fbff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 120; stroke-dashoffset: 120; animation: loginDraw 1.1s .45s ease forwards; }
+.login-enter-ping { fill: var(--lx-ok); animation: loginPing 1.2s 1.2s ease-out infinite; transform-origin: 32px 12px; }
+.login-enter-hello { animation-delay: .4s; padding: 6px 14px; border-radius: 999px; background: rgba(3, 18, 27, .7); border: 1px solid rgba(110, 230, 248, .35); font: 800 13px/1 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .3em; text-transform: uppercase; color: #d9f8ff; text-shadow: 0 0 12px rgba(94, 230, 245, .6); }
+.login-enter-name { animation-delay: .55s; margin: 10px 0 22px; font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -.02em; background: linear-gradient(100deg, #fff 20%, #bff6ff 55%, var(--lx-accent)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 18px rgba(0, 0, 0, .7)); }
+.login-enter-steps { animation-delay: .7s; list-style: none; margin: 0 0 18px; padding: 14px 20px; display: grid; gap: 9px; justify-items: start; min-width: 280px; border-radius: 14px; background: rgba(3, 18, 27, .72); border: 1px solid rgba(110, 230, 248, .3); backdrop-filter: blur(8px); font-size: 14px; font-weight: 600; }
+.login-enter-steps li { display: flex; align-items: center; gap: 10px; color: rgba(200, 236, 244, .45); animation: loginStep .35s ease forwards; }
+.login-enter-steps li::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(110, 230, 248, .35); box-sizing: border-box; }
+.login-enter-steps li:nth-child(1) { animation-delay: .8s; }
+.login-enter-steps li:nth-child(2) { animation-delay: 1.4s; }
+.login-enter-steps li:nth-child(3) { animation-delay: 2s; }
+.login-enter-steps li:nth-child(4) { animation-delay: 2.6s; }
+.login-enter-bar { animation-delay: .7s; width: 280px; height: 3px; border-radius: 3px; background: rgba(110, 230, 248, .18); overflow: hidden; }
+.login-enter-bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--lx-accent-2), var(--lx-accent), var(--lx-ok)); box-shadow: 0 0 12px rgba(94, 230, 245, .8); animation: loginBar 2.3s .75s cubic-bezier(.5, 0, .3, 1) forwards; }
+
+#appView.app-arrive { animation: appArrive 1.1s cubic-bezier(.2, .8, .2, 1) both; }
+
+@keyframes loginCardOut { to { opacity: 0; transform: scale(.94) translateY(-12px); filter: blur(6px); } }
+@keyframes loginFadeOut { to { opacity: 0; transform: translateY(-8px); } }
+@keyframes loginDraw { to { stroke-dashoffset: 0; } }
+@keyframes loginPing { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
+@keyframes loginStep { to { color: #e8fbff; } }
+@keyframes loginBar { to { width: 100%; } }
+@keyframes appArrive { from { opacity: 0; transform: scale(1.015); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+
 @keyframes loginRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes loginBeam { to { --login-angle: 360deg; } }
 @keyframes loginSpin { to { transform: rotate(360deg); } }
@@ -192,3 +228,8 @@
 @media (prefers-reduced-motion: reduce) {
   #loginView *, #loginView *::before, #loginView *::after { animation: none !important; transition: none !important; }
 }
+
+.login-enter-steps li { --tick: 0; }
+.login-enter-steps li::before { animation: loginTick .35s ease forwards; animation-delay: inherit; }
+@keyframes loginTick { to { border-color: var(--lx-ok); background: var(--lx-ok); box-shadow: 0 0 10px rgba(79, 240, 180, .7); } }
+@media (prefers-reduced-motion: reduce) { #appView.app-arrive { animation: none !important; } }

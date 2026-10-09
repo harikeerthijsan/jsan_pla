@@ -1,10 +1,10 @@
 // Super admin page: every account with its access and work, and a timeline of everyone's actions.
 // Only shown to accounts with the super.view permission; the server enforces it on every route.
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-login-premium";
-import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261009-login-premium";
-import { teamAgo, teamAvatar } from "./team-progress.js?v=20261009-login-premium";
-import { openTeamPage } from "./team.js?v=20261009-login-premium";
-import { applyWorkspace } from "./workspace.js?v=20261009-login-premium";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-brand-cyan";
+import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261009-brand-cyan";
+import { teamAgo, teamAvatar } from "./team-progress.js?v=20261009-brand-cyan";
+import { openTeamPage } from "./team.js?v=20261009-brand-cyan";
+import { applyWorkspace } from "./workspace.js?v=20261009-brand-cyan";
 
 const ROLES=["USER","ADMIN","SUPER_ADMIN"];
 const GROUPS={production:"Production",qc:"QC",data:"Data",delivery:"Delivery",accounts:"Accounts",other:"Other"};

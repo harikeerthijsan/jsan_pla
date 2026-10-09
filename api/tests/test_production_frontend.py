@@ -279,7 +279,7 @@ def test_login_page_has_brand_and_animated_background_without_api_url():
     javascript = web_javascript()
     background = (ROOT / "web" / "assets" / "login-background.js").read_text(encoding="utf-8")
 
-    assert "<h1>JSAN PoleGrid</h1>" in html and "<p>LiDAR Utility Engineering Platform</p>" in html
+    assert '<h1>JSAN PoleGrid<sup class="tm">™</sup></h1>' in html and "<p>LiDAR Utility Engineering Platform</p>" in html
     assert '<div class="login-page-brand"><img src="assets/logo.jpg" width="174" height="56" alt="JSAN" /></div>' in html
     assert (ROOT / "web" / "assets" / "logo.jpg").read_bytes()[:3] == b"\xff\xd8\xff"
     assert '<div class="brand-mark">J</div>' not in html
@@ -422,3 +422,26 @@ def test_sign_in_page_extras_are_wired():
     # The card moves aside on wide screens so the pole inspection stays visible, and motion is optional.
     assert "place-items: center end" in css and "prefers-reduced-motion: reduce" in css
     assert "function drawLaserSwath(" in scene and "function cardClearX(" in scene
+
+
+def test_sign_in_entrance_plays_over_the_loading_app():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    core = (ROOT / "web" / "assets" / "modules" / "core.js").read_text(encoding="utf-8")
+    login = (ROOT / "web" / "assets" / "modules" / "login-experience.js").read_text(encoding="utf-8")
+    scene = (ROOT / "web" / "assets" / "lidar-login-scene.js").read_text(encoding="utf-8")
+    assert 'id="loginEnter"' in html and 'PoleGrid<sup class="tm">™</sup> World' in html and 'id="loginEnterHello"' in html
+    assert "`Welcome ${first}, now entering`" in login
+    # Only a fresh sign-in (login page visible, scene running) gets the entrance; the app loads underneath.
+    assert 'const entering=Boolean(entrance&&stopLoginBackground?.enter&&!loginView.classList.contains("hidden"))' in core
+    assert "stopLoginBackground?.leave?.()" in core
+    assert "setEntrance(playEntrance)" in login
+    assert "stop.enter = () => new Promise" in scene and "function drawWarp(" in scene
+
+
+def test_brand_line_decodes_engineering():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    brand = (ROOT / "web" / "assets" / "modules" / "brand.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    assert 'LiDAR Utility <span class="brand-engineering-wrap"><span id="brandEngineering"' in html and ">ENGINEERING</span></span> Platform</div>" in html
+    assert 'const WORD = "ENGINEERING"' in brand and "prefers-reduced-motion: reduce" in brand
+    assert ".brand-engineering{" in css and "@keyframes brandShimmer" in css

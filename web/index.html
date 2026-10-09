@@ -9,8 +9,8 @@
   <link rel="stylesheet" href="potree/libs/openlayers3/ol.css" />
   <link rel="stylesheet" href="potree/libs/spectrum/spectrum.css" />
   <link rel="stylesheet" href="potree/libs/jstree/themes/mixed/style.css" />
-  <link rel="stylesheet" href="assets/app.css?v=20261009-login-premium" />
-  <link rel="stylesheet" href="assets/login-lidar.css?v=20261009-login-premium" />
+  <link rel="stylesheet" href="assets/app.css?v=20261009-brand-cyan" />
+  <link rel="stylesheet" href="assets/login-lidar.css?v=20261009-brand-cyan" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -18,7 +18,7 @@
     <div class="login-page-brand"><img src="assets/logo.jpg" width="174" height="56" alt="JSAN" /></div>
     <div class="login-card">
       <div class="login-status" aria-live="polite"><span id="loginStatusDot" class="login-status-dot"></span><span id="loginServerStatus">Connecting to server…</span></div>
-      <h1>JSAN PoleGrid</h1>
+      <h1>JSAN PoleGrid<sup class="tm">™</sup></h1>
       <p>LiDAR Utility Engineering Platform</p>
       <div id="loginTabs" class="login-tabs hidden" role="tablist" aria-label="Sign-in method"><button type="button" role="tab" data-login-tab="password" class="active" aria-selected="true">Password</button><button type="button" role="tab" data-login-tab="code" aria-selected="false">Email code</button></div>
       <div id="loginPasswordPane">
@@ -43,11 +43,18 @@
       <div class="hint">Use your assigned JSAN PoleGrid account.</div>
       <div class="login-ticker" aria-hidden="true"><span class="login-ticker-tag">Inside</span><span id="loginTicker" class="login-ticker-text">Synchronized Plan · Profile · Cross · 3D evidence</span></div>
     </div>
+    <div id="loginEnter" class="login-enter" role="status" aria-live="polite">
+      <div class="login-enter-mark" aria-hidden="true"><svg viewBox="0 0 64 64" width="64" height="64"><circle class="login-enter-orbit" cx="32" cy="32" r="29"/><path class="login-enter-pole" d="M32 12v40M20 19h24M23 24h18M24 19l8 7 8-7"/><circle class="login-enter-ping" cx="32" cy="12" r="2.6"/></svg></div>
+      <div id="loginEnterHello" class="login-enter-hello">Now entering</div>
+      <div id="loginEnterTitle" class="login-enter-name">PoleGrid<sup class="tm">™</sup> World</div>
+      <ol class="login-enter-steps"><li>Identity verified</li><li>Loading your datasets</li><li>Calibrating LiDAR viewer</li><li>Opening your workspace</li></ol>
+      <div class="login-enter-bar" aria-hidden="true"><span></span></div>
+    </div>
   </div>
 
   <div id="appView" class="app-shell hidden">
     <header class="topbar">
-      <div class="brand-block"><div class="title">JSAN PoleGrid</div><div class="brand-subline">LiDAR Utility Engineering Platform</div></div>
+      <div class="brand-block"><div class="title brand-title"><img class="brand-logo" src="assets/logo.jpg" width="81" height="26" alt="JSAN" /><span>PoleGrid<sup class="tm">™</sup></span></div><div class="brand-subline">LiDAR Utility <span class="brand-engineering-wrap"><span id="brandEngineering" class="brand-engineering" aria-label="Engineering">ENGINEERING</span></span> Platform</div></div>
       <div class="top-actions"><div id="workspaceSwitch" class="workspace-switch hidden"><button id="productionWorkspaceBtn" class="workspace-btn">Production</button><button id="qcWorkspaceBtn" class="workspace-btn">QC</button><button id="deliveryWorkspaceBtn" class="workspace-btn">Delivery</button></div><select id="projectSelect" class="project-select"></select><button id="superAdminBtn" type="button" class="ghost hidden" title="Super admin: everyone's work, accounts and access">Super admin</button><button id="reprocessBtn" class="ghost" title="Re-run LiDAR mapping, geometry build and QC using the files already uploaded for this dataset">Reprocess</button><span class="notify-wrap"><button type="button" id="notifyBtn" class="notify-btn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" title="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg><span id="notifyCount" class="notify-count hidden">0</span></button><div id="notifyPanel" class="notify-panel hidden" role="region" aria-label="Notifications"><div class="notify-head"><b>Notifications</b><button type="button" id="notifyReadAll" class="compact-btn">Mark all read</button></div><div id="notifyList" class="notify-list"></div></div></span><button type="button" id="userBadge" class="badge muted profile-chip" title="Open your profile"></button><button id="logoutBtn" class="ghost">Logout</button></div>
     </header>
 
@@ -288,7 +295,7 @@
   <dialog id="decisionDialog"><form method="dialog" id="decisionForm"><h3 id="decisionTitle">Review finding</h3><input type="hidden" id="decisionFindingId" /><label>Decision<select id="decisionValue"><option value="CONFIRMED_FAIL">Confirm fail</option><option value="ACCEPTED_EXCEPTION">Accept exception</option><option value="NEEDS_FIELD_REVIEW">Needs field review</option><option value="CORRECTED">Corrected</option><option value="OPEN">Re-open</option></select></label><label>Reviewer comment<textarea id="decisionComment" rows="4" placeholder="Evidence / correction note"></textarea></label><div class="dialog-actions"><button value="cancel">Cancel</button><button id="saveDecision" value="default" class="primary">Save decision</button></div></form></dialog>
 
   <script src="potree/libs/jquery/jquery-3.1.1.min.js"></script><script src="potree/libs/spectrum/spectrum.js"></script><script src="potree/libs/jquery-ui/jquery-ui.min.js"></script><script src="potree/libs/other/BinaryHeap.js"></script><script src="potree/libs/tween/tween.min.js"></script><script src="potree/libs/d3/d3.js"></script><script src="potree/libs/proj4/proj4.js"></script><script src="potree/libs/openlayers3/ol.js"></script><script src="potree/libs/i18next/i18next.js"></script><script src="potree/libs/jstree/jstree.js"></script><script src="potree/libs/copc/index.js"></script><script src="potree/build/potree/potree.js"></script><script src="potree/libs/plasio/js/laslaz.js"></script>
-  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261009-login-premium"></script>
+  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261009-brand-cyan"></script>
 <div id="toastStack" class="toast-stack" aria-live="polite"></div>
 </body>
 </html>
