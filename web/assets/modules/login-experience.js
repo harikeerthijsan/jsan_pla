@@ -1,7 +1,7 @@
 // Sign-in page polish: live server status, Enter-to-submit, busy button, show/hide password,
 // Caps Lock warning, error shake, a rotating feature line, a pointer spotlight on the card,
 // and the entrance played after a successful sign-in while the workspace loads underneath.
-import { $, state, setEntrance } from "./core.js?v=20261009-directory-422";
+import { $, state, setEntrance } from "./core.js?v=20261012-box-close-focus-1";
 
 const FEATURES = [
   "Synchronized Plan · Profile · Cross · 3D evidence",

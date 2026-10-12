@@ -1,17 +1,18 @@
 // Viewer creation, permissions, workspace switching, dataset selection and bootstrap.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, state, rememberPage } from "./core.js?v=20261009-directory-422";
-import { loadWorkflow } from "./delivery.js?v=20261009-directory-422";
-import { loadNotifications } from "./notifications.js?v=20261009-directory-422";
-import { loadProduction } from "./production-data.js?v=20261009-directory-422";
-import { installProductionNavigation } from "./production-view.js?v=20261009-directory-422";
-import { clearCanvases } from "./qc-analysis.js?v=20261009-directory-422";
-import { renderPoles, renderSummary } from "./qc-review.js?v=20261009-directory-422";
-import { loadProject } from "./qc-run.js?v=20261009-directory-422";
-import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261009-directory-422";
+import { applyProductionPointSettings } from "./production-points.js?v=20261012-box-close-focus-1";
+import { $, api, state, rememberPage } from "./core.js?v=20261012-box-close-focus-1";
+import { loadWorkflow } from "./delivery.js?v=20261012-box-close-focus-1";
+import { loadNotifications } from "./notifications.js?v=20261012-box-close-focus-1";
+import { loadProduction } from "./production-data.js?v=20261012-box-close-focus-1";
+import { installProductionNavigation } from "./production-view.js?v=20261012-box-close-focus-1";
+import { clearCanvases } from "./qc-analysis.js?v=20261012-box-close-focus-1";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261012-box-close-focus-1";
+import { loadProject } from "./qc-run.js?v=20261012-box-close-focus-1";
+import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261012-box-close-focus-1";
 
 export function initViewer(){if(state.viewer)return;const v=new Potree.Viewer($("potree_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.viewer=v;state.overlay=new THREE.Group();state.relation=new THREE.Group();v.scene.scene.add(state.overlay);v.scene.scene.add(state.relation)}
-export function initProductionViewer(){if(state.productionViewer)return;const v=new Potree.Viewer($("production_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.productionViewer=v;installProductionNavigation(v)}
+export function initProductionViewer(){if(state.productionViewer)return;const v=new Potree.Viewer($("production_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.productionViewer=v;applyProductionPointSettings();installProductionNavigation(v)}
 export function can(permission){return state.permissions.has(permission)}
 export function renderRuntime(){const r=state.runtime||{};const env=(r.railway_environment||r.app_env||"local").toUpperCase();const version=String(r.version||"3.4").replace(/-operational$/,""),badge=$("runtimeBadge");if(badge){badge.textContent=`v${version.replace(/^v/,"")} · ${env}`;badge.className=`version env-${env.toLowerCase()}`}document.title=`JSAN PoleGrid · ${env}`}
 export function applyWorkspace(){rememberPage("workspace");$("profilePage").classList.add("hidden");$("teamPage").classList.add("hidden");$("superPage").classList.add("hidden");$("superAdminBtn").classList.toggle("hidden",!can("super.view"));$("teamProgressBtn").classList.toggle("hidden",!can("work.view_all"));$("poleAssignBtn").classList.toggle("hidden",!can("user.manage"));$("appView").classList.remove("profile-open");const available=state.workspaces.length;$("workspaceSwitch").classList.toggle("hidden",available<2);for(const name of ["PRODUCTION","DELIVERY","QC"]){const id=name.toLowerCase()+"WorkspaceBtn";$(id)?.classList.toggle("active",state.workspace===name)}$("productionWorkspace").classList.toggle("hidden",state.workspace!=="PRODUCTION");$("deliveryWorkspace").classList.toggle("hidden",state.workspace!=="DELIVERY");$("qcWorkspace").classList.toggle("hidden",state.workspace!=="QC");$("qcKpis").classList.toggle("hidden",state.workspace!=="QC");$("productionUploadBtn").classList.toggle("hidden",!can("project.create"));$("reprocessBtn").classList.toggle("hidden",state.workspace==="PRODUCTION"||!can("processing.run"));const projectChanged=state.projects?.length?syncWorkspaceProject():false;if(state.workspace==="PRODUCTION"){initProductionViewer();if(state.projectId)loadProduction()}else if(state.workspace==="DELIVERY"&&state.projectId)loadWorkflow();else if(state.workspace==="QC"&&(projectChanged||state.projectStale))loadProject();state.projectStale=false;if(!state.projects?.length)clearProject()}

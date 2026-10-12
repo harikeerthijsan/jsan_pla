@@ -80,6 +80,10 @@ POLE_PARENT = "pole"
 
 PRODUCTION_STATUSES = {"NOT_STARTED", "IN_PROGRESS", "COMPLETED", "REWORK", "ON_HOLD", "SUBMITTED_FOR_QC"}
 
+# How a point's coordinates were obtained: snapped to a LiDAR return, or placed in open space on a working plane
+# (the profile section, a vertical plane through the pole, a level plane at ground height, or the view's pivot depth).
+POINT_PLACEMENTS = {"lidar", "section_plane", "pole_plane", "ground_plane", "view_plane"}
+
 SECTION3_ATTRIBUTE_FIELDS = [
     "feature_id", "parent_feature_id", "pole_internal_id", "item_number", "asset_sub_type",
     "catalog_key", "owner", "arm_no", "usage", "support", "voltage", "anchor_no",
@@ -137,11 +141,13 @@ def validate_annotation_values(family: str, feature_type: str, status: str, attr
         raise HTTPException(422, "Point type does not belong to the selected production family")
     if status not in PRODUCTION_STATUSES:
         raise HTTPException(422, "Unsupported production status")
-    unknown = sorted(set(attributes) - set(SECTION3_ATTRIBUTE_FIELDS))
+    unknown = sorted(set(attributes) - set(SECTION3_ATTRIBUTE_FIELDS) - {"placement"})
     if unknown:
         raise HTTPException(422, f"Unsupported production attribute(s): {', '.join(unknown)}")
     if len(json.dumps(attributes, default=str)) > 20000:
         raise HTTPException(413, "Production attributes exceed the allowed size")
+    if "placement" in attributes and attributes["placement"] not in POINT_PLACEMENTS:
+        raise HTTPException(422, f"Unsupported point placement (use one of: {', '.join(sorted(POINT_PLACEMENTS))})")
 
 
 def resolve_parent(db: Session, project_id: str, family: str, pole_internal_id: int | None, reference_id: str | None):

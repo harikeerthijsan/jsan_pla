@@ -37,6 +37,31 @@ def test_production_box_tool_supports_the_combined_multi_cloud_model():
     assert 'e.key!=="Escape"' in javascript
 
 
+def test_production_box_fits_the_local_lidar_height_before_zooming():
+    view = (ROOT / "web" / "assets" / "modules" / "production-view.js").read_text(encoding="utf-8")
+
+    # The clip box must not inherit the full project's vertical range: one
+    # distant bad elevation would make a small selection look like a tower and
+    # force Potree to zoom far away from the selected points.
+    assert "function productionBoxElevations(" in view
+    assert "getMousePointCloudIntersection(mouse,camera,v,v.scene.pointclouds)" in view
+    assert "function fittedProductionBoxRange(" in view
+    assert "volume.position.set(center.x,center.y,range.center)" in view
+    assert "volume.scale.set(width,height,range.depth)" in view
+    assert "bounds.max.z-bounds.min.z+20" not in view
+    assert "v.zoomTo(volume,.72,450)" in view
+
+
+def test_closing_production_box_returns_to_the_pre_box_pole_or_region():
+    view = (ROOT / "web" / "assets" / "modules" / "production-view.js").read_text(encoding="utf-8")
+
+    assert "returnCamera=state.productionBoxTool?.previous" in view
+    assert "volume.plaReturnCamera=returnCamera" in view
+    assert "const returnCamera=state.productionClipVolume?.plaReturnCamera" in view
+    assert "clearProductionClip(false);restoreProductionCamera(returnCamera)" in view
+    assert 'clearProductionClip(true);toast("Bounding box removed.' not in view
+
+
 def test_production_navigation_controls_are_wired():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
     javascript = web_javascript()
@@ -76,8 +101,8 @@ def test_production_profile_view_is_wired():
     assert "above base" in javascript
     # Picks in the production viewer honour the clip so profile picks stay inside the slab.
     assert "pickClipped:true" in javascript
-    # A click that hits no LiDAR point must not create a draft at the origin.
-    assert 'if(!hit){toast("No LiDAR point under the cursor' in javascript
+    # A click that can be neither snapped to LiDAR nor placed on a working plane must not create a draft at the origin.
+    assert 'if(spot.error){toast(spot.error,"error",4500);return}' in javascript
 
 
 def test_production_pick_lets_the_user_navigate_and_geojson_markers_are_large():
@@ -389,11 +414,19 @@ def test_datasets_are_created_only_from_production_import():
 
 def test_saved_points_have_quick_edit_and_remove_actions():
     javascript = web_javascript()
+    pick = (ROOT / "web" / "assets" / "modules" / "production-pick.js").read_text(encoding="utf-8")
+    points = (ROOT / "web" / "assets" / "modules" / "production-points.js").read_text(encoding="utf-8")
     # One remove path: open the point and run the existing Delete flow (confirmation, revision and parent checks).
     assert 'export function removeSavedPoint(id){' in javascript and '$("annotationDeleteBtn").click()' in javascript
     # Clicking a saved point in the 3D view opens its menu before GeoJSON pin selection.
     assert "if(!openPointMenuAt(e.clientX-r.left,e.clientY-r.top))selectProductionGeoAt(" in javascript
     assert 'data-point-action="edit"' in javascript and 'data-point-action="delete"' in javascript
+    # The saved-point action menu must not share the point-display settings ID. The settings document-level
+    # mousedown handler otherwise hides the action menu before Edit or Delete receives its click.
+    assert 'menu.id="productionPointActionMenu"' in pick
+    assert '#productionPointActionMenu' in pick
+    assert '$("productionPointMenu")' not in pick
+    assert '$("productionPointMenu")' in points
     # Saved points list rows and the Pole base / top checklist rows offer delete directly.
     assert "data-row-delete" in javascript and "removeSavedPoint(row.id)" in javascript
     assert 'data-check-delete="${esc(row.id)}"' in javascript and "removeSavedPoint(button.dataset.checkDelete)" in javascript
@@ -468,3 +501,59 @@ def test_validation_errors_are_readable_and_username_patterns_are_valid_for_chro
     assert 'pattern="[A-Za-z0-9._-]' not in html and html.count('pattern="[A-Za-z0-9._\\-]') == 4
     assert "export function errorText(detail)" in core and "new Error(errorText(data?.detail)" in core
     assert 'string_pattern_mismatch"?"may use only letters, numbers, dot, dash and underscore (no spaces)"' in core
+
+
+def test_production_quick_save_card_and_measurement_tool():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    measure = (ROOT / "web" / "assets" / "modules" / "production-measure.js").read_text(encoding="utf-8")
+    pick = (ROOT / "web" / "assets" / "modules" / "production-pick.js").read_text(encoding="utf-8")
+    # Saving happens in the card next to the picked point; it drives the existing form so its rules still apply.
+    assert "#annotationForm .annotation-actions{display:none}" in css
+    assert '$("annotationForm").requestSubmit()' in quick and '$("annotationCancelBtn").click()' in quick and '$("annotationDeleteBtn").click()' in quick
+    # Measurement section sits under the pole / attachments checklist; two picks, line + tag in 3D, values in the panel.
+    assert html.index('id="productionChecklist"') < html.index('id="productionMeasurePanel"')
+    assert "export function startProductionMeasure()" in measure and "function values(a, b)" in measure
+    assert "horizontal" in measure and "vertical" in measure and "measure-label" in measure
+    assert "cancelProductionMeasure();const v=state.productionViewer" in pick
+
+
+def test_production_colour_modes_and_hidden_more_fields():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    colour = (ROOT / "web" / "assets" / "modules" / "production-colour.js").read_text(encoding="utf-8")
+    data = (ROOT / "web" / "assets" / "modules" / "production-data.js").read_text(encoding="utf-8")
+    # The colour dropdown and point-size controls sit right before the Top / Front / Side / 3D buttons, in the viewer toolbar.
+    toolbar = html.index('class="production-viewer-tools"')
+    assert toolbar < html.index('id="productionColourMode"') < html.index('id="productionPointSmaller"') < html.index('data-production-view="top"') < html.index('id="productionProfileBtn"')
+    for value, label in (("intensity", "Intensity view"), ("rgb", "RGB view"), ("elevation", "Elevation view")):
+        assert f'<option value="{value}"' in html and label in html
+    assert 'const MODES = { intensity: "intensity", rgb: "rgba", elevation: "elevation" }' in colour
+    assert "colourProductionPointCloud(e.pointcloud)" in data and 'activeAttributeName="elevation"' not in data
+    # "More fields" stays in the page for the save card to mirror, but is no longer shown.
+    assert '<details class="production-more hidden" aria-hidden="true">' in html
+
+
+def test_production_point_size_shape_and_detail_controls():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    points = (ROOT / "web" / "assets" / "modules" / "production-points.js").read_text(encoding="utf-8")
+    data = (ROOT / "web" / "assets" / "modules" / "production-data.js").read_text(encoding="utf-8")
+    workspace = (ROOT / "web" / "assets" / "modules" / "workspace.js").read_text(encoding="utf-8")
+    for element in ("productionPointSmaller", "productionPointBigger", "productionPointSlider", "productionPointMenu"):
+        assert f'id="{element}"' in html, element
+    assert 'data-point-shape="round"' in html and 'data-point-detail="ultra"' in html
+    # Close-up squares came from a 2.2M point budget running out; detail is now a setting (default 5M) and squares are capped.
+    assert "high: 5_000_000" in points and "m.uniforms.maxSize.value" in points and "Potree.maxNodesLoading = 8" in points
+    assert "styleProductionPointCloud(e.pointcloud)" in data and "applyProductionPointSettings()" in workspace
+
+
+def test_points_can_be_placed_in_open_space():
+    pick = (ROOT / "web" / "assets" / "modules" / "production-pick.js").read_text(encoding="utf-8")
+    placement = (ROOT / "web" / "assets" / "modules" / "production-placement.js").read_text(encoding="utf-8")
+    measure = (ROOT / "web" / "assets" / "modules" / "production-measure.js").read_text(encoding="utf-8")
+    # No more "No LiDAR point under the cursor": snap first, otherwise a working plane.
+    assert "No LiDAR point under the cursor" not in pick and "spot=pickOrPlace(" in pick
+    assert 'placement:state.productionDraftPlacement||"lidar"' in pick
+    for plane in ("section_plane", "pole_plane", "ground_plane", "view_plane"):
+        assert f'placement: "{plane}"' in placement or f'"{plane}"' in placement, plane
+    assert "pickOrPlace(event.clientX - r.left, event.clientY - r.top)" in measure

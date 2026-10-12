@@ -1,11 +1,11 @@
 // Super admin page: every account with its access and work, and a timeline of everyone's actions.
 // Only shown to accounts with the super.view permission; the server enforces it on every route.
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261009-directory-422";
-import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261009-directory-422";
-import { teamAgo, teamAvatar } from "./team-progress.js?v=20261009-directory-422";
-import { openTeamPage } from "./team.js?v=20261009-directory-422";
-import { loadDirectory } from "./employee-directory.js?v=20261009-directory-422";
-import { applyWorkspace } from "./workspace.js?v=20261009-directory-422";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261012-box-close-focus-1";
+import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261012-box-close-focus-1";
+import { teamAgo, teamAvatar } from "./team-progress.js?v=20261012-box-close-focus-1";
+import { openTeamPage } from "./team.js?v=20261012-box-close-focus-1";
+import { loadDirectory } from "./employee-directory.js?v=20261012-box-close-focus-1";
+import { applyWorkspace } from "./workspace.js?v=20261012-box-close-focus-1";
 
 const ROLES=["USER","ADMIN","SUPER_ADMIN"];
 const GROUPS={production:"Production",qc:"QC",data:"Data",delivery:"Delivery",accounts:"Accounts",other:"Other"};
