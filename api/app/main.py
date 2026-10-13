@@ -30,8 +30,9 @@ from .deliverables import build_package, ensure_package
 from .network_access import client_ip, get_network_policy, ip_on_listed_network, set_network_policy, user_network_allowed
 from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, list_objects, delete_objects, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
-from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
+from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, wgs84_to_project, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
+from .collection_workbook import build_collection_workbook, restore_validation_extensions
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
 APP_VERSION=os.getenv('APP_VERSION','3.4.1-operational')
@@ -155,6 +156,12 @@ class PoleWorkbookSaveIn(BaseModel):
     updates:list[WorkbookCellUpdate]=Field(min_length=1,max_length=5000)
 class CoordinateTransformIn(BaseModel):
     x:float; y:float; z:float|None=None
+class Wgs84TransformIn(BaseModel):
+    latitude:float=Field(ge=-90,le=90)
+    longitude:float=Field(ge=-180,le=180)
+    z:float|None=None
+class Wgs84BatchTransformIn(BaseModel):
+    points:list[Wgs84TransformIn]=Field(min_length=1,max_length=400)
 
 LOGIN_FAILURES={}
 LOGIN_WINDOW_SECONDS=int(os.getenv('LOGIN_WINDOW_SECONDS','300'))
@@ -565,6 +572,24 @@ def coordinates_to_wgs84(project_id:str,body:CoordinateTransformIn,u:User=Depend
     latitude,longitude=project_to_wgs84(project.crs,body.x,body.y)
     return {'project_crs':project.crs,'x':body.x,'y':body.y,'z':body.z,'latitude':latitude,'longitude':longitude}
 
+@app.post('/api/projects/{project_id}/coordinates/from-wgs84')
+def coordinates_from_wgs84(project_id:str,body:Wgs84TransformIn,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    project=db.query(Project).filter_by(id=project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    x,y=wgs84_to_project(project.crs,body.latitude,body.longitude)
+    validate_coordinates(x,y,body.z or 0.0)
+    return {'project_crs':project.crs,'x':x,'y':y,'z':body.z,'latitude':body.latitude,'longitude':body.longitude}
+
+@app.post('/api/projects/{project_id}/coordinates/from-wgs84/batch')
+def coordinates_from_wgs84_batch(project_id:str,body:Wgs84BatchTransformIn,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    project=db.query(Project).filter_by(id=project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    points=[]
+    for source in body.points:
+        x,y=wgs84_to_project(project.crs,source.latitude,source.longitude)
+        points.append({'x':x,'y':y,'latitude':source.latitude,'longitude':source.longitude})
+    return {'project_crs':project.crs,'points':points}
+
 @app.get('/api/projects/{project_id}/production-geo-features')
 def list_production_geo_features(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
     project=db.query(Project).filter_by(id=project_id).first()
@@ -631,6 +656,7 @@ def save_pole_workbook(project_id:str,internal_id:int,body:PoleWorkbookSaveIn,u:
     updates=[cell.model_dump() for cell in body.updates]
     try:
         updated=apply_workbook_updates(contents,pole.pole_number,updates,internal_id=pole.internal_id,allow_internal_id=has_permission(u,'workbook.edit_internal_id'))
+        updated=restore_validation_extensions(contents,updated)
     except ValueError as exc:
         raise HTTPException(422,str(exc)) from exc
     if len(updated)>MAX_WORKBOOK_BYTES: raise HTTPException(413,'Updated workbook exceeds configured size limit')
@@ -678,6 +704,48 @@ def download_pole_workbook(project_id:str,internal_id:int,u:User=Depends(require
     filename=re.sub(r'[^A-Za-z0-9._-]+','_',pathlib.Path(workbook_file.filename).name)
     return Response(content=contents,media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     headers={'Content-Disposition':f'attachment; filename="{filename}"'})
+
+def elevation_to_feet(units:str|None)->tuple[float,str]:
+    """Workbook elevations are *_elev_ft. Project Z is in project units; only metres need converting."""
+    u=(units or '').lower()
+    if 'met' in u or u.strip() in {'m','metre','meter'}: return 1/0.3048,'metres converted to feet (x 3.28084)'
+    return 1.0,'project units are feet (no conversion)'
+
+@app.get('/api/projects/{project_id}/production-workbook/collection')
+def download_collection_workbook(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    """The COLLECTION workbook with every saved point written in (built now from the latest workbook; the upload is untouched)."""
+    project=db.query(Project).filter_by(id=project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    version=db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).first()
+    base=None; base_name=project.name
+    if version:
+        files=[f for f in version_files(db,version.id) if f.status=='UPLOADED']
+        edited=[f for f in files if f.role=='WORKBOOK_EDITED']; sources=[f for f in files if f.role=='WORKBOOK']
+        workbook_file=(edited or sources)[-1] if (edited or sources) else None
+        if workbook_file:
+            base_name=pathlib.Path((sources[-1] if sources else workbook_file).filename).stem
+            try: base=read_bytes(workbook_file.object_key)
+            except FileNotFoundError: base=None
+    poles=[{'internal_id':p.internal_id,'pole_number':p.pole_number} for p in db.query(Pole).filter_by(project_id=project_id).order_by(Pole.internal_id).all()]
+    rows=visible_annotations(db,u,project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
+    points=[{'pole_internal_id':r.pole_internal_id,'family':r.family,'feature_type':r.feature_type,'latitude':r.latitude,'longitude':r.longitude,
+             'z':r.z,'attributes':json.loads(r.attributes_json or '{}'),'updated_at':iso_utc(r.updated_at)} for r in rows]
+    factor,note=elevation_to_feet(project.units)
+    try:
+        data,summary=build_collection_workbook(base,poles,points,elevation_to_ft=factor)
+    except Exception as exc:
+        raise HTTPException(422,f'The workbook could not be updated: {exc}') from exc
+    summary['elevation']=note
+    db.add(AuditLog(actor=u.email,action='DOWNLOAD_COLLECTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps(
+        {k:summary[k] for k in ('source','points_written','columns_added','rows_added','elevation')}|{'skipped':len(summary['skipped']),'unmapped':summary['unmapped'][:50]})))
+    db.commit()
+    stem=re.sub(r'[^A-Za-z0-9._-]+','_',base_name).strip('._') or 'workbook'
+    filename=f'{stem}-collection-updated.xlsx'
+    return Response(content=data,media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    headers={'Content-Disposition':f'attachment; filename="{filename}"',
+                             'X-Collection-Summary':json.dumps({'source':summary['source'],'points':summary['points_written'],
+                                                                'columns_added':len(summary['columns_added']),'rows_added':summary['rows_added']}),
+                             'Access-Control-Expose-Headers':'Content-Disposition, X-Collection-Summary'})
 
 @app.get('/api/projects/{project_id}/production-annotations')
 def list_production_annotations(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):

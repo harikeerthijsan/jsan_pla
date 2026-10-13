@@ -3,9 +3,10 @@
 // selects, same submit, same conflict handling); it only mirrors and forwards. It follows the point while the view
 // moves and stays clamped inside the viewer when the point leaves the screen.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, esc, state } from "./core.js?v=20261012-box-close-focus-1";
-import { PLACEMENT_LABELS } from "./production-placement.js?v=20261012-box-close-focus-1";
-import { productionGroupLabels } from "./production-annotations.js?v=20261012-box-close-focus-1";
+import { $, esc, state, toast } from "./core.js?v=20261013-no-line-nav";
+import { PLACEMENT_LABELS } from "./production-placement.js?v=20261013-no-line-nav";
+import { openProductionMapPicker } from "./production-map.js?v=20261013-no-line-nav";
+import { productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261013-no-line-nav";
 
 const MIRRORED = [["qsFamily", "annotationFamily"], ["qsFeature", "annotationFeature"], ["qsParent", "annotationParent"]];
 let card = null, ring = null, shownKey = "", frame = 0;
@@ -25,11 +26,33 @@ function build() {
     <label>Group<select id="qsFamily"></select></label>
     <label>Point / variable<select id="qsFeature"></select></label>
     <label id="qsParentField" class="hidden">Parent<select id="qsParent"></select></label>
+    <div id="qsFields" class="qs-fields" aria-label="Attributes"></div>
     <div id="qsPlacement" class="qs-placement"></div>
-    <div class="qs-readout"><span>Z <b id="qsZ">—</b></span><span id="qsGeo"></span></div>
+    <div class="qs-coords" role="group" aria-label="Coordinates (click a value to copy it)">
+      <button type="button" class="qs-coord wide" data-qs-copy="X" title="Copy X" aria-label="Copy X"><span>X</span><b id="qsX">—</b><i class="qs-copy-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg></i></button>
+      <button type="button" class="qs-coord wide" data-qs-copy="Y" title="Copy Y" aria-label="Copy Y"><span>Y</span><b id="qsY">—</b><i class="qs-copy-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg></i></button>
+      <button type="button" class="qs-coord wide" data-qs-copy="Z" title="Copy Z (elevation)" aria-label="Copy Z (elevation)"><span>Z</span><b id="qsZ">—</b><i class="qs-copy-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg></i></button>
+      <button type="button" class="qs-coord wide" data-qs-copy="Lat" title="Copy latitude" aria-label="Copy latitude"><span>Lat</span><b id="qsLat">—</b><i class="qs-copy-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg></i></button>
+      <button type="button" class="qs-coord wide" data-qs-copy="Lon" title="Copy longitude" aria-label="Copy longitude"><span>Lon</span><b id="qsLon">—</b><i class="qs-copy-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="13" height="13"><path fill="currentColor" d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1Zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Zm0 16H8V7h11v14Z"/></svg></i></button>
+    </div>
+    <div class="qs-coord-actions"><button type="button" class="qs-ghost qs-map" data-qs="map" title="Adjust X/Y on OpenStreetMap while preserving this LiDAR elevation">Map location</button><button type="button" class="qs-ghost qs-sv" data-qs="streetview" title="Open this location in Google Street View">Street View</button></div>
     <p id="qsError" class="qs-error" role="alert"></p>
     <footer><button type="button" class="qs-link hidden" data-qs="history">History</button><button type="button" class="qs-danger hidden" data-qs="delete">Delete</button><span class="qs-spacer"></span><button type="button" class="qs-ghost" data-qs="clear">Clear</button><button type="button" class="qs-save" data-qs="save">Save point</button></footer>`;
   area.append(ring, card);
+  // Attribute fields: a dropdown (with "Other (type a value)") or a typed value, kept on the draft.
+  card.addEventListener("change", event => {
+    const select = event.target.closest("[data-attr-select]");
+    if (!select) return;
+    const key = select.dataset.attrSelect, other = card.querySelector(`[data-attr-other="${CSS.escape(key)}"]`);
+    const isOther = select.value === OTHER;
+    other.classList.toggle("hidden", !isOther);
+    setAttr(key, isOther ? other.value : select.value);
+    if (isOther) other.focus();
+  });
+  card.addEventListener("input", event => {
+    const input = event.target.closest("[data-attr-other], [data-attr-text]");
+    if (input) setAttr(input.dataset.attrOther || input.dataset.attrText, input.value);
+  });
   card.addEventListener("change", event => {
     const pair = MIRRORED.find(([mine]) => mine === event.target.id);
     if (!pair) return;
@@ -39,10 +62,15 @@ function build() {
     sync(true);
   });
   card.addEventListener("click", event => {
+    const copy = event.target.closest("[data-qs-copy]");
+    if (copy) { const k = copy.dataset.qsCopy; copyValue(copy, k === "Lat" ? "Latitude" : k === "Lon" ? "Longitude" : k, $(`qs${k}`).textContent); return; }
     const action = event.target.closest("[data-qs]")?.dataset.qs;
     if (action === "save") $("annotationForm").requestSubmit();
     else if (action === "clear") $("annotationCancelBtn").click();
     else if (action === "delete") $("annotationDeleteBtn").click();
+    else if (action === "map") openProductionMapPicker();
+    else if (action === "streetview") $("annotationStreetView").click();
+
     else if (action === "history") {
       $("annotationHistoryBtn").click();
       document.querySelector(".production-layout.is-fullscreen:not(.drawer-open)") && $("productionPanelToggleBtn").click();
@@ -57,6 +85,57 @@ function build() {
   });
 }
 
+async function copyValue(button, label, text) {
+  if (!text || text === "—" || /Calculating|Unavailable/.test(text)) { toast(`${label} is not available yet`, "info", 1800); return; }
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const area = Object.assign(document.createElement("textarea"), { value: text });
+    document.body.append(area); area.select(); document.execCommand("copy"); area.remove();
+  }
+  button.classList.add("copied");
+  setTimeout(() => button.classList.remove("copied"), 1100);
+  toast(`${label} copied`, "success", 1400);
+}
+
+const OTHER = "__other__";
+let fieldsKey = "";
+
+function setAttr(key, value) {
+  state.productionDraftAttributes = state.productionDraftAttributes || {};
+  if (value == null || String(value).trim() === "") delete state.productionDraftAttributes[key];
+  else state.productionDraftAttributes[key] = value;
+}
+
+// Anchor points already saved for the selected pole (anc_1, anc_2, ...), for fields such as guy_anchor_no.
+function poleAnchors() {
+  const poleId = $("annotationPoleId").value;
+  return (state.productionAnnotations || [])
+    .filter(row => row.family === "anchors" && String(row.pole_internal_id ?? row.attributes?.pole_internal_id) === poleId)
+    .map(row => row.feature_type)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+// The fields of the chosen group / point type, from the attribute workbook (served in the catalogue).
+function renderFields() {
+  const family = $("annotationFamily").value, feature = $("annotationFeature").value;
+  const anchors = poleAnchors();
+  const key = `${family}|${feature}|${$("annotationId").value}|${state.productionDraft ? `${state.productionDraft.x}|${state.productionDraft.y}` : ""}|${$("annotationPoleId").value}|${anchors.join(",")}`;
+  if (key === fieldsKey) return;
+  fieldsKey = key;
+  const group = productionAnnotationGroups().find(g => g.id === family);
+  const fields = (group?.fields || []).filter(f => !f.features || f.features.includes(feature));
+  const values = state.productionDraftAttributes || {};
+  $("qsFields").innerHTML = fields.map(f => {
+    const value = values[f.key] ?? "";
+    if (f.manual) return `<label class="qs-field">${esc(f.label)}<input data-attr-text="${esc(f.key)}" maxlength="200" value="${esc(value)}" placeholder="Type ${esc(f.label.toLowerCase())}" autocomplete="off"></label>`;
+    const options = f.source === "anchors" ? anchors : f.options;
+    const known = value === "" || options.includes(value);
+    const empty = f.source === "anchors" && !anchors.length ? '<option value="" disabled>No anchors saved for this pole yet</option>' : "";
+    return `<label class="qs-field">${esc(f.label)}<select data-attr-select="${esc(f.key)}"><option value="">—</option>${empty}${options.map(o => `<option value="${esc(o)}"${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}<option value="${OTHER}"${known ? "" : " selected"}>Other (type a value)</option></select><input class="qs-other${known ? " hidden" : ""}" data-attr-other="${esc(f.key)}" maxlength="200" value="${known ? "" : esc(value)}" placeholder="Type ${esc(f.label.toLowerCase())}" autocomplete="off"></label>`;
+  }).join("");
+  $("qsFields").classList.toggle("hidden", !fields.length);
+}
+
 function mirrorSelect(mine, real) {
   const signature = [...real.options].map(o => `${o.value}\u0001${o.text}\u0001${o.disabled}`).join("\u0002");
   if (mine.dataset.signature !== signature) {
@@ -69,19 +148,23 @@ function mirrorSelect(mine, real) {
 
 function sync(force = false) {
   if (!force && frame % 8) return;
+  renderFields();
   for (const [mine, real] of MIRRORED) mirrorSelect($(mine), $(real));
   const editing = Boolean($("annotationId").value), family = $("annotationFamily").value;
   $("qsParentField").classList.toggle("hidden", $("annotationParentField").classList.contains("hidden"));
   $("qsTitle").textContent = editing ? "Edit point" : "Save this point";
   const pole = state.productionPoles?.find(p => String(p.internal_id) === $("annotationPoleId").value);
   $("qsSub").textContent = `${pole ? pole.pole_number || `Pole ID ${pole.internal_id}` : "No pole selected"} · ${productionGroupLabels[family] || $("annotationFamily").selectedOptions[0]?.text || family || "—"}`;
-  $("qsZ").textContent = state.productionDraft ? Number(state.productionDraft.z).toFixed(3) : "—";
+  for (const k of ["X", "Y", "Z"]) $(`qs${k}`).textContent = $(`annotation${k}`).textContent;
   const placement = state.productionDraftPlacement || "lidar";
   $("qsPlacement").textContent = PLACEMENT_LABELS[placement] || placement;
   $("qsPlacement").classList.toggle("free", placement !== "lidar");
   card.querySelector(".qs-dot").classList.toggle("free", placement !== "lidar");
-  const lat = $("annotationLat").textContent, lon = $("annotationLon").textContent;
-  $("qsGeo").textContent = /^-?\d/.test(lat) ? `${Number(lat).toFixed(6)}, ${Number(lon).toFixed(6)}` : lat === "Calculating…" ? "Locating…" : "";
+  $("qsLat").textContent = $("annotationLat").textContent;
+  $("qsLon").textContent = $("annotationLon").textContent;
+  const sv = card.querySelector('[data-qs="streetview"]');
+  sv.disabled = $("annotationStreetView").disabled;
+  card.querySelector('[data-qs="map"]').disabled = !state.productionDraft || !state.projectId;
   $("qsError").textContent = $("annotationError").textContent;
   const save = card.querySelector('[data-qs="save"]');
   save.disabled = $("annotationSaveBtn").disabled;
@@ -92,6 +175,7 @@ function sync(force = false) {
 
 function hide() {
   if (!card || card.classList.contains("hidden")) return;
+  fieldsKey = "";
   card.classList.add("hidden");
   ring.classList.add("hidden");
   shownKey = "";

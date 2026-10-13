@@ -164,6 +164,23 @@ def test_production_annotations_are_typed_measured_audited_and_role_protected():
         assert transformed.status_code==200
         assert transformed.json()['latitude']==20.0
         assert transformed.json()['longitude']==10.0
+        reverse_unauthorized=client.post(f'/api/projects/{project_id}/coordinates/from-wgs84',json={'latitude':20,'longitude':10,'z':100})
+        assert reverse_unauthorized.status_code==401
+        reversed_point=client.post(f'/api/projects/{project_id}/coordinates/from-wgs84',headers=admin,json={'latitude':20,'longitude':10,'z':100})
+        assert reversed_point.status_code==200
+        assert reversed_point.json()['x']==10.0
+        assert reversed_point.json()['y']==20.0
+        assert reversed_point.json()['z']==100.0
+        reversed_batch=client.post(f'/api/projects/{project_id}/coordinates/from-wgs84/batch',headers=admin,json={'points':[{'latitude':20,'longitude':10},{'latitude':21,'longitude':11}]})
+        assert reversed_batch.status_code==200
+        assert reversed_batch.json()['points']==[
+            {'x':10.0,'y':20.0,'latitude':20.0,'longitude':10.0},
+            {'x':11.0,'y':21.0,'latitude':21.0,'longitude':11.0},
+        ]
+        oversized_batch=client.post(f'/api/projects/{project_id}/coordinates/from-wgs84/batch',headers=admin,json={'points':[{'latitude':20,'longitude':10}]*401})
+        assert oversized_batch.status_code==422
+        invalid_map_point=client.post(f'/api/projects/{project_id}/coordinates/from-wgs84',headers=admin,json={'latitude':91,'longitude':10,'z':100})
+        assert invalid_map_point.status_code==422
 
         top=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={
             'block_name':'tile-01','family':'poles','feature_type':'Pole_Top',

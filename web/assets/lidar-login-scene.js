@@ -384,72 +384,180 @@ function drawPoleGuides(context, poles, travel, width, height, pointer) {
   context.restore();
 }
 
-// Airborne scanner: a glowing sensor head sweeps a laser swath across the ground at the scan line.
-function drawLaserSwath(context, travel, width, height, pointer, scanDepth, time) {
-  const z = (travel + scanDepth) % LOOP_DEPTH;
-  // The sensor flies ahead of the scan line; it is pinned high in the frame so it is always visible.
-  const sensorZ = (travel + Math.max(scanDepth, 30) + 30) % LOOP_DEPTH;
-  const anchor = projectPoint({ x: Math.sin(time * 0.00031) * 5, y: 0, z: sensorZ }, travel, width, height, pointer);
-  if (!anchor) return;
-  const sensor = { x: anchor.x, y: Math.max(52, height * 0.14) + Math.sin(time * 0.0011) * 6 };
-  const sweep = Math.sin(time * 0.0042);
+// Mobile LiDAR mapping car, seen from a chase camera as it drives down the corridor: metallic body, glass with
+// reflections, a full-width LED tail bar and a roof rack carrying a spinning LiDAR head that sweeps the road.
+// On sign-in it accelerates away and is drawn into the entrance logo (logoTarget), leaving light trails.
+let logoTarget = null;
+const CAR_LEAVE = 0.62; // share of the entrance warp spent driving into the logo
+
+function carPose(width, height, pointer, time, warp) {
+  const carWidth = Math.max(200, Math.min(width < 720 ? width * 0.62 : width * 0.25, 430));
+  const sway = Math.sin(time * 0.0011) * 3 + pointer.x * 6;
+  const bob = Math.sin(time * 0.0042) * 1.1;
+  const start = { x: width * viewFocus + sway, y: height - carWidth * 0.2 + bob };
+  if (warp <= 0) return { ...start, scale: 1, carWidth, k: 0 };
+  const k = Math.min(1, warp / CAR_LEAVE), e = k * k * (3 - 2 * k);
+  const target = logoTarget || { x: width / 2, y: height * 0.36 };
+  // A gentle arc: first a short dip as it launches, then straight up the road into the logo.
+  const lift = Math.sin(Math.PI * e) * -height * 0.04;
+  return { x: start.x + (target.x - start.x) * e, y: start.y + (target.y - start.y) * e + lift, scale: Math.max(0.02, 1 - e * 0.98), carWidth, k };
+}
+
+function drawStreetViewCar(context, width, height, pointer, time, warp) {
+  const pose = carPose(width, height, pointer, time, warp);
+  if (pose.k >= 1) { drawLogoPulse(context, width, height, warp); return; }
+  const W = pose.carWidth, H = W * 0.62, s = pose.scale;
+
+  // Light trails from the tail bar while it drives into the logo.
+  if (pose.k > 0) {
+    const from = carPose(width, height, pointer, time, 0);
+    context.save();
+    context.globalCompositeOperation = "lighter";
+    for (const side of [-1, 1]) {
+      const trail = context.createLinearGradient(from.x, from.y, pose.x, pose.y);
+      trail.addColorStop(0, "rgba(255, 60, 80, 0)");
+      trail.addColorStop(1, `rgba(255, 90, 110, ${0.55 * (1 - pose.k * 0.4)})`);
+      context.strokeStyle = trail;
+      context.lineWidth = Math.max(1.5, 7 * s);
+      context.lineCap = "round";
+      context.beginPath();
+      context.moveTo(from.x + side * W * 0.36, from.y - H * 0.42);
+      context.lineTo(pose.x + side * W * 0.36 * s, pose.y - H * 0.42 * s);
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  context.save();
+  context.translate(pose.x, pose.y);
+  context.scale(s, s);
+
+  // Road contact shadow and headlight spill on the road ahead.
+  const shadow = context.createRadialGradient(0, 0, 0, 0, 0, W * 0.62);
+  shadow.addColorStop(0, "rgba(0, 0, 0, 0.75)");
+  shadow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  context.fillStyle = shadow;
+  context.beginPath(); context.ellipse(0, 2, W * 0.62, H * 0.13, 0, 0, TAU); context.fill();
   context.save();
   context.globalCompositeOperation = "lighter";
+  const beam = context.createRadialGradient(0, -H * 0.55, 0, 0, -H * 0.55, W * 0.9);
+  beam.addColorStop(0, "rgba(180, 245, 255, 0.10)");
+  beam.addColorStop(1, "rgba(180, 245, 255, 0)");
+  context.fillStyle = beam;
+  context.beginPath(); context.ellipse(0, -H * 0.6, W * 0.75, H * 0.3, 0, 0, TAU); context.fill();
+  context.restore();
 
-  // Faint fan of returns.
-  context.lineWidth = 1;
-  for (let x = -40; x <= 40; x += 5) {
-    const hit = projectPoint({ x, y: terrainHeight(x, z) + 0.1, z }, travel, width, height, pointer);
-    if (!hit) continue;
-    const near = 1 - Math.min(1, Math.abs(x / 40 - sweep) * 2.2);
-    context.strokeStyle = `rgba(94, 232, 255, ${0.035 + near * 0.16})`;
-    context.beginPath();
-    context.moveTo(sensor.x, sensor.y);
-    context.lineTo(hit.x, hit.y);
-    context.stroke();
-  }
+  // Tyres peeking out under the body.
+  context.fillStyle = "#05090d";
+  for (const side of [-1, 1]) { context.beginPath(); context.roundRect(side * W * 0.43 - W * 0.06, -H * 0.13, W * 0.12, H * 0.15, W * 0.02); context.fill(); }
 
-  // The live beam and its ground footprint.
-  const beamX = sweep * 40;
-  const beamHit = projectPoint({ x: beamX, y: terrainHeight(beamX, z) + 0.1, z }, travel, width, height, pointer);
-  if (beamHit) {
-    const beam = context.createLinearGradient(sensor.x, sensor.y, beamHit.x, beamHit.y);
-    beam.addColorStop(0, "rgba(160, 248, 255, 0.85)");
-    beam.addColorStop(1, "rgba(94, 232, 255, 0.25)");
-    context.strokeStyle = beam;
-    context.lineWidth = 1.6;
-    context.shadowColor = "rgba(94, 232, 255, 0.9)";
-    context.shadowBlur = 12;
-    context.beginPath();
-    context.moveTo(sensor.x, sensor.y);
-    context.lineTo(beamHit.x, beamHit.y);
-    context.stroke();
-    const footprint = context.createRadialGradient(beamHit.x, beamHit.y, 0, beamHit.x, beamHit.y, 16);
-    footprint.addColorStop(0, "rgba(190, 252, 255, 0.85)");
-    footprint.addColorStop(1, "rgba(94, 232, 255, 0)");
-    context.shadowBlur = 0;
-    context.fillStyle = footprint;
-    context.fillRect(beamHit.x - 16, beamHit.y - 16, 32, 32);
-  }
-
-  // Sensor head with a pulsing halo.
-  const pulse = 0.5 + 0.5 * Math.sin(time * 0.006);
-  const halo = context.createRadialGradient(sensor.x, sensor.y, 0, sensor.x, sensor.y, 18 + pulse * 8);
-  halo.addColorStop(0, "rgba(200, 252, 255, 0.95)");
-  halo.addColorStop(0.25, "rgba(94, 232, 255, 0.5)");
-  halo.addColorStop(1, "rgba(94, 232, 255, 0)");
-  context.fillStyle = halo;
+  // Lower body / bumper.
+  const body = context.createLinearGradient(0, -H * 0.62, 0, 0);
+  body.addColorStop(0, "#3a6578");
+  body.addColorStop(0.18, "#1d4152");
+  body.addColorStop(0.62, "#0d2532");
+  body.addColorStop(1, "#050f16");
+  context.fillStyle = body;
+  context.shadowColor = "rgba(0, 0, 0, 0.6)"; context.shadowBlur = 16;
   context.beginPath();
-  context.arc(sensor.x, sensor.y, 18 + pulse * 8, 0, TAU);
-  context.fill();
-  context.strokeStyle = "rgba(170, 246, 255, 0.7)";
-  context.lineWidth = 1;
+  context.moveTo(-W * 0.5, -H * 0.1);
+  context.bezierCurveTo(-W * 0.52, -H * 0.36, -W * 0.5, -H * 0.55, -W * 0.44, -H * 0.62);
+  context.lineTo(W * 0.44, -H * 0.62);
+  context.bezierCurveTo(W * 0.5, -H * 0.55, W * 0.52, -H * 0.36, W * 0.5, -H * 0.1);
+  context.quadraticCurveTo(W * 0.5, -H * 0.02, W * 0.42, -H * 0.02);
+  context.lineTo(-W * 0.42, -H * 0.02);
+  context.quadraticCurveTo(-W * 0.5, -H * 0.02, -W * 0.5, -H * 0.1);
+  context.closePath(); context.fill();
+  context.shadowBlur = 0;
+  context.strokeStyle = "rgba(140, 228, 244, 0.35)"; context.lineWidth = 1.2; context.stroke();
+
+  // Cabin and rear glass with a sky reflection.
+  const cabin = context.createLinearGradient(0, -H * 0.98, 0, -H * 0.6);
+  cabin.addColorStop(0, "#2c5568"); cabin.addColorStop(1, "#122f3e");
+  context.fillStyle = cabin;
   context.beginPath();
-  context.moveTo(sensor.x - 14, sensor.y);
-  context.lineTo(sensor.x - 5, sensor.y);
-  context.moveTo(sensor.x + 5, sensor.y);
-  context.lineTo(sensor.x + 14, sensor.y);
-  context.stroke();
+  context.moveTo(-W * 0.42, -H * 0.6);
+  context.quadraticCurveTo(-W * 0.38, -H * 0.9, -W * 0.3, -H * 0.97);
+  context.lineTo(W * 0.3, -H * 0.97);
+  context.quadraticCurveTo(W * 0.38, -H * 0.9, W * 0.42, -H * 0.6);
+  context.closePath(); context.fill();
+  const glass = context.createLinearGradient(0, -H * 0.93, 0, -H * 0.66);
+  glass.addColorStop(0, "#0a1c27"); glass.addColorStop(0.55, "#163c4d"); glass.addColorStop(1, "#3c8aa3");
+  context.fillStyle = glass;
+  context.beginPath();
+  context.moveTo(-W * 0.35, -H * 0.66);
+  context.quadraticCurveTo(-W * 0.32, -H * 0.86, -W * 0.26, -H * 0.92);
+  context.lineTo(W * 0.26, -H * 0.92);
+  context.quadraticCurveTo(W * 0.32, -H * 0.86, W * 0.35, -H * 0.66);
+  context.closePath(); context.fill();
+  context.save(); context.clip();
+  const glint = context.createLinearGradient(-W * 0.3, -H * 0.92, W * 0.1, -H * 0.66);
+  glint.addColorStop(0, "rgba(200, 248, 255, 0)"); glint.addColorStop(0.45, "rgba(200, 248, 255, 0.22)"); glint.addColorStop(0.55, "rgba(200, 248, 255, 0)");
+  context.fillStyle = glint; context.fillRect(-W * 0.4, -H, W * 0.8, H * 0.4);
+  context.restore();
+
+  // Shoulder highlight along the body.
+  context.strokeStyle = "rgba(170, 240, 252, 0.5)"; context.lineWidth = 1.4;
+  context.beginPath(); context.moveTo(-W * 0.45, -H * 0.58); context.quadraticCurveTo(0, -H * 0.63, W * 0.45, -H * 0.58); context.stroke();
+
+  // Full-width LED tail bar with glowing ends.
+  context.save();
+  context.shadowColor = "rgba(255, 40, 70, 0.95)"; context.shadowBlur = 18;
+  const tail = context.createLinearGradient(-W * 0.46, 0, W * 0.46, 0);
+  tail.addColorStop(0, "#ff4d5e"); tail.addColorStop(0.15, "#c3142e"); tail.addColorStop(0.5, "#ff3550"); tail.addColorStop(0.85, "#c3142e"); tail.addColorStop(1, "#ff4d5e");
+  context.fillStyle = tail;
+  context.beginPath(); context.roundRect(-W * 0.46, -H * 0.5, W * 0.92, H * 0.045, H * 0.02); context.fill();
+  for (const side of [-1, 1]) { context.beginPath(); context.roundRect(side * W * 0.46 - (side > 0 ? W * 0.1 : 0), -H * 0.53, W * 0.1, H * 0.1, H * 0.03); context.fill(); }
+  context.restore();
+
+  // Plate.
+  context.fillStyle = "rgba(225, 245, 250, 0.92)";
+  context.beginPath(); context.roundRect(-W * 0.085, -H * 0.3, W * 0.17, H * 0.085, 3); context.fill();
+  context.fillStyle = "#0b2a3a"; context.font = `800 ${Math.round(H * 0.06)}px ui-monospace, SFMono-Regular, Consolas, monospace`;
+  context.textAlign = "center"; context.textBaseline = "middle"; context.fillText("JSAN", 0, -H * 0.255);
+
+  // Roof rack, GNSS antennas and the spinning LiDAR head.
+  context.fillStyle = "#0b1d27"; context.strokeStyle = "rgba(140, 228, 244, 0.45)"; context.lineWidth = 1;
+  context.beginPath(); context.roundRect(-W * 0.3, -H * 1.03, W * 0.6, H * 0.05, 3); context.fill(); context.stroke();
+  for (const side of [-1, 1]) { context.fillStyle = "#cfe9f0"; context.beginPath(); context.ellipse(side * W * 0.24, -H * 1.06, W * 0.03, H * 0.016, 0, 0, TAU); context.fill(); }
+  context.fillStyle = "#0e2633"; context.fillRect(-W * 0.012, -H * 1.16, W * 0.024, H * 0.13);
+  const head = { y: -H * 1.21, r: W * 0.06, h: H * 0.1 };
+  const can = context.createLinearGradient(-head.r, 0, head.r, 0);
+  can.addColorStop(0, "#0d2230"); can.addColorStop(0.45, "#4f8ea3"); can.addColorStop(1, "#0d2230");
+  context.fillStyle = can;
+  context.beginPath(); context.roundRect(-head.r, head.y - head.h / 2, head.r * 2, head.h, head.r * 0.3); context.fill();
+  // Rotating window band on the sensor.
+  const spin = (time * 0.012) % TAU, band = Math.sin(spin);
+  context.save();
+  context.globalCompositeOperation = "lighter";
+  context.fillStyle = "rgba(94, 232, 255, 0.85)";
+  context.shadowColor = "rgba(94, 232, 255, 1)"; context.shadowBlur = 12;
+  context.beginPath(); context.ellipse(band * head.r * 0.7, head.y, head.r * 0.22 * (1 - Math.abs(band) * 0.6), head.h * 0.18, 0, 0, TAU); context.fill();
+  // The scan beam sweeping the road around the car.
+  if (pose.k === 0) {
+    const reach = W * 1.15, a = Math.PI / 2 + Math.sin(spin) * 1.15;
+    const end = { x: Math.cos(a) * reach * Math.sign(Math.cos(spin) || 1), y: head.y + Math.sin(a) * reach * 0.35 };
+    const ray = context.createLinearGradient(0, head.y, end.x, end.y);
+    ray.addColorStop(0, "rgba(140, 245, 255, 0.55)"); ray.addColorStop(1, "rgba(140, 245, 255, 0)");
+    context.strokeStyle = ray; context.lineWidth = 1.5; context.shadowBlur = 6;
+    context.beginPath(); context.moveTo(0, head.y); context.lineTo(end.x, end.y); context.stroke();
+  }
+  context.restore();
+  context.restore();
+}
+
+// After the car reaches the logo: a ring of light spreads from it.
+function drawLogoPulse(context, width, height, warp) {
+  const target = logoTarget || { x: width / 2, y: height * 0.36 };
+  const t = Math.min(1, (warp - CAR_LEAVE) / 0.25);
+  if (t >= 1) return;
+  context.save();
+  context.globalCompositeOperation = "lighter";
+  for (const [r, a] of [[30 + t * 140, 0.7], [20 + t * 90, 0.45]]) {
+    context.strokeStyle = `rgba(150, 245, 255, ${a * (1 - t)})`;
+    context.lineWidth = 3 * (1 - t) + 1;
+    context.beginPath(); context.arc(target.x, target.y, r, 0, TAU); context.stroke();
+  }
   context.restore();
 }
 
@@ -761,7 +869,7 @@ export function startLidarLoginBackground(canvas) {
     drawPointCloud(context, scene.points, travel, width, height, pointer, scanDepth, density);
     drawInfrastructure(context, scene.conductors, travel, width, height, pointer, scanDepth);
     drawPoleGuides(context, scene.poles, travel, width, height, pointer);
-    drawLaserSwath(context, travel, width, height, pointer, scanDepth, sceneTime);
+    drawStreetViewCar(context, width, height, pointer, sceneTime, warp);
     // The HUD dims away as the entrance starts.
     context.save();
     context.globalAlpha = 1 - smoothStep(warp * 3);
@@ -812,12 +920,14 @@ export function startLidarLoginBackground(canvas) {
     context.clearRect(0, 0, width, height);
   }
   // Starts the sign-in entrance; resolves when the warp has finished (at once with reduced motion).
-  stop.enter = () => new Promise(resolve => {
+  stop.enter = (target = null) => new Promise(resolve => {
     if (reducedMotion || stopped) { resolve(); return; }
+    // Where the car flies to: the entrance logo, in canvas coordinates.
+    if (target) { const box = canvas.getBoundingClientRect(); logoTarget = { x: target.x - box.left, y: target.y - box.top }; }
     warpStart = performance.now();
     setTimeout(resolve, WARP_MS);
   });
   // Signed out again mid-entrance: return to the normal fly-through.
-  stop.leave = () => { warpStart = null; viewFocus = baseFocus; };
+  stop.leave = () => { warpStart = null; viewFocus = baseFocus; logoTarget = null; };
   return stop;
 }

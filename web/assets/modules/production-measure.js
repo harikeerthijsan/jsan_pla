@@ -2,16 +2,18 @@
 // view and the values (3D, horizontal, vertical) are listed in the side panel. Measurements are for this session
 // and dataset only; they are not saved.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, esc, state, toast } from "./core.js?v=20261012-box-close-focus-1";
-import { annotationUnits } from "./production-annotations.js?v=20261012-box-close-focus-1";
-import { pickOrPlace } from "./production-placement.js?v=20261012-box-close-focus-1";
-import { cancelProductionPick } from "./production-pick.js?v=20261012-box-close-focus-1";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261012-box-close-focus-1";
-import { cancelProductionBox } from "./production-view.js?v=20261012-box-close-focus-1";
+import { $, esc, state, toast } from "./core.js?v=20261013-no-line-nav";
+import { annotationUnits } from "./production-annotations.js?v=20261013-no-line-nav";
+import { pickOrPlace } from "./production-placement.js?v=20261013-no-line-nav";
+import { cancelProductionPick } from "./production-pick.js?v=20261013-no-line-nav";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261013-no-line-nav";
+import { cancelProductionBox } from "./production-view.js?v=20261013-no-line-nav";
 
 const COLOR = 0x3fe0ff, DRAFT_COLOR = 0xffd24a;
 const tapes = [];
-let tool = null, counter = 0, selectedId = null, draftTag = null;
+const UNIT_FACTORS = Object.freeze({ ft: 0.3048, m: 1, cm: 0.01, mm: 0.001 });
+const UNIT_PRECISION = Object.freeze({ ft: 2, m: 3, cm: 1, mm: 0 });
+let tool = null, counter = 0, selectedId = null, draftTag = null, draftDistance = null, displayUnit = null;
 const mid = new THREE.Vector3();
 
 function tag(text, cls = "") {
@@ -37,12 +39,21 @@ function tagLoop() {
   requestAnimationFrame(tagLoop);
 }
 
-const unitLabel = () => { const u = annotationUnits().toLowerCase(); return u.includes("foot") || u.includes("feet") ? "ft" : "m"; };
-const fmt = value => `${value.toFixed(2)} ${unitLabel()}`;
+const sourceUnitLabel = () => { const u = annotationUnits().toLowerCase(); return u.includes("foot") || u.includes("feet") ? "ft" : "m"; };
+const measurementUnit = () => displayUnit && UNIT_FACTORS[displayUnit] ? displayUnit : sourceUnitLabel();
+export function convertMeasurementValue(value, fromUnit = sourceUnitLabel(), toUnit = measurementUnit()) {
+  return Number(value) * UNIT_FACTORS[fromUnit] / UNIT_FACTORS[toUnit];
+}
+const fmt = value => { const unit = measurementUnit(); return `${convertMeasurementValue(value).toFixed(UNIT_PRECISION[unit])} ${unit}`; };
+
+function refreshMeasurementLabels() {
+  for (const tape of tapes) if (tape.tag) tape.tag.textContent = `${tape.name} · ${fmt(tape.distance)}`;
+  if (draftTag && draftDistance != null) draftTag.textContent = fmt(draftDistance);
+}
 
 function makeMeasure(points, { name, color, label }) {
   const viewer = state.productionViewer;
-  viewer.setLengthUnit(unitLabel());
+  viewer.setLengthUnit(sourceUnitLabel());
   const measure = new Potree.Measure();
   measure.name = name;
   measure.color = new THREE.Color(color);
@@ -109,7 +120,8 @@ export function startProductionMeasure() {
     picked.push(point.clone());
     if (picked.length === 1) {
       draft = makeMeasure([picked[0], picked[0]], { name: "Measuring", color: DRAFT_COLOR, label: true });
-      draftTag = tag("0.00", "draft");
+      draftDistance = 0;
+      draftTag = tag(fmt(draftDistance), "draft");
       placeTag(draftTag, picked[0], picked[0]);
       hint(`<b>Point 1 placed</b> · click the second point · Esc to cancel`);
       return;
@@ -125,7 +137,8 @@ export function startProductionMeasure() {
       const point = last && hitAt(last);
       if (!point || !draft) return;
       draft.setPosition(1, point);
-      draftTag.textContent = fmt(values(picked[0], point).distance);
+      draftDistance = values(picked[0], point).distance;
+      draftTag.textContent = fmt(draftDistance);
       placeTag(draftTag, picked[0], point);
       hint(`<b>${fmt(values(picked[0], point).distance)}</b> · click the second point · Esc to cancel`);
     });
@@ -155,7 +168,7 @@ export function startProductionMeasure() {
       dom.classList.remove("production-picking");
       state.productionPicking = false;
       if (draft) { viewer.scene.removeMeasurement(draft); draft = null; }
-      draftTag?.remove(); draftTag = null;
+      draftTag?.remove(); draftTag = null; draftDistance = null;
     },
   };
   hint(`<b>Measure distance</b> · click the first point on the point cloud · Esc to cancel`);
@@ -194,9 +207,12 @@ export function renderMeasurePanel() {
       <span class="measure-values"><b>${fmt(t.distance)}</b><small>H ${fmt(t.horizontal)} · V ${fmt(t.vertical)} · ${t.slope.toFixed(1)}°</small></span>
       <button type="button" class="check-remove" data-measure-remove="${esc(t.id)}" title="Remove ${esc(t.name)}" aria-label="Remove ${esc(t.name)}">×</button>
     </div>`).join("");
-  root.innerHTML = `<div class="checklist-title measure-title"><span>Measurements</span>${mine.length ? '<button type="button" class="measure-clear" data-measure-clear>Clear all</button>' : ""}</div>
+  const unit = measurementUnit();
+  const unitOptions = [["ft", "Feet"], ["mm", "Millimetres"], ["cm", "Centimetres"], ["m", "Metres"]]
+    .map(([value, label]) => `<option value="${value}"${value === unit ? " selected" : ""}>${value} · ${label}</option>`).join("");
+  root.innerHTML = `<div class="checklist-title measure-title"><span>Measurements</span><span class="measure-title-actions"><select class="measure-unit" data-measure-unit aria-label="Measurement display unit" title="Display measurements in feet, millimetres, centimetres or metres">${unitOptions}</select>${mine.length ? '<button type="button" class="measure-clear" data-measure-clear>Clear all</button>' : ""}</span></div>
     <div class="check-row measure-start${tool ? " measuring" : ""}"><span class="check-mark measure-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M2 17.6 17.6 2 22 6.4 6.4 22 2 17.6Zm3.2-.1 1.4 1.4 1.2-1.2-1.4-1.4 1.1-1.1 2.1 2.1 1.1-1.1-2.1-2.1 1.1-1.1 1.4 1.4 1.1-1.1-1.4-1.4 1.1-1.1 2.1 2.1 1.1-1.1-2.1-2.1 1.1-1.1 1.4 1.4 1.2-1.2-1.4-1.4-1.6 1.6L5.2 17.5Z"/></svg></span>
-      <span class="check-label">Distance<small>${tool ? "Click two points in the 3D view" : `Two points · result in ${unitLabel()}`}</small></span>
+      <span class="check-label">Distance<small>${tool ? "Click two points in the 3D view" : `Two points · displayed in ${unit}`}</small></span>
       ${tool ? '<button type="button" class="compact-btn danger" data-measure-cancel>Cancel</button>' : `<button type="button" class="primary-small" data-measure-start ${ready ? "" : "disabled"} title="${ready ? "Click two LiDAR points to measure between them" : "Wait for the LiDAR to load"}">Measure</button>`}
     </div>${rows || '<div class="measure-empty">No measurements yet</div>'}`;
 }
@@ -212,6 +228,13 @@ export function init() {
     else if (target.matches("[data-measure-clear]")) { for (const t of tapes.filter(x => x.projectId === state.projectId)) removeTape(t.id); renderMeasurePanel(); }
     else if (target.matches("[data-measure-remove]")) { removeTape(target.dataset.measureRemove); renderMeasurePanel(); }
     else if (target.matches(".measure-row")) { const tape = tapes.find(t => t.id === target.dataset.measure); if (tape) focusTape(tape); }
+  });
+  panel.addEventListener("change", event => {
+    const select = event.target.closest("[data-measure-unit]");
+    if (!select || !UNIT_FACTORS[select.value]) return;
+    displayUnit = select.value;
+    refreshMeasurementLabels();
+    renderMeasurePanel();
   });
   document.addEventListener("keydown", event => { if (event.key === "Escape" && tool) { event.stopPropagation(); cancelProductionMeasure(); } }, true);
   requestAnimationFrame(tagLoop);

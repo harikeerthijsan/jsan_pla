@@ -1,7 +1,7 @@
 // Sign-in page polish: live server status, Enter-to-submit, busy button, show/hide password,
 // Caps Lock warning, error shake, a rotating feature line, a pointer spotlight on the card,
 // and the entrance played after a successful sign-in while the workspace loads underneath.
-import { $, state, setEntrance } from "./core.js?v=20261012-box-close-focus-1";
+import { $, state, setEntrance } from "./core.js?v=20261013-no-line-nav";
 
 const FEATURES = [
   "Synchronized Plan · Profile · Cross · 3D evidence",
@@ -100,7 +100,14 @@ async function playEntrance({ warp }) {
   const user = state.user || {};
   const first = String(user.name || user.username || "").trim().split(/\s+/)[0];
   $("loginEnterHello").textContent = first ? `Welcome ${first}, now entering` : "Now entering";
-  await warp();
+  // The car drives into the round logo in the middle; the logo pulses as it arrives.
+  const mark = document.querySelector("#loginEnter .login-enter-mark");
+  await new Promise(requestAnimationFrame);
+  const box = mark?.getBoundingClientRect();
+  const target = box && box.width ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null;
+  setTimeout(() => mark?.classList.add("absorb"), reduced ? 0 : 1800);
+  await warp(target);
+  mark?.classList.remove("absorb");
   const app = $("appView");
   app.classList.add("app-arrive");
   $("loginView").classList.add("leaving");

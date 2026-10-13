@@ -1,11 +1,11 @@
 // Super admin page: every account with its access and work, and a timeline of everyone's actions.
 // Only shown to accounts with the super.view permission; the server enforces it on every route.
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261012-box-close-focus-1";
-import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261012-box-close-focus-1";
-import { teamAgo, teamAvatar } from "./team-progress.js?v=20261012-box-close-focus-1";
-import { openTeamPage } from "./team.js?v=20261012-box-close-focus-1";
-import { loadDirectory } from "./employee-directory.js?v=20261012-box-close-focus-1";
-import { applyWorkspace } from "./workspace.js?v=20261012-box-close-focus-1";
+import { $, api, confirmAction, esc, state, toast, rememberPage } from "./core.js?v=20261013-no-line-nav";
+import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261013-no-line-nav";
+import { teamAgo, teamAvatar } from "./team-progress.js?v=20261013-no-line-nav";
+import { openTeamPage } from "./team.js?v=20261013-no-line-nav";
+import { loadDirectory } from "./employee-directory.js?v=20261013-no-line-nav";
+import { applyWorkspace } from "./workspace.js?v=20261013-no-line-nav";
 
 const ROLES=["USER","ADMIN","SUPER_ADMIN"];
 const GROUPS={production:"Production",qc:"QC",data:"Data",delivery:"Delivery",accounts:"Accounts",other:"Other"};
@@ -53,9 +53,9 @@ export function init(){
     const access=event.target.closest("[data-super-remote]");
     if(access){const allow=access.dataset.remote==="true";access.disabled=true;try{await updateAccount(access.dataset.superRemote,{remote_access:allow},allow?`${access.dataset.name} can work from anywhere`:`${access.dataset.name} can now work only from the office networks`)}catch(e){access.disabled=false;toast(e.message,"error")}return}
     const active=event.target.closest("[data-super-active]");
-    if(active){const on=active.dataset.superActive==="true",name=active.dataset.name;if(!on&&!confirm(`Deactivate ${name}? They are signed out everywhere and cannot sign in until reactivated. Their work is kept.`))return;active.disabled=true;try{await updateAccount(active.dataset.superUser,{active:on},on?`${name} can sign in again`:`${name} is deactivated and signed out`)}catch(e){active.disabled=false;toast(e.message,"error")}}
+    if(active){const on=active.dataset.superActive==="true",name=active.dataset.name;if(!on&&!await confirmAction(`Deactivate ${name}? They are signed out everywhere and cannot sign in until reactivated. Their work is kept.`))return;active.disabled=true;try{await updateAccount(active.dataset.superUser,{active:on},on?`${name} can sign in again`:`${name} is deactivated and signed out`)}catch(e){active.disabled=false;toast(e.message,"error")}}
   });
-  $("superPeople").addEventListener("change",async event=>{const select=event.target.closest("[data-super-role]");if(!select)return;const role=select.value,name=select.dataset.name;if(!confirm(`Change ${name} to ${roleLabel(role)}?`)){select.value=select.dataset.current;return}select.disabled=true;try{await updateAccount(select.dataset.superRole,{role},`${name} is now ${roleLabel(role)}`)}catch(e){select.value=select.dataset.current;select.disabled=false;toast(e.message,"error")}});
+  $("superPeople").addEventListener("change",async event=>{const select=event.target.closest("[data-super-role]");if(!select)return;const role=select.value,name=select.dataset.name;if(!await confirmAction(`Change ${name} to ${roleLabel(role)}?`)){select.value=select.dataset.current;return}select.disabled=true;try{await updateAccount(select.dataset.superRole,{role},`${name} is now ${roleLabel(role)}`)}catch(e){select.value=select.dataset.current;select.disabled=false;toast(e.message,"error")}});
   $("superCreateForm").onsubmit=async event=>{event.preventDefault();const form=event.currentTarget,status=$("superCreateStatus"),button=$("superCreateBtn"),password=$("superCreatePassword").value;if(password!==$("superCreateConfirm").value){status.textContent="The temporary passwords don't match";return}if(password.length<12){status.textContent="Use at least 12 characters";return}status.textContent="Creating account…";button.disabled=true;
     try{const created=await api("/api/users",{method:"POST",body:JSON.stringify({username:$("superCreateUsername").value.trim(),name:$("superCreateName").value.trim(),email:$("superCreateEmail").value.trim(),role:$("superCreateRole").value,remote_access:$("superCreateAccess").value==="anywhere",password})});form.reset();status.textContent=`${created.username||created.email} created`;toast(`${roleLabel(created.role)} account created. The temporary password must be changed at first sign-in.`,"success",7000);await loadPeople()}catch(e){status.textContent=e.message;toast(e.message,"error")}finally{button.disabled=false}};
   $("superCreateRole").onchange=event=>{$("superCreateAccess").value=event.target.value==="USER"?"office":"anywhere"};

@@ -787,6 +787,9 @@ body.layout-lock{overflow:hidden}.view-card.maximized .view-action[data-action=m
 /* Production · distance measurement */
 .production-measure{margin-top:10px}
 .measure-title{display:flex;align-items:center;justify-content:space-between}
+.measure-title-actions{display:inline-flex;align-items:center;gap:8px}
+.measure-unit{height:26px;max-width:116px;padding:0 24px 0 8px;border:1px solid var(--line-strong);border-radius:7px;background:#fff;color:var(--brand-deep);font:800 10.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;cursor:pointer}
+.measure-unit:hover,.measure-unit:focus-visible{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px rgba(46,165,214,.12)}
 .measure-clear{border:0;background:none;padding:0;font:inherit;font-size:11px;font-weight:700;color:var(--accent);cursor:pointer;text-transform:none;letter-spacing:0;text-decoration:underline;text-underline-offset:3px}
 .measure-icon{color:#0aa5c9}
 .measure-start.measuring{border-color:#3fe0ff;background:linear-gradient(90deg,rgba(63,224,255,.12),transparent);box-shadow:0 0 0 2px rgba(63,224,255,.25)}
@@ -840,3 +843,124 @@ body.layout-lock{overflow:hidden}.view-card.maximized .view-action[data-action=m
 .qs-placement::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .qs-placement.free{background:#fff3df;color:#8a5a0c}
 .qs-dot.free{background:#ff9f43;box-shadow:0 0 0 3px rgba(255,159,67,.3)}
+
+
+.production-box-control{position:relative;display:inline-flex}.production-box-mode-menu{position:absolute;top:calc(100% + 8px);right:0;z-index:70;width:220px;padding:6px;border:1px solid var(--line-strong);border-radius:11px;background:#fff;box-shadow:0 16px 38px rgba(10,35,51,.24)}.production-box-mode-menu button{display:block;width:100%;padding:9px 10px;border:0;border-radius:7px;background:transparent;text-align:left;color:var(--text);cursor:pointer}.production-box-mode-menu button:hover{background:var(--accent-soft)}.production-box-mode-menu b,.production-box-mode-menu small{display:block}.production-box-mode-menu b{font-size:11px;color:var(--brand-deep)}.production-box-mode-menu small{margin-top:2px;font-size:9px;color:var(--muted)}
+.production-polygon-box{position:absolute;inset:0;z-index:5;width:100%;height:100%;pointer-events:none}.production-polygon-box .polygon-fill{fill:rgba(46,165,214,.12);stroke:none}.production-polygon-box .polygon-line{fill:none;stroke:#53d9ff;stroke-width:2;stroke-dasharray:7 5}.production-polygon-box .polygon-dots circle{fill:#fff;stroke:#0ba9dc;stroke-width:3;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+
+/* Points are added by clicking the LiDAR (the save card asks what the point is), so the checklist is not shown. */
+#productionChecklist{display:none}
+
+/* Zoom-aware north/south/east/west panning inside the Production LiDAR view. */
+.production-direction-pad{position:absolute;right:12px;bottom:34px;z-index:8;display:grid;grid-template-columns:34px 30px 34px;grid-template-rows:34px 30px 34px;grid-template-areas:". north ." "west centre east" ". south .";align-items:center;justify-items:center;padding:7px;border:1px solid rgba(113,177,208,.55);border-radius:15px;background:rgba(8,28,40,.86);box-shadow:0 12px 30px rgba(0,0,0,.25);backdrop-filter:blur(10px)}
+.production-direction-pad button{width:32px;height:32px;display:flex;align-items:center;justify-content:center;gap:2px;padding:0;border:1px solid #557f94;border-radius:9px;background:#153e52;color:#edfaff;box-shadow:0 2px 7px rgba(0,0,0,.18);font-size:11px;cursor:pointer}.production-direction-pad button:hover:not(:disabled),.production-direction-pad button:focus-visible{background:#246f8d;border-color:#72ddff;outline:none}.production-direction-pad button:active:not(:disabled){transform:translateY(1px);background:#0e91b8}.production-direction-pad button:disabled{opacity:.35;cursor:default}.production-direction-pad button span{font-size:15px;line-height:1;color:#72ddff}.production-direction-pad button b{font-size:9px;line-height:1}.direction-north{grid-area:north;flex-direction:column}.direction-south{grid-area:south;flex-direction:column-reverse}.direction-west{grid-area:west}.direction-east{grid-area:east}.direction-centre{grid-area:centre;width:23px;height:23px;display:grid;place-items:center;border:1px solid rgba(114,221,255,.35);border-radius:50%;color:#72ddff;font-size:11px}.direction-status{position:absolute;right:0;bottom:calc(100% + 7px);width:max-content;max-width:220px;padding:4px 7px;border-radius:5px;background:rgba(8,28,40,.9);color:#dff7ff;font-size:9px;pointer-events:none}.direction-status:empty{display:none}
+.production-viewer.is-fullscreen .production-direction-pad{right:14px;bottom:34px}
+@media(max-width:850px){.production-direction-pad{right:8px;bottom:28px;transform:scale(.9);transform-origin:right bottom}}
+
+.qs-card{width:320px}
+
+/* Coordinates, latitude / longitude and Street View live in the save card; the side panel no longer shows them. */
+#annotationForm .geographic-readout,#annotationForm .coordinate-readout{display:none!important}
+.qs-card{width:330px}
+.qs-coords{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:2px 0 6px}
+.qs-coord{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;padding:5px 7px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);cursor:copy;text-align:left;transition:border-color .12s,background .12s}
+.qs-coord.wide{grid-column:span 3;flex-direction:row;align-items:center;gap:8px}
+.qs-coord span{font-size:9.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.qs-coord b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 11.5px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--brand-deep)}
+.qs-coord:hover{border-color:var(--accent);background:var(--accent-soft)}
+.qs-coord.copied,.qs-link.copied{border-color:#2a8c72;background:#e3f6ee}
+.qs-coord.copied::after{content:"Copied";margin-left:auto;font-size:10px;font-weight:800;color:#1f7a5f}
+.qs-coord-actions{display:flex;align-items:center;justify-content:space-between;margin:0 0 6px}
+.qs-coord-actions .qs-sv{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:800;cursor:pointer}
+.qs-coord-actions .qs-sv:disabled{opacity:.45;cursor:not-allowed}
+
+.qs-coord{position:relative;padding-right:24px}
+.qs-copy-icon{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:grid;place-items:center;color:var(--muted)}
+.qs-coord:hover .qs-copy-icon{color:var(--accent)}
+.qs-coord.copied .qs-copy-icon{display:none}
+.qs-coord.copied::after{position:absolute;right:6px;top:50%;transform:translateY(-50%)}
+.qs-coord-actions{justify-content:flex-end}
+.qs-coords{grid-template-columns:1fr;gap:4px}.qs-coord.wide{grid-column:auto;padding-top:4px;padding-bottom:4px}.qs-coord span{min-width:26px}
+
+/* Inactivity warning before automatic sign-out */
+.idle-warning{position:fixed;left:50%;bottom:28px;z-index:20000;display:flex;align-items:center;gap:14px;width:min(520px,calc(100vw - 32px));padding:14px 16px;border-radius:16px;transform:translateX(-50%);background:#0b2231;color:#e8fbff;border:1px solid rgba(94,230,245,.45);box-shadow:0 22px 60px rgba(0,0,0,.45);animation:qsIn .25s ease}
+.idle-warning.hidden{display:none}
+.idle-ring{position:relative;flex:none;width:48px;height:48px;display:grid;place-items:center}
+.idle-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.idle-track{fill:none;stroke:rgba(255,255,255,.15);stroke-width:3}
+.idle-arc{fill:none;stroke:#ffc15a;stroke-width:3;stroke-linecap:round;stroke-dasharray:119.4;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear}
+.idle-ring b{font:800 15px/1 ui-monospace,SFMono-Regular,Consolas,monospace;color:#ffd58a}
+.idle-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.idle-text b{font-size:14px}.idle-text small{color:#a9cfdb;font-size:12px;line-height:1.35}
+.idle-warning .primary{flex:none;padding:9px 16px;border-radius:999px;font-weight:800}
+
+/* Attribute fields in the save card */
+.qs-card{max-height:calc(100% - 16px);overflow:auto}
+.qs-fields{display:grid;gap:6px;margin:2px 0 8px;padding:8px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}
+.qs-fields.hidden{display:none}
+.qs-field{display:flex;flex-direction:column;gap:3px;margin:0!important}
+.qs-field input{width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--line-strong);background:#fff;font-size:12.5px;font-weight:600;color:var(--text);text-transform:none;letter-spacing:0}
+.qs-field input.hidden{display:none}
+.qs-field .qs-other{margin-top:3px;border-color:var(--accent);background:var(--accent-soft)}
+
+/* Workbook field names are shown exactly as written (no capitalisation). */
+.qs-field{text-transform:none!important;letter-spacing:0!important;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px!important}
+
+/* OpenStreetMap point adjustment: X/Y comes from the map; LiDAR/profile Z is deliberately preserved. */
+.qs-coord-actions{gap:7px}.qs-coord-actions .qs-map,.qs-coord-actions .qs-sv{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:800;cursor:pointer}.qs-coord-actions .qs-map:disabled,.qs-coord-actions .qs-sv:disabled{opacity:.45;cursor:not-allowed}
+.production-map-dialog{width:min(940px,94vw);max-width:none;padding:0;overflow:hidden;border-radius:16px}
+.production-map-dialog::backdrop{background:rgba(5,20,30,.62);backdrop-filter:blur(3px)}
+.production-map-dialog form{padding:0;margin:0}
+.production-map-dialog header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;padding:17px 20px;background:var(--panel2);border-bottom:1px solid var(--line)}
+.production-map-dialog h3{margin:0;color:var(--brand-deep);font-size:18px}.production-map-dialog header p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.4}
+.map-dialog-close{flex:none;width:34px;height:34px;padding:0;border-radius:50%;font-size:22px;line-height:1;background:#fff;color:var(--muted)}
+.production-map-canvas{height:min(58vh,590px);min-height:360px;background:#dbe7ec}
+.production-map-fields{display:grid;grid-template-columns:minmax(170px,1fr) minmax(170px,1fr) auto;align-items:end;gap:12px;padding:13px 20px 7px}.production-map-fields label{margin:0}.production-map-fields input{width:100%;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.production-map-fields span{padding:0 0 10px;color:var(--muted);font-size:12px}.production-map-fields b{color:var(--brand-deep)}
+.production-map-privacy{margin:0;padding:0 20px;color:var(--muted);font-size:10px}.production-map-dialog .error{min-height:18px;margin:4px 20px}.production-map-dialog footer{display:flex;justify-content:flex-end;gap:8px;padding:5px 20px 16px}
+.production-map-dialog .ol-attribution{bottom:5px;right:5px}.production-map-dialog .ol-attribution button{display:none}.production-map-dialog .ol-attribution ul{display:block!important;margin:0;padding:3px 6px;border-radius:4px;background:rgba(255,255,255,.9);font-size:10px}
+.production-map-intensity{position:absolute;right:10px;top:54px;z-index:7;width:220px;padding:9px 11px;border:1px solid rgba(139,195,216,.7);border-radius:10px;background:rgba(7,25,36,.9);box-shadow:0 10px 28px rgba(0,0,0,.3);color:#e8fbff;backdrop-filter:blur(6px)}
+.production-map-intensity.hidden{display:none}.production-map-intensity label{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin:0;font-size:11px;font-weight:800}.production-map-intensity input{min-width:0;padding:0;accent-color:#2fc4e7}.production-map-intensity b{min-width:34px;text-align:right;font:700 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace;color:#7ce6ff}
+.production-map-attribution{position:absolute;left:8px;bottom:7px;z-index:7;padding:2px 5px;border-radius:4px;background:rgba(7,25,36,.72);color:rgba(232,251,255,.76);font-size:8px;line-height:1;text-decoration:none;pointer-events:auto}.production-map-attribution:hover{color:#fff;text-decoration:underline}.production-map-attribution.hidden{display:none}
+.production-viewer.is-fullscreen .production-map-intensity{top:76px}.production-viewer:not(.is-fullscreen) .production-profile-bar:not(.hidden)~.production-map-intensity{top:calc(var(--viewer-overlay-top) + var(--profile-bar-h, 46px) + 8px)}.production-viewer.is-fullscreen .production-profile-bar:not(.hidden)~.production-map-intensity{top:calc(var(--viewer-overlay-top) + var(--profile-bar-h, 46px) + 8px)}
+@media(max-width:700px){.production-map-fields{grid-template-columns:1fr 1fr}.production-map-fields span{grid-column:1/-1;padding-bottom:2px}.production-map-canvas{min-height:300px;height:48vh}}
+/* Production viewer header: the title gets its own row and the toolbar a full-width row below it, so the title
+   is not squeezed to "Combined LiDAR mo…" and the toolbar needs fewer rows on narrower screens. */
+.production-viewer:not(.is-fullscreen) .production-viewer-head{flex-wrap:wrap;row-gap:6px;align-items:flex-start}
+.production-viewer:not(.is-fullscreen) .production-viewer-head>div:first-child{flex:1 1 100%;display:flex;align-items:baseline;gap:10px;min-width:0}
+.production-viewer:not(.is-fullscreen) .production-viewer-head>div:first-child b{flex:none;display:inline}
+.production-viewer:not(.is-fullscreen) .production-viewer-head>div:first-child small{flex:1 1 auto;display:block;min-width:0}
+.production-viewer:not(.is-fullscreen) .production-viewer-tools{flex:1 1 100%;justify-content:flex-start}
+/* Point attributes: no empty space for an error that is not there. */
+#annotationForm>.error:empty{display:none}
+#annotationForm{margin-top:8px}
+/* Map overlay intensity: sit just below the toolbar (whatever its height), readable light text on the dark card,
+   and a full-width slider under its label. */
+.production-viewer:not(.is-fullscreen) .production-map-intensity{top:calc(var(--viewer-head-h, 46px) + 10px)}
+.production-viewer:not(.is-fullscreen) .production-profile-bar:not(.hidden)~.production-map-intensity{top:calc(var(--viewer-overlay-top) + var(--profile-bar-h, 46px) + 8px)}
+.production-map-intensity{width:250px;padding:10px 12px}
+.production-map-intensity label{grid-template-columns:1fr auto!important;row-gap:6px!important;color:#e8fbff!important}
+.production-map-intensity label span{grid-column:1/-1;color:#e8fbff!important;font-size:11.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase}
+.production-map-intensity input{width:100%}
+.production-map-intensity b{min-width:38px;text-align:right;color:#7ce6ff!important;font-variant-numeric:tabular-nums}
+/* Profile mode: overlays stack below the toolbar and the profile bar, and stay clear of the elevation ruler (74px). */
+.production-viewer{--viewer-overlay-top:calc(var(--viewer-head-h, 46px) + 8px)}
+.production-viewer.is-fullscreen{--viewer-overlay-top:76px}
+.production-viewer .production-profile-bar{top:var(--viewer-overlay-top)}
+.production-viewer .production-profile-bar:not(.hidden)~.production-map-intensity{top:calc(var(--viewer-overlay-top) + var(--profile-bar-h, 46px) + 8px)}
+.production-viewer:has(.production-profile-bar:not(.hidden)) .production-direction-pad{right:86px}
+/* In-page confirmation dialog (replaces the browser's confirm popup). */
+.confirm-overlay{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(7,20,30,.45);backdrop-filter:blur(3px);animation:confirm-fade .14s ease both}
+.confirm-overlay.is-leaving{animation:confirm-fade .14s ease reverse both}
+.confirm-dialog{display:grid;grid-template-columns:auto 1fr;gap:12px 14px;width:min(420px,100%);padding:20px 20px 16px;border-radius:14px;background:#fff;border:1px solid var(--line-strong,#c9dbe6);box-shadow:0 24px 60px rgba(7,20,30,.35);animation:confirm-pop .16s ease both}
+.confirm-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;background:#e3f3fb;color:#1a6a8c}
+.confirm-dialog.is-danger .confirm-icon{background:#fde8ea;color:#b42f3d}
+.confirm-body h3{margin:4px 0 0;font-size:15px;line-height:1.35;color:var(--brand-deep,#0d2d46)}
+.confirm-body p{margin:6px 0 0;font-size:13px;line-height:1.5;color:var(--muted,#5b7183);white-space:pre-line}
+.confirm-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.confirm-actions button{min-width:88px;padding:8px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line-strong,#c9dbe6)}
+.confirm-cancel{background:#fff;color:var(--brand-deep,#0d2d46)}.confirm-cancel:hover{background:#f1f7fa}
+.confirm-ok{background:#1d6a8c;border-color:#1d6a8c!important;color:#fff}.confirm-ok:hover{background:#185a77}
+.confirm-dialog.is-danger .confirm-ok{background:#c0303f;border-color:#c0303f!important}.confirm-dialog.is-danger .confirm-ok:hover{background:#a12633}
+.confirm-actions button:focus-visible{outline:2px solid #2aa7d8;outline-offset:2px}
+@keyframes confirm-fade{from{opacity:0}to{opacity:1}}@keyframes confirm-pop{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}
+

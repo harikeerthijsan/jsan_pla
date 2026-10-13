@@ -6,12 +6,13 @@
 //                               crossarms and pole tops beside the pole), or through the view's pivot if no pole.
 // Every point records how it was placed ("placement"), so QC can tell snapped points from free ones.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, state } from "./core.js?v=20261012-box-close-focus-1";
-import { productionGeoGround, productionGeoPoleRange } from "./production-geo.js?v=20261012-box-close-focus-1";
-import { productionProfileFrame } from "./production-profile.js?v=20261012-box-close-focus-1";
+import { $, state } from "./core.js?v=20261013-no-line-nav";
+import { productionGeoGround, productionGeoPoleRange } from "./production-geo.js?v=20261013-no-line-nav";
+import { productionProfileFrame } from "./production-profile.js?v=20261013-no-line-nav";
 
 export const PLACEMENT_LABELS = {
   lidar: "Snapped to a LiDAR point",
+  map: "Horizontal position adjusted on the map",
   section_plane: "Open space · on the profile section",
   pole_plane: "Open space · on the pole's vertical plane",
   ground_plane: "Open space · at ground level",
@@ -76,12 +77,45 @@ export function placeInOpenSpace(px, py) {
   return { error: "Could not place a point there. Rotate the view towards the pole, use Top view, or click on the LiDAR." };
 }
 
-// Snap to LiDAR when a return is under the cursor; otherwise place in open space.
-export function pickOrPlace(px, py) {
+// Snap to LiDAR when a return is under the cursor; an explicit free pick bypasses point-cloud snapping entirely.
+export function pickOrPlace(px, py, { forceOpen = false } = {}) {
   const viewer = state.productionViewer;
-  const hit = Potree.Utils.getMousePointCloudIntersection({ x: px, y: py }, viewer.scene.getActiveCamera(), viewer, viewer.scene.pointclouds);
-  if (hit) return { location: hit.location, placement: "lidar" };
+  if (!forceOpen) {
+    const hit = Potree.Utils.getMousePointCloudIntersection({ x: px, y: py }, viewer.scene.getActiveCamera(), viewer, viewer.scene.pointclouds);
+    if (hit) return { location: hit.location, placement: "lidar" };
+  }
   return placeInOpenSpace(px, py);
 }
 
-export function init() {}
+function renderPlacementMode() {
+  const button = $("productionPlacementModeBtn");
+  if (!button) return;
+  const free = state.productionPlacementMode === "free";
+  button.textContent = free ? "Free: on" : "Free: off";
+  button.classList.toggle("active", free);
+  button.setAttribute("aria-pressed", String(free));
+  button.title = free
+    ? "Free placement is on: clicks use the visible profile/working plane and ignore nearby LiDAR points"
+    : "Turn on to place points in gaps without snapping to a nearby LiDAR return";
+}
+
+export function annotationPickOptions() {
+  return { forceOpen: state.productionPlacementMode === "free" };
+}
+
+export function init() {
+  let button = $("productionPlacementModeBtn");
+  if (!button) {
+    button = document.createElement("button");
+    button.id = "productionPlacementModeBtn";
+    button.type = "button";
+    button.className = "compact-btn";
+    button.setAttribute("aria-pressed", "false");
+    $("productionProfileBtn").after(button);
+  }
+  button.onclick = () => {
+    state.productionPlacementMode = state.productionPlacementMode === "free" ? "snap" : "free";
+    renderPlacementMode();
+  };
+  renderPlacementMode();
+}

@@ -30,7 +30,7 @@ def test_production_box_tool_supports_the_combined_multi_cloud_model():
     # Potree's ScreenBoxSelectTool picks a single point cloud and throws on the
     # combined model, leaving the camera stuck in orthographic mode.
     assert "ScreenBoxSelectTool" not in javascript.replace("Potree's ScreenBoxSelectTool", "")
-    assert "function startProductionBox()" in javascript
+    assert "function startProductionBox(" in javascript
     assert "function cancelProductionBox(" in javascript
     assert "restoreProductionCamera(tool.previous)" in javascript
     assert "inputHandler.removeInputListener(tool.listener)" in javascript
@@ -46,10 +46,26 @@ def test_production_box_fits_the_local_lidar_height_before_zooming():
     assert "function productionBoxElevations(" in view
     assert "getMousePointCloudIntersection(mouse,camera,v,v.scene.pointclouds)" in view
     assert "function fittedProductionBoxRange(" in view
-    assert "volume.position.set(center.x,center.y,range.center)" in view
-    assert "volume.scale.set(width,height,range.depth)" in view
+    assert "volume.position.set(frame.center.x,frame.center.y,range.center)" in view
+    assert "volume.scale.set(frame.width,frame.height,range.depth)" in view
     assert "bounds.max.z-bounds.min.z+20" not in view
     assert "v.zoomTo(volume,.72,450)" in view
+
+
+def test_production_box_offers_rectangle_and_four_point_polygon_modes():
+    view = (ROOT / "web" / "assets" / "modules" / "production-view.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+
+    assert "function installProductionBoxModeMenu()" in view
+    assert 'data-box-mode="rectangle"' in view
+    assert 'data-box-mode="polygon"' in view
+    assert "function startProductionPolygonBox(" in view
+    assert "if(points.length<4)" in view
+    assert "function orientedProductionBox(points)" in view
+    assert 'applyProductionBoxVolume(frame,a,b,returnCamera,"polygon",elevations)' in view
+    assert "if(hit?.location&&inside(hit.location))" in view
+    assert ".production-box-mode-menu" in css
+    assert ".production-polygon-box" in css
 
 
 def test_closing_production_box_returns_to_the_pre_box_pole_or_region():
@@ -65,6 +81,9 @@ def test_closing_production_box_returns_to_the_pre_box_pole_or_region():
 def test_production_navigation_controls_are_wired():
     html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
     javascript = web_javascript()
+    app = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    direction = (ROOT / "web" / "assets" / "modules" / "production-direction.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
 
     for view in ("top", "front", "side", "3d"):
         assert f'data-production-view="{view}"' in html
@@ -74,6 +93,23 @@ def test_production_navigation_controls_are_wired():
     assert "e.drag.mouse===4" in javascript
     # Saved markers are display-only so a drag over them orbits instead of moving them.
     assert "sphere._listeners={}" in javascript
+    assert "initProductionDirection" in app and "./modules/production-direction.js" in app
+    for direction_name in ("north", "south", "east", "west"):
+        assert f'data-production-direction="{direction_name}"' in direction
+    assert "function moveProductionDirection(direction)" in direction
+    assert "vector.x*distance,vector.y*distance,0" in direction
+    assert "view.position.add(offset)" in direction
+    assert "radius*.4" in direction
+    assert ".production-direction-pad" in css
+
+
+def test_pole_line_navigation_option_is_removed():
+    # "Line nav" (forward/back along the pole line) was removed from the viewer toolbar at the user's request.
+    app = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    assert not (ROOT / "web" / "assets" / "modules" / "production-route.js").exists()
+    assert "production-route.js" not in app and "initProductionRoute" not in app
+    assert "productionRouteNavBtn" not in web_javascript() and ".production-route-bar" not in css
 
 
 def test_production_profile_view_is_wired():
@@ -90,8 +126,14 @@ def test_production_profile_view_is_wired():
         assert f'data-profile-pick="{preset}"' in html
     assert "function productionPointAt(px,py)" in javascript
     assert "function startProductionProfileLine()" in javascript
-    assert 'toast("Now click the end of the section line."' in javascript
-    assert "function enterProductionProfile(a,b)" in javascript
+    assert 'setProductionView("top",{yaw:v.scene.view.yaw,pitch:-Math.PI/2})' in javascript
+    assert 'toast("Top view: move the line and click the end of the profile."' in javascript
+    assert 'addProductionMeasurement([point,point],{name:"Profile preview"' in javascript
+    assert 'if(point)marker.setPosition(1,point)' in javascript
+    assert 'dom.addEventListener("mousemove",onMove)' in javascript
+    assert 'dom.removeEventListener("mousemove",onMove)' in javascript
+    assert "function enterProductionProfile(a,b,previousCamera=null)" in javascript
+    assert "if(restore)restoreProductionCamera(line.previous)" in javascript
     assert "p.volume.scale.set(p.len,p.depth" in javascript
     assert "startProductionProfileBox" not in javascript
     assert "production-profile-rect" not in javascript
@@ -206,6 +248,20 @@ def test_production_pole_workflow_is_wired():
     assert "function showFullProductionModel()" in javascript
     assert "root.appendChild(productionFullModelRow(!selected))" in javascript
     assert 'rows=$("annotationPoleId").value?selectedPoleAnnotations():state.productionAnnotations' in javascript
+
+
+def test_selected_pole_focus_uses_the_original_workflow():
+    production = (ROOT / "web" / "assets" / "modules" / "production-poles.js").read_text(encoding="utf-8")
+    qc = (ROOT / "web" / "assets" / "modules" / "qc-scene.js").read_text(encoding="utf-8")
+
+    # Keep the legacy selection camera behavior: the experimental height-based
+    # close-focus implementation caused improper jumps in real datasets.
+    assert "function productionPoleFocus(pole)" not in production
+    assert "target=productionPoleTarget(pole)" in production
+    assert 'view.radius=productionUnitLabel()==="ft"?120:36' in production
+    assert "function poleFocusFrame(feature)" not in qc
+    assert "const c=featureCenter(f)" in qc
+    assert "c[0]+48,c[1]-48,c[2]+30" in qc
 
 
 def test_qc_banner_runs_qc_on_production_lidar():
@@ -325,6 +381,7 @@ def test_login_page_has_brand_and_animated_background_without_api_url():
         "drawPointCloud",
         "drawInfrastructure",
         "drawPoleGuides",
+        "drawStreetViewCar",
         "drawPoleMeasurement",
         "drawViewerChrome",
     ):
@@ -419,7 +476,8 @@ def test_saved_points_have_quick_edit_and_remove_actions():
     # One remove path: open the point and run the existing Delete flow (confirmation, revision and parent checks).
     assert 'export function removeSavedPoint(id){' in javascript and '$("annotationDeleteBtn").click()' in javascript
     # Clicking a saved point in the 3D view opens its menu before GeoJSON pin selection.
-    assert "if(!openPointMenuAt(e.clientX-r.left,e.clientY-r.top))selectProductionGeoAt(" in javascript
+    # Order: a saved point opens its menu, a pin head opens the GeoJSON card, anything else places a new point.
+    assert "if(openPointMenuAt(px,py)||selectProductionGeoAt(px,py))return;placeProductionPointAt(px,py)" in javascript
     assert 'data-point-action="edit"' in javascript and 'data-point-action="delete"' in javascript
     # The saved-point action menu must not share the point-display settings ID. The settings document-level
     # mousedown handler otherwise hides the action menu before Edit or Delete receives its click.
@@ -454,7 +512,10 @@ def test_sign_in_page_extras_are_wired():
     assert 'getModifierState("CapsLock")' in login
     # The card moves aside on wide screens so the pole inspection stays visible, and motion is optional.
     assert "place-items: center end" in css and "prefers-reduced-motion: reduce" in css
-    assert "function drawLaserSwath(" in scene and "function cardClearX(" in scene
+    assert "function drawStreetViewCar(" in scene and "function cardClearX(" in scene
+    assert "function drawLaserSwath(" not in scene and "airborne" not in scene.lower()
+    # The car is a mobile LiDAR mapping vehicle with a roof-mounted, spinning scanner head.
+    assert "Mobile LiDAR mapping car" in scene and "spinning LiDAR head" in scene
 
 
 def test_sign_in_entrance_plays_over_the_loading_app():
@@ -468,7 +529,7 @@ def test_sign_in_entrance_plays_over_the_loading_app():
     assert 'const entering=Boolean(entrance&&stopLoginBackground?.enter&&!loginView.classList.contains("hidden"))' in core
     assert "stopLoginBackground?.leave?.()" in core
     assert "setEntrance(playEntrance)" in login
-    assert "stop.enter = () => new Promise" in scene and "function drawWarp(" in scene
+    assert "stop.enter = (target = null) => new Promise" in scene and "function drawWarp(" in scene
 
 
 def test_brand_line_decodes_engineering():
@@ -516,6 +577,14 @@ def test_production_quick_save_card_and_measurement_tool():
     assert html.index('id="productionChecklist"') < html.index('id="productionMeasurePanel"')
     assert "export function startProductionMeasure()" in measure and "function values(a, b)" in measure
     assert "horizontal" in measure and "vertical" in measure and "measure-label" in measure
+    # Display units are selectable without altering source coordinates or stored tape values.
+    assert 'Object.freeze({ ft: 0.3048, m: 1, cm: 0.01, mm: 0.001 })' in measure
+    assert "export function convertMeasurementValue(" in measure
+    assert 'data-measure-unit aria-label="Measurement display unit"' in measure
+    for unit in ("ft", "mm", "cm", "m"):
+        assert f'["{unit}",' in measure
+    assert "refreshMeasurementLabels();" in measure
+    assert ".measure-unit{" in css
     assert "cancelProductionMeasure();const v=state.productionViewer" in pick
 
 
@@ -554,6 +623,133 @@ def test_points_can_be_placed_in_open_space():
     # No more "No LiDAR point under the cursor": snap first, otherwise a working plane.
     assert "No LiDAR point under the cursor" not in pick and "spot=pickOrPlace(" in pick
     assert 'placement:state.productionDraftPlacement||"lidar"' in pick
+    assert 'button.id = "productionPlacementModeBtn"' in placement
+    assert 'forceOpen: state.productionPlacementMode === "free"' in placement
+    assert "pickOrPlace(px,py,annotationPickOptions())" in pick
     for plane in ("section_plane", "pole_plane", "ground_plane", "view_plane"):
         assert f'placement: "{plane}"' in placement or f'"{plane}"' in placement, plane
     assert "pickOrPlace(event.clientX - r.left, event.clientY - r.top)" in measure
+
+
+def test_clicking_the_lidar_places_a_point_and_the_card_asks_what_it_is():
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    pick = (ROOT / "web" / "assets" / "modules" / "production-pick.js").read_text(encoding="utf-8")
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    geo = (ROOT / "web" / "assets" / "modules" / "production-geo.js").read_text(encoding="utf-8")
+    # The Pole / Attachments & structure checklist is no longer shown in the side panel.
+    assert "#productionChecklist{display:none}" in css
+    assert "export function placeProductionPointAt(px,py){" in pick and "productionPoleTarget(pole)" in pick
+    # The card keeps it simple: the Group and Point / variable selects say what the point is; the pole is chosen
+    # automatically (the selected pole near the click, else the nearest pole).
+    assert 'id="qsFamily"' in quick and 'id="qsFeature"' in quick
+    assert "qsTypes" not in quick and "qsPole" not in quick
+    # Pins open their card from the head only, so clicks on the pole itself place points.
+    assert "d=Math.max(0,Math.hypot(px-head.x,py-head.y)-head.r);if(d<=6" in geo
+
+
+def test_coordinates_and_street_view_live_in_the_save_card():
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    # The side panel no longer shows latitude / longitude, X / Y / Z or the Street View button.
+    assert "#annotationForm .geographic-readout,#annotationForm .coordinate-readout{display:none!important}" in css
+    # The card shows them, each value copies on click, "Copy all" copies everything, Street View uses the existing button.
+    for key in ("X", "Y", "Z", "Lat", "Lon"):
+        assert f'data-qs-copy="{key}"' in quick and f'id="qs{key}"' in quick, key
+    # Each value copies on its own (no "Copy all").
+    assert 'data-qs="copyall"' not in quick and quick.count('class="qs-copy-icon"') == 5
+    assert 'data-qs="streetview"' in quick and '$("annotationStreetView").click()' in quick
+    assert "navigator.clipboard.writeText(text)" in quick
+
+
+def test_map_picker_preserves_lidar_elevation_and_uses_server_crs_transform():
+    app = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    map_picker = (ROOT / "web" / "assets" / "modules" / "production-map.js").read_text(encoding="utf-8")
+    config = (ROOT / "web" / "config.js").read_text(encoding="utf-8")
+    assert "initProductionMap" in app
+    assert 'data-qs="map"' in quick and "openProductionMapPicker()" in quick
+    assert "/coordinates/from-wgs84" in map_picker and "/coordinates/to-wgs84" in map_picker
+    assert 'const button = $("productionMapUseBtn"), z = state.productionDraft.z;' in map_picker
+    assert 'setAnnotationDraft({ x: result.x, y: result.y, z })' in map_picker
+    assert 'state.productionDraftPlacement = "map"' in map_picker
+    assert "tile.openstreetmap.org/{z}/{x}/{y}.png" in config
+    assert "ol.Attribution" in map_picker and ".production-map-dialog" in css
+
+
+def test_georeferenced_map_overlay_has_toggle_tile_cap_and_intensity_control():
+    # OpenStreetMap attribution stays visible, but is positioned independently
+    # so the intensity control cannot collide with viewer navigation controls.
+    core = (ROOT / "web" / "assets" / "modules" / "core.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    map_overlay = (ROOT / "web" / "assets" / "modules" / "production-map.js").read_text(encoding="utf-8")
+    assert 'button.id = "productionMapOverlayBtn"' in map_overlay
+    assert 'id="productionMapIntensity"' in map_overlay and "applyOverlayIntensity()" in map_overlay
+    assert 'attribution.id = "productionMapAttribution"' in map_overlay
+    assert 'attribution.textContent = "© OpenStreetMap"' in map_overlay
+    assert "control.innerHTML = `<label><span>Map intensity</span>" in map_overlay
+    assert "const MAX_OVERLAY_TILES = 64" in map_overlay
+    assert "/coordinates/from-wgs84/batch" in map_overlay
+    assert 'new THREE.MeshBasicMaterial({ map: texture' in map_overlay
+    assert 'state.productionMapOverlayIntensity = Number(event.target.value) / 100' in map_overlay
+    assert "productionMapOverlayVisible:false" in core
+    assert ".production-map-intensity" in css
+    assert ".production-map-attribution" in css
+    assert ".production-map-intensity a" not in css
+
+
+def test_automatic_sign_out_after_five_idle_minutes():
+    app = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    idle = (ROOT / "web" / "assets" / "modules" / "idle-timeout.js").read_text(encoding="utf-8")
+    assert "initIdleTimeout" in app
+    assert "export const IDLE_MINUTES = 5;" in idle and "logout(" in idle
+    # Warns for the last minute, shares activity between tabs, and never signs out during a request in progress.
+    assert "const WARN_MS = 60 * 1000;" in idle and 'const SHARED_KEY = "pla_last_activity";' in idle
+    assert "if (inFlight > 0) { touch(); return; }" in idle
+
+
+def test_login_mapping_car_drives_into_the_entrance_logo():
+    scene = (ROOT / "web" / "assets" / "lidar-login-scene.js").read_text(encoding="utf-8")
+    login = (ROOT / "web" / "assets" / "modules" / "login-experience.js").read_text(encoding="utf-8")
+    assert "function drawStreetViewCar(" in scene and "function carPose(" in scene and "function drawLogoPulse(" in scene
+    assert "stop.enter = (target = null) =>" in scene and "logoTarget" in scene
+    assert 'document.querySelector("#loginEnter .login-enter-mark")' in login and "await warp(target)" in login
+
+
+def test_save_card_shows_the_workbook_attribute_fields():
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    pick = (ROOT / "web" / "assets" / "modules" / "production-pick.js").read_text(encoding="utf-8")
+    # Fields come from the group's catalogue entry; every dropdown has "Other (type a value)" with a text box.
+    assert "function renderFields()" in quick and "group?.fields" in quick
+    assert 'Other (type a value)' in quick and "data-attr-other" in quick and "data-attr-text" in quick
+    # The values are saved with the point.
+    assert "export function featureAttributes()" in pick and "...featureAttributes()" in pick
+
+
+def test_profile_view_overlays_follow_the_toolbar_and_the_cursor():
+    modules = ROOT / "web" / "assets" / "modules"
+    profile = (modules / "production-profile.js").read_text(encoding="utf-8")
+    geo = (modules / "production-geo.js").read_text(encoding="utf-8")
+    points = (modules / "production-points.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    # The cursor/Z overlay is aligned to the 3D canvas on every draw, so the cursor line matches the pointer.
+    assert "canvasBox.top-hostBox.top" in profile
+    # The profile bar, intensity control and GeoJSON card stack below the (wrapping) toolbar and the profile bar.
+    assert '"--profile-bar-h"' in points and '"--viewer-head-h"' in points
+    assert ".production-viewer .production-profile-bar{top:var(--viewer-overlay-top)}" in css
+    assert "var(--viewer-overlay-top, 54px) + var(--profile-bar-h, 46px)" in geo
+    # The direction pad stays clear of the elevation ruler, and pins repaint as soon as the slab changes.
+    assert ".production-direction-pad{right:86px}" in css
+    assert "  drawProductionGeoMarkers()}" in geo
+
+
+def test_confirmations_use_the_in_page_dialog_not_browser_popups():
+    import re
+    modules = ROOT / "web" / "assets" / "modules"
+    core = (modules / "core.js").read_text(encoding="utf-8")
+    assert "export function confirmAction(" in core and 'role="alertdialog"' in core
+    for path in sorted(modules.glob("*.js")):
+        text = "\n".join(line for line in path.read_text(encoding="utf-8").splitlines() if not line.lstrip().startswith("//"))
+        assert not re.search(r"(?<![\w.])(window\.)?confirm\(", text), f"{path.name} still uses the browser confirm popup"
+    pick = (modules / "production-pick.js").read_text(encoding="utf-8")
+    assert 'await confirmAction("Delete this saved production point?' in pick

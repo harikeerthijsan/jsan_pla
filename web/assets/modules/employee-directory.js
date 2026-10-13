@@ -1,8 +1,8 @@
 // Super admin · Directory: the HR employee list, with search/filters, and turning employees into PoleGrid accounts.
 // Granting access creates the account on the server (temporary password shown once). Role, active and works-from
 // changes on existing accounts use PUT /api/users/{id}, so the usual account safeguards apply.
-import { $, api, esc, state, toast } from "./core.js?v=20261012-box-close-focus-1";
-import { roleLabel } from "./profile.js?v=20261012-box-close-focus-1";
+import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261013-no-line-nav";
+import { roleLabel } from "./profile.js?v=20261013-no-line-nav";
 
 const PAGE = 100;
 const ACCESS = { none: "No access yet", active: "Active", pending: "Must change password", inactive: "Deactivated" };
@@ -217,6 +217,23 @@ async function submitEdit(event) {
   finally { button.disabled = false; }
 }
 
+// A sample file with the exact columns of the HR export. Only Name and Email are required; every other column is
+// optional and may be left empty. The rows are made-up examples (example.com addresses).
+const SAMPLE_HEADER = ["Name", "JSAN ID", "Employee ID", "Email", "Department", "Designation", "Date of joining", "Role", "Password set", "Last sign-in", "Submission", "Total years of experience"];
+const SAMPLE_ROWS = [
+  ["Asha Kumar", "asha.kumar", "JSAN101", "asha.kumar@example.com", "Engineering", "GIS Developer", "15-01-2025", "employee", "No", "", "draft", "2"],
+  ["Rahul Verma", "rverma", "JSAN102", "rverma@example.com", "Operations", "Manager", "03-06-2024", "employee", "Yes", "06-10-2026", "submitted", "5"],
+  ["Priya Nair", "pnair", "", "pnair@example.com", "", "Trainee GIS", "", "employee", "No", "", "", "0"],
+];
+function downloadSample() {
+  const cell = v => /[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  const text = [SAMPLE_HEADER, ...SAMPLE_ROWS].map(row => row.map(cell).join(",")).join("\r\n") + "\r\n";
+  const url = URL.createObjectURL(new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: "employee-directory-sample.csv" });
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast("Sample downloaded. Name and Email are required; dates use DD-MM-YYYY; other columns may be empty.", "info", 6500);
+}
+
 async function importFile(file) {
   if (!file) return;
   if (!/\.csv$/i.test(file.name)) { toast("Choose a .csv file", "error"); return; }
@@ -235,7 +252,7 @@ async function bulkGrant() {
   const ids = [...dir.selected].filter(id => !byId(id)?.account);
   if (!ids.length) { toast("Everyone selected already has access", "info"); return; }
   const role = $("dirBulkRole").value;
-  if (!confirm(`Give ${ids.length} employee${ids.length === 1 ? "" : "s"} access as ${roleLabel(role)}? A temporary password is created for each.`)) return;
+  if (!await confirmAction(`Give ${ids.length} employee${ids.length === 1 ? "" : "s"} access as ${roleLabel(role)}? A temporary password is created for each.`)) return;
   const button = $("dirBulkGrant"); button.disabled = true; button.textContent = "Granting…";
   try {
     const r = await api("/api/super/directory/grant", { method: "POST", body: JSON.stringify({ ids, role, remote_access: remoteChoice($("dirBulkAccess").value) }) });
@@ -252,7 +269,7 @@ async function bulkGrant() {
 async function bulkActive(active) {
   const targets = [...dir.selected].map(byId).filter(e => e?.account && !isMe(e) && e.account.active !== active);
   if (!targets.length) { toast(active ? "Nobody selected is deactivated" : "Nobody selected has active access", "info"); return; }
-  if (!confirm(`${active ? "Reactivate" : "Deactivate"} access for ${targets.length} employee${targets.length === 1 ? "" : "s"}?${active ? "" : " They are signed out straight away."}`)) return;
+  if (!await confirmAction(`${active ? "Reactivate" : "Deactivate"} access for ${targets.length} employee${targets.length === 1 ? "" : "s"}?${active ? "" : " They are signed out straight away."}`)) return;
   let done = 0; const errors = [];
   for (const e of targets) {
     try { await api(`/api/users/${encodeURIComponent(e.account.id)}`, { method: "PUT", body: JSON.stringify({ active }) }); done++; }
@@ -288,16 +305,16 @@ async function onTableClick(event) {
   if (target.dataset.dirGrant) openGrant(e);
   else if (target.dataset.dirEdit) openEdit(e);
   else if (target.dataset.dirDelete) {
-    if (!confirm(`Remove ${e.name} from the directory?${e.account ? " Their deactivated account is kept for their work history." : ""}`)) return;
+    if (!await confirmAction(`Remove ${e.name} from the directory?${e.account ? " Their deactivated account is kept for their work history." : ""}`)) return;
     try { await api(`/api/super/directory/${e.id}`, { method: "DELETE" }); toast(`${e.name} removed`, "success"); dir.selected.delete(e.id); await loadDirectory(); }
     catch (err) { toast(err.message, "error"); }
   } else if (target.dataset.dirReset) {
-    if (!confirm(`Reset ${e.name}'s password? They are signed out and must use the new temporary password.`)) return;
+    if (!await confirmAction(`Reset ${e.name}'s password? They are signed out and must use the new temporary password.`)) return;
     try { const r = await api(`/api/super/directory/${e.id}/reset-password`, { method: "POST" }); showCreds([{ name: e.name, email: e.email, username: e.account.username, role: e.account.role, temporary_password: r.temporary_password }], "Password reset"); await loadDirectory(); }
     catch (err) { toast(err.message, "error"); }
   } else if (target.dataset.dirActive) {
     const active = !e.account.active;
-    if (!confirm(`${active ? "Reactivate" : "Deactivate"} ${e.name}'s access?${active ? "" : " They are signed out straight away."}`)) return;
+    if (!await confirmAction(`${active ? "Reactivate" : "Deactivate"} ${e.name}'s access?${active ? "" : " They are signed out straight away."}`)) return;
     await updateAccount(e, { active }, `${e.name} ${active ? "reactivated" : "deactivated"}`);
   } else if (target.dataset.dirRemote) {
     const remote = !e.account.remote_access;
@@ -309,7 +326,7 @@ async function onRoleChange(event) {
   const select = event.target.closest("[data-dir-role]");
   if (!select) return;
   const e = byId(select.dataset.dirRole), role = select.value;
-  if (!confirm(`Change ${e.name}'s role from ${roleLabel(e.account.role)} to ${roleLabel(role)}?`)) { select.value = e.account.role; return; }
+  if (!await confirmAction(`Change ${e.name}'s role from ${roleLabel(e.account.role)} to ${roleLabel(role)}?`)) { select.value = e.account.role; return; }
   await updateAccount(e, { role }, `${e.name} is now ${roleLabel(role)}`);
 }
 
@@ -325,6 +342,7 @@ export function init() {
   $("dirTable").addEventListener("change", onRoleChange);
   $("dirAddBtn").onclick = () => openEdit(null);
   $("dirImportBtn").onclick = () => $("dirImportFile").click();
+  $("dirSampleBtn").onclick = downloadSample;
   $("dirImportFile").onchange = event => importFile(event.target.files?.[0]);
   $("dirBulkGrant").onclick = bulkGrant;
   $("dirBulkActivate").onclick = () => bulkActive(true);

@@ -1,10 +1,10 @@
 // QC pole list, pole selection, findings, reviewer decisions and evidence focus.
-import { $, api, esc, state, toast } from "./core.js?v=20261012-box-close-focus-1";
-import { loadWorkflow } from "./delivery.js?v=20261012-box-close-focus-1";
-import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261012-box-close-focus-1";
-import { loadProject } from "./qc-run.js?v=20261012-box-close-focus-1";
-import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261012-box-close-focus-1";
-import { can, currentProject } from "./workspace.js?v=20261012-box-close-focus-1";
+import { $, api, esc, state, toast } from "./core.js?v=20261013-no-line-nav";
+import { loadWorkflow } from "./delivery.js?v=20261013-no-line-nav";
+import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261013-no-line-nav";
+import { loadProject } from "./qc-run.js?v=20261013-no-line-nav";
+import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261013-no-line-nav";
+import { can, currentProject } from "./workspace.js?v=20261013-no-line-nav";
 
 function renderRuleCoverage(){const c=state.summary?.rule_coverage,btn=$("kpiCoverageBtn");if(!btn)return;btn.classList.toggle("partial",Boolean(c&&c.ran<c.total));$("kpiCoverage").textContent=c?`${c.ran} / ${c.total} ran`:"—";btn.title=c?`${c.total-c.ran} rule(s) could not run on this workbook. Click for details.`:"Run QC to see which rules apply to this workbook"}
 function openRuleCoverage(){const c=state.summary?.rule_coverage;if(!c){toast("Run QC on this dataset to see which rules apply to its workbook.","info",4200);return}

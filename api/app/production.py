@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from .feature_attributes import FEATURE_ATTRIBUTES
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -82,7 +83,7 @@ PRODUCTION_STATUSES = {"NOT_STARTED", "IN_PROGRESS", "COMPLETED", "REWORK", "ON_
 
 # How a point's coordinates were obtained: snapped to a LiDAR return, or placed in open space on a working plane
 # (the profile section, a vertical plane through the pole, a level plane at ground height, or the view's pivot depth).
-POINT_PLACEMENTS = {"lidar", "section_plane", "pole_plane", "ground_plane", "view_plane"}
+POINT_PLACEMENTS = {"lidar", "map", "section_plane", "pole_plane", "ground_plane", "view_plane"}
 
 SECTION3_ATTRIBUTE_FIELDS = [
     "feature_id", "parent_feature_id", "pole_internal_id", "item_number", "asset_sub_type",
@@ -98,6 +99,7 @@ def catalogue() -> dict:
         "annotation_groups": [
             {**group, **SEQUENCED_ANNOTATION_GROUPS.get(group["id"], {}),
              "automatic_numbering": group["id"] in SEQUENCED_ANNOTATION_GROUPS,
+             "fields": FEATURE_ATTRIBUTES.get(group["id"], []),
              "point_types": PRODUCTION_FAMILIES[group["id"]],
              "parent_families": list(PARENT_FAMILIES.get(group["id"], ()))}
             for group in PRODUCTION_ANNOTATION_GROUPS
@@ -141,11 +143,24 @@ def validate_annotation_values(family: str, feature_type: str, status: str, attr
         raise HTTPException(422, "Point type does not belong to the selected production family")
     if status not in PRODUCTION_STATUSES:
         raise HTTPException(422, "Unsupported production status")
-    unknown = sorted(set(attributes) - set(SECTION3_ATTRIBUTE_FIELDS) - {"placement"})
+    feature_fields = {f["key"]: f for f in FEATURE_ATTRIBUTES.get(family, [])}
+    unknown = sorted(set(attributes) - set(SECTION3_ATTRIBUTE_FIELDS) - {"placement"} - set(feature_fields))
     if unknown:
         raise HTTPException(422, f"Unsupported production attribute(s): {', '.join(unknown)}")
     if len(json.dumps(attributes, default=str)) > 20000:
         raise HTTPException(413, "Production attributes exceed the allowed size")
+    # Feature fields from the attribute workbook: a picked option or a typed value ("Other"), as short text,
+    # and only on the point types they belong to (pole base fields on Pole_Base, for example).
+    for key, field in feature_fields.items():
+        if key not in attributes:
+            continue
+        value = attributes[key]
+        if value is not None and not isinstance(value, (str, int, float)):
+            raise HTTPException(422, f"{field['label']} must be text")
+        if value is not None and len(str(value)) > 200:
+            raise HTTPException(422, f"{field['label']} is longer than 200 characters")
+        if field.get("features") and feature_type not in field["features"]:
+            raise HTTPException(422, f"{field['label']} does not apply to {feature_type}")
     if "placement" in attributes and attributes["placement"] not in POINT_PLACEMENTS:
         raise HTTPException(422, f"Unsupported point placement (use one of: {', '.join(sorted(POINT_PLACEMENTS))})")
 
@@ -184,6 +199,19 @@ def project_to_wgs84(project_crs: str, x: float, y: float) -> tuple[float, float
     if not math.isfinite(latitude) or not math.isfinite(longitude) or not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
         raise HTTPException(422, "Picked coordinates do not produce a valid WGS84 latitude/longitude")
     return latitude, longitude
+
+
+def wgs84_to_project(project_crs: str, latitude: float, longitude: float) -> tuple[float, float]:
+    """Transform a map click into the project's explicit CRS without browser-side CRS guessing."""
+    if not math.isfinite(latitude) or not math.isfinite(longitude) or not (-90 <= latitude <= 90) or not (-180 <= longitude <= 180):
+        raise HTTPException(422, "Map coordinates must be valid WGS84 latitude/longitude")
+    try:
+        x, y = Transformer.from_crs("EPSG:4326", project_crs, always_xy=True).transform(longitude, latitude)
+    except Exception as exc:
+        raise HTTPException(422, f"WGS84 cannot be transformed to the project CRS: {project_crs}") from exc
+    if not math.isfinite(x) or not math.isfinite(y):
+        raise HTTPException(422, "Map coordinates do not produce valid project coordinates")
+    return x, y
 
 
 def measurement_values(db: Session, project_id: str, x: float, y: float, z: float, reference_id: str | None) -> tuple[float | None, float | None, float | None]:

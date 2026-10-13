@@ -192,3 +192,18 @@ def test_edit_syncs_the_account_and_delete_needs_access_removed_first(boss):
         assert db.get(EmployeeRecord, record) is None and db.get(User, account["id"]).is_active is False
     finally:
         db.close()
+
+
+def test_the_sample_csv_offered_on_the_page_imports_cleanly():
+    """The Directory page's "Sample CSV" must always match what the importer accepts."""
+    import json
+    import re
+    from pathlib import Path
+
+    js = (Path(__file__).resolve().parents[2] / "web" / "assets" / "modules" / "employee-directory.js").read_text(encoding="utf-8")
+    header = json.loads(re.search(r"const SAMPLE_HEADER = (\[.*?\]);", js).group(1))
+    rows = [json.loads(line.strip().rstrip(",")) for line in re.search(r"const SAMPLE_ROWS = \[(.*?)\];\n", js, re.S).group(1).strip().splitlines()]
+    text = "\ufeff" + "\r\n".join(",".join(row) for row in [header, *rows]) + "\r\n"
+    parsed, skipped = parse_employee_csv(text)
+    assert len(parsed) == len(rows) >= 3 and skipped == []
+    assert all(r["email"].endswith("@example.com") for r in parsed)  # sample data only, never real people
