@@ -684,6 +684,7 @@ def test_georeferenced_map_overlay_has_toggle_tile_cap_and_intensity_control():
     css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
     map_overlay = (ROOT / "web" / "assets" / "modules" / "production-map.js").read_text(encoding="utf-8")
     assert 'button.id = "productionMapOverlayBtn"' in map_overlay
+    assert "button.hidden = true;" in map_overlay  # Map button hidden from the toolbar for now
     assert 'id="productionMapIntensity"' in map_overlay and "applyOverlayIntensity()" in map_overlay
     assert 'attribution.id = "productionMapAttribution"' in map_overlay
     assert 'attribution.textContent = "© OpenStreetMap"' in map_overlay

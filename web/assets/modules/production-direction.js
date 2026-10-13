@@ -1,7 +1,7 @@
 // Cardinal-direction panning for the Production LiDAR viewer.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, state } from "./core.js?v=20261013-no-line-nav";
-import { productionUnitLabel } from "./production-view.js?v=20261013-no-line-nav";
+import { $, state } from "./core.js?v=20261013-hide-map";
+import { productionUnitLabel } from "./production-view.js?v=20261013-hide-map";
 
 const DIRECTIONS={north:{x:0,y:1,label:"North",axis:"+Y"},south:{x:0,y:-1,label:"South",axis:"-Y"},east:{x:1,y:0,label:"East",axis:"+X"},west:{x:-1,y:0,label:"West",axis:"-X"}};
 

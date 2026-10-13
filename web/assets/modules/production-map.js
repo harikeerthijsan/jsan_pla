@@ -2,9 +2,9 @@
 // elevation remains the value selected in the engineering view. The API performs both CRS transformations using
 // the project's declared CRS, so arbitrary EPSG definitions are never guessed in the browser.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, cfg, state, toast } from "./core.js?v=20261013-no-line-nav";
-import { setAnnotationDraft } from "./production-annotations.js?v=20261013-no-line-nav";
-import { PLACEMENT_LABELS } from "./production-placement.js?v=20261013-no-line-nav";
+import { $, api, cfg, state, toast } from "./core.js?v=20261013-hide-map";
+import { setAnnotationDraft } from "./production-annotations.js?v=20261013-hide-map";
+import { PLACEMENT_LABELS } from "./production-placement.js?v=20261013-hide-map";
 
 let dialog = null, map = null, markerSource = null;
 const MAX_OVERLAY_TILES = 64;
@@ -318,6 +318,8 @@ function buildOverlayControls() {
   button.textContent = "Map";
   button.title = "Overlay OpenStreetMap beneath the LiDAR point cloud";
   button.disabled = true;
+  // Hidden for now at the user's request; the overlay code stays so it can be shown again by removing this line.
+  button.hidden = true;
   $("productionGeoToggleBtn").after(button);
   const control = document.createElement("div");
   control.id = "productionMapIntensityControl";
