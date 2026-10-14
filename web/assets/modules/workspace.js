@@ -1,15 +1,15 @@
 // Viewer creation, permissions, workspace switching, dataset selection and bootstrap.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { applyProductionPointSettings } from "./production-points.js?v=20261014-rdbl-zoom";
-import { $, api, state, rememberPage, updatePageTitle } from "./core.js?v=20261014-rdbl-zoom";
-import { loadWorkflow } from "./delivery.js?v=20261014-rdbl-zoom";
-import { loadNotifications } from "./notifications.js?v=20261014-rdbl-zoom";
-import { loadProduction } from "./production-data.js?v=20261014-rdbl-zoom";
-import { installProductionNavigation } from "./production-view.js?v=20261014-rdbl-zoom";
-import { clearCanvases } from "./qc-analysis.js?v=20261014-rdbl-zoom";
-import { renderPoles, renderSummary } from "./qc-review.js?v=20261014-rdbl-zoom";
-import { loadProject } from "./qc-run.js?v=20261014-rdbl-zoom";
-import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261014-rdbl-zoom";
+import { applyProductionPointSettings } from "./production-points.js?v=20261014-format-backfill";
+import { $, api, state, rememberPage, updatePageTitle } from "./core.js?v=20261014-format-backfill";
+import { loadWorkflow } from "./delivery.js?v=20261014-format-backfill";
+import { loadNotifications } from "./notifications.js?v=20261014-format-backfill";
+import { loadProduction } from "./production-data.js?v=20261014-format-backfill";
+import { installProductionNavigation } from "./production-view.js?v=20261014-format-backfill";
+import { clearCanvases } from "./qc-analysis.js?v=20261014-format-backfill";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261014-format-backfill";
+import { loadProject } from "./qc-run.js?v=20261014-format-backfill";
+import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261014-format-backfill";
 
 export function initViewer(){if(state.viewer)return;const v=new Potree.Viewer($("potree_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.viewer=v;state.overlay=new THREE.Group();state.relation=new THREE.Group();v.scene.scene.add(state.overlay);v.scene.scene.add(state.relation)}
 export function initProductionViewer(){if(state.productionViewer)return;const v=new Potree.Viewer($("production_render_area"));v.setEDLEnabled(true);v.setFOV(60);v.setPointBudget(2200000);v.setBackground("gradient");state.productionViewer=v;applyProductionPointSettings();installProductionNavigation(v)}

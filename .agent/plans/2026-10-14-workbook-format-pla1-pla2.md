@@ -73,3 +73,7 @@ Redeploy the previous release. Older code ignores the extra nullable column, so 
 - [x] 2026-10-14 Download routing (PLA-1 → `/production-workbook/latest`, PLA-2 → `/collection`, legacy falls back on 409), header shows the format,
   CORS exposes Content-Disposition / X-Collection-Summary / X-Workbook-Edited so cross-origin downloads keep their names
 - [x] 2026-10-14 Browser check on the dev app: hint, mismatch refusal (no dataset created), sample-1 detected as PLA-1, original-Excel note
+- [x] 2026-10-14 Existing datasets on deployed servers: the worker backfills formats on start (`app/workbook_format.py`,
+  `backfill_workbook_formats`, idempotent, one failure doesn't stop the rest). Datasets imported without an Excel stay unset;
+  admins set them from the header (`PUT /api/projects/{id}/workbook-format`, `project.create`, refused if it contradicts the
+  Excel, audited as SET_WORKBOOK_FORMAT; tested for 401/403/422/200). Local dev run: detected 3, no workbook 23, failed 0.

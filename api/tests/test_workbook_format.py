@@ -136,3 +136,52 @@ def test_pla1_download_returns_the_latest_saved_edit():
         latest = client.get(f"/api/projects/{project_id}/production-workbook/latest", headers=headers)
         assert latest.status_code == 200 and latest.content == edited
         assert latest.headers["x-workbook-edited"] == "1" and latest.headers["content-disposition"].endswith('client-updated.xlsx"')
+
+
+def test_worker_backfill_fills_existing_datasets_once():
+    from app.workbook_format import backfill_workbook_formats
+    with TestClient(app) as client:
+        headers = login(client)
+        with_excel = dataset(client, headers, collection_workbook(), None)       # imported before the format choice
+        no_excel = client.post("/api/projects", headers=headers, json={"name": "LiDAR only (old import)"}).json()["id"]
+    db = SessionLocal()
+    try:
+        first = backfill_workbook_formats(db)
+        assert db.query(Project).filter_by(id=with_excel).first().workbook_format == "PLA-2"
+        assert db.query(Project).filter_by(id=no_excel).first().workbook_format is None   # nothing to detect: admin sets it
+        assert first["detected"] >= 1 and first["no_workbook"] >= 1
+        again = backfill_workbook_formats(db)                                   # repeat runs only revisit unset datasets
+        assert again["detected"] == 0
+    finally:
+        db.close()
+
+
+def test_admin_sets_the_format_of_a_dataset_without_excel():
+    from app.auth import hash_password
+    from app.models import AuditLog, User
+    email = f"format-user-{uuid.uuid4().hex[:8]}@example.invalid"
+    db = SessionLocal()
+    try:
+        db.add(User(email=email, name="Production user", role="USER", password_hash=hash_password("Unique-Test-Password-123!"))); db.commit()
+    finally:
+        db.close()
+    with TestClient(app) as client:
+        headers = login(client)
+        no_excel = client.post("/api/projects", headers=headers, json={"name": "LiDAR only"}).json()["id"]
+        url = f"/api/projects/{no_excel}/workbook-format"
+        assert client.put(url, json={"workbook_format": "PLA-1"}).status_code == 401
+        user = {"Authorization": "Bearer " + client.post("/api/auth/login", json={"email": email, "password": "Unique-Test-Password-123!"}).json()["token"]}
+        assert client.put(url, headers=user, json={"workbook_format": "PLA-1"}).status_code == 403
+        assert client.put(url, headers=headers, json={"workbook_format": "PLA-9"}).status_code == 422
+        saved = client.put(url, headers=headers, json={"workbook_format": "PLA-1"})
+        assert saved.status_code == 200 and saved.json()["workbook_format"] == "PLA-1"
+        # A dataset that has an Excel can't be set against it.
+        collection = dataset(client, headers, collection_workbook(), "PLA-2")
+        refused = client.put(f"/api/projects/{collection}/workbook-format", headers=headers, json={"workbook_format": "PLA-1"})
+        assert refused.status_code == 422 and "PLA-2 (COLLECTION workbook)" in refused.json()["detail"]
+        assert client.put("/api/projects/missing/workbook-format", headers=headers, json={"workbook_format": "PLA-1"}).status_code == 404
+    db = SessionLocal()
+    try:
+        assert db.query(AuditLog).filter_by(action="SET_WORKBOOK_FORMAT", entity_id=no_excel).count() == 1
+    finally:
+        db.close()

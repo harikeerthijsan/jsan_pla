@@ -33,6 +33,7 @@ from .sections import vector_analysis, build_frame, section_result_key
 from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, wgs84_to_project, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
 from .collection_workbook import build_collection_workbook, detect_workbook_format, restore_validation_extensions
+from .workbook_format import latest_workbook_file, resolve_workbook_format
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
 APP_VERSION=os.getenv('APP_VERSION','3.4.1-operational')
@@ -503,6 +504,25 @@ async def check_production_workbook_format(file:UploadFile=File(...),u:User=Depe
     detected=detect_workbook_format(data)
     return {'workbook_format':detected,'label':WORKBOOK_FORMAT_LABELS.get(detected)}
 
+class WorkbookFormatIn(BaseModel):
+    workbook_format:str=Field(pattern=r'^PLA-[12]$')
+
+@app.put('/api/projects/{project_id}/workbook-format')
+def set_workbook_format(project_id:str,body:WorkbookFormatIn,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
+    """Admins set the format of a dataset (needed for ones imported without an Excel). It must match the dataset's Excel."""
+    p=db.query(Project).filter_by(id=project_id).first()
+    if not p: raise HTTPException(404,'Project not found')
+    current,_=latest_workbook_file(db,project_id)
+    if current:
+        try: detected=detect_workbook_format(read_bytes(current.object_key))
+        except FileNotFoundError: detected=None
+        if detected and detected!=body.workbook_format:
+            raise HTTPException(422,f"This dataset's Excel is a {WORKBOOK_FORMAT_LABELS[detected]}, so it can't be set to {body.workbook_format}.")
+    previous=p.workbook_format; p.workbook_format=body.workbook_format
+    db.add(AuditLog(actor=u.email,action='SET_WORKBOOK_FORMAT',entity_type='project',entity_id=project_id,
+                    detail_json=json.dumps({'from':previous,'to':body.workbook_format,'has_workbook':bool(current)})))
+    db.commit(); return project_dict(p)
+
 @app.post('/api/projects')
 def create_project(body:ProjectIn,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
     pid=f"{slug(body.name)}-{uuid.uuid4().hex[:8]}"; p=Project(id=pid,name=body.name,customer=body.customer,crs=body.crs,units=body.units,status='UPLOADING',workbook_format=body.workbook_format); db.add(p); db.flush(); ensure_current_version(db,pid,u.email); db.add(AuditLog(actor=u.email,action='CREATE_PROJECT',entity_type='project',entity_id=pid,detail_json=body.model_dump_json())); db.commit(); return project_dict(p)
@@ -727,24 +747,6 @@ def check_workbook_format(project:Project,data:bytes)->str|None:
                                 f"Choose {detected} for this Excel, or upload the {WORKBOOK_FORMAT_LABELS[project.workbook_format].split(' ',1)[1].strip('()')}.")
     if not project.workbook_format and detected: project.workbook_format=detected
     return project.workbook_format
-
-def latest_workbook_file(db:Session,project_id:str):
-    """The workbook the dataset works from now: the latest saved edit, else the uploaded source."""
-    version=db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).first()
-    if not version: return None,None
-    files=[f for f in version_files(db,version.id) if f.status=='UPLOADED']
-    edited=[f for f in files if f.role=='WORKBOOK_EDITED']; sources=[f for f in files if f.role=='WORKBOOK']
-    return ((edited or sources)[-1] if (edited or sources) else None),(sources[-1] if sources else None)
-
-def resolve_workbook_format(db:Session,project:Project)->str|None:
-    """Projects created before the format choice: detect it once from their workbook and keep it."""
-    if project.workbook_format: return project.workbook_format
-    current,_=latest_workbook_file(db,project.id)
-    if not current: return None
-    try: detected=detect_workbook_format(read_bytes(current.object_key))
-    except FileNotFoundError: return None
-    if detected: project.workbook_format=detected; db.commit()
-    return detected
 
 def elevation_to_feet(units:str|None)->tuple[float,str]:
     """Workbook elevations are *_elev_ft. Project Z is in project units; only metres need converting."""
