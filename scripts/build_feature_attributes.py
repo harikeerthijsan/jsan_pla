@@ -70,6 +70,13 @@ def read_blocks(path: Path) -> dict[str, list[dict]]:
 # Fields that are not in the workbook but are required in the app, appended after the workbook's own fields.
 # "source": "anchors" fills the dropdown with the anchor points already saved for the pole (anc_1, anc_2, ...).
 EXTRA_FIELDS = {
+    # COLLECTION lut_enums: first_pole / last_pole INCOMPLETE -> prev_inc / next_inc lat, lon, elev. Shown on Pole_Base only when
+    # that field is INCOMPLETE; "pick" fills all three from a click in the LiDAR view.
+    "poles": [
+        {"key": f"{side}_{part}", "label": f"{side}_{part}", "options": [], "manual": True, "features": ["Pole_Base"],
+         "pick": side, "show_when": {flag: "INCOMPLETE"}}
+        for side, flag in (("prev_inc", "first_pole"), ("next_inc", "last_pole")) for part in ("lat", "lon", "elev_ft")
+    ],
     # util_N_arm_no is a COLLECTION workbook column; the attribute workbook has no utility arm field, so it is added here.
     "attachments_util": [
         {"key": "util_arm_no", "label": "util_arm_no", "options": [], "manual": False, "source": "crossarms", "features": None},

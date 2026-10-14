@@ -980,3 +980,18 @@ a.brand-home:focus-visible{outline:2px solid #2aa7d8;outline-offset:4px}
 .format-control{display:inline-flex;align-items:center;gap:6px;margin-left:10px;font-size:11px;font-weight:700;color:#9a5b00}
 .format-control select{padding:2px 6px;font-size:11px;border-radius:6px;border:1px solid #e0b46a;background:#fff8ec;color:#5c3a00}
 
+/* Point card: first/last pole INCOMPLETE -> pick prev_inc / next_inc on the LiDAR. */
+.qs-pick-btn{grid-column:1/-1;justify-self:start;margin:2px 0 6px;padding:6px 10px;border-radius:8px;border:1px solid #2aa7d8;background:#e6f6fc;color:#0d4f6b;font-size:11.5px;font-weight:700;cursor:pointer}
+.qs-pick-btn:hover{background:#cfeef9}.qs-pick-btn:focus-visible{outline:2px solid #2aa7d8;outline-offset:2px}
+.qs-pick-field{margin-left:10px;padding-left:9px;border-left:2px solid #2aa7d8}
+.qs-pick-btn{margin-left:10px}
+/* Point card: other poles / structures on a pole base (other_1, other_2 …). */
+.qs-others{grid-column:1/-1;display:grid;gap:6px;margin-top:4px;padding-top:8px;border-top:1px dashed var(--line-strong,#c9dbe6)}
+.qs-others-head{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#5b7183)}
+.qs-other-entry{display:grid;gap:4px;padding:7px 8px;border:1px solid var(--line,#dde8ef);border-radius:9px;background:#f7fbfd}
+.qs-other-entry-head{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--brand-deep,#0d2d46)}
+.qs-other-remove{width:22px;height:22px;border:1px solid #e3b3b9;border-radius:6px;background:#fff;color:#a3303d;font-size:14px;line-height:1;cursor:pointer}
+.qs-other-remove:hover{background:#fde8ea}
+.qs-other-add{justify-self:start;padding:6px 10px;border-radius:8px;border:1px dashed #2aa7d8;background:#fff;color:#0d4f6b;font-size:11.5px;font-weight:700;cursor:pointer}
+.qs-other-add:hover{background:#e6f6fc}
+.qs-other-remove{display:inline-flex;align-items:center;justify-content:center;padding:0;font-weight:700}

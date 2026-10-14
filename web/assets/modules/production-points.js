@@ -5,7 +5,7 @@
 // but only up to the point budget. With 1.4 billion points across many files, a small budget runs out close up
 // and the coarse points stay on screen as large squares. A larger budget refines further; the adaptive square
 // size is also capped so any leftover coarse points stay modest instead of growing to 50 px.
-import { $, state } from "./core.js?v=20261014-format-backfill";
+import { $, state } from "./core.js?v=20261014-other-poles2";
 
 const SIZES = [0.3, 0.4, 0.5, 0.6, 0.8, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 const DETAIL = { balanced: 3_000_000, high: 5_000_000, ultra: 8_000_000 };

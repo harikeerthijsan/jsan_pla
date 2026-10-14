@@ -38,6 +38,15 @@ def test_every_module_specifier_uses_one_version():
     assert f'assets/app.js?v=' in html
 
 
+def test_page_uses_jsan_favicon():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    favicon = ASSETS / "favicon.svg"
+
+    assert '<link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />' in html
+    assert favicon.is_file()
+    assert "<title>JSAN</title>" in favicon.read_text(encoding="utf-8")
+
+
 def test_modules_import_only_existing_modules_and_never_the_entry():
     names = {module.name for module in MODULES}
     for module in MODULES:

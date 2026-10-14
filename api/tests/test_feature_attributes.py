@@ -15,7 +15,8 @@ def test_every_workbook_block_maps_to_a_production_group():
     for family in FEATURE_ATTRIBUTES:
         assert family in groups, family
         assert groups[family]["fields"] == FEATURE_ATTRIBUTES[family]
-    assert set(fields("poles")) == {"first_pole", "last_pole", "environment", "other_type", "other_id", "other_attach_N"}
+    assert set(fields("poles")) == {"first_pole", "last_pole", "environment", "other_type", "other_id", "other_attach_N",
+                                   "prev_inc_lat", "prev_inc_lon", "prev_inc_elev_ft", "next_inc_lat", "next_inc_lon", "next_inc_elev_ft"}
     assert set(fields("attachments_util")) == {"util_size", "util_support", "util_owner", "util_1_usage", "util_arm_no"}
     assert set(fields("span_guys")) == {"sgy_key", "sgy_runs_to", "sgy_end_type", "sgy_owner"}
 
@@ -69,3 +70,27 @@ def test_attachment_arm_number_lists_the_poles_crossarms():
     assert util["util_arm_no"]["source"] == "crossarms" and not util["util_arm_no"]["manual"]
     validate_annotation_values("attachments_comm", "comm_1", "IN_PROGRESS", {"comm_arm_no": "arm_2"})
     validate_annotation_values("attachments_util", "util_1", "IN_PROGRESS", {"util_arm_no": "pole"})
+
+
+def test_incoming_line_fields_follow_incomplete_and_are_numbers():
+    poles = fields("poles")
+    assert poles["prev_inc_lat"]["show_when"] == {"first_pole": "INCOMPLETE"} and poles["prev_inc_lat"]["pick"] == "prev_inc"
+    assert poles["next_inc_elev_ft"]["show_when"] == {"last_pole": "INCOMPLETE"} and poles["next_inc_elev_ft"]["features"] == ["Pole_Base"]
+    validate_annotation_values("poles", "Pole_Base", "IN_PROGRESS", {"first_pole": "INCOMPLETE", "prev_inc_lat": "34.37", "prev_inc_lon": -118.9, "prev_inc_elev_ft": "1012.5"})
+    for bad in ({"prev_inc_lat": "north"}, {"prev_inc_lat": "95"}, {"next_inc_lon": "-200"}):
+        with pytest.raises(HTTPException):
+            validate_annotation_values("poles", "Pole_Base", "IN_PROGRESS", bad)
+    with pytest.raises(HTTPException):  # only on the pole base point
+        validate_annotation_values("poles", "Pole_Top", "IN_PROGRESS", {"prev_inc_lat": "34.37"})
+
+
+def test_numbered_other_entries_are_validated_on_the_pole_base():
+    validate_annotation_values("poles", "Pole_Base", "IN_PROGRESS", {"other_1_type": "OTHER_POLE", "other_1_scope": "IN_SCOPE", "other_1_id": "P-1",
+                                                                     "other_2_scope": "OUT_OF_SCOPE", "other_2_lat": "34.1", "other_2_lon": "-118.2", "other_2_elev_ft": "40"})
+    for bad in ({"other_1_scope": "MAYBE"}, {"other_2_lat": "north"}, {"other_2_lon": "-181"}, {"other_0_type": "OTHER_POLE"}, {"other_51_id": "x"}):
+        with pytest.raises(HTTPException):
+            validate_annotation_values("poles", "Pole_Base", "IN_PROGRESS", bad)
+    with pytest.raises(HTTPException):
+        validate_annotation_values("poles", "Pole_Top", "IN_PROGRESS", {"other_1_type": "OTHER_POLE"})
+    with pytest.raises(HTTPException):  # only the pole group accepts them
+        validate_annotation_values("guys", "guy_1", "IN_PROGRESS", {"other_1_type": "OTHER_POLE"})

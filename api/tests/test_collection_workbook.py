@@ -190,15 +190,65 @@ def test_poles_sheet_is_overwritten_with_lidar_values():
     assert value(poles, 1, "environment") == "Crossing Street"
 
 
-def test_incoming_line_points_fill_prev_and_next_inc():
+def test_incomplete_first_and_last_pole_fill_prev_and_next_inc():
     data, summary = build_collection_workbook(None, POLES, [
-        point("prev_inc", "poles", {}, z=30.0),
-        point("next_inc", "poles", {}, z=31.0),
-        point("Pole_Base", "poles", {"last_pole": "YES"}, z=10.0),
+        point("Pole_Base", "poles", {"first_pole": "INCOMPLETE", "prev_inc_lat": "33.1111", "prev_inc_lon": "-118.2222", "prev_inc_elev_ft": "40.5",
+                                     "last_pole": "YES", "next_inc_lat": "33.9", "next_inc_lon": "-118.9", "next_inc_elev_ft": "41"}, z=10.0),
     ])
     poles = load_workbook(BytesIO(data))["poles"]
-    assert value(poles, 1, "prev_inc_lat") == 33.12345679 and value(poles, 1, "prev_inc_lon") == -118.98765432 and value(poles, 1, "prev_inc_elev_ft") == 30.0
-    assert value(poles, 1, "next_inc_elev_ft") == 31.0
-    # lut_enums: a captured incoming point means INCOMPLETE on that side, unless the user chose a value on the Pole_Base point.
-    assert value(poles, 1, "first_pole") == "INCOMPLETE" and value(poles, 1, "last_pole") == "YES"
-    assert summary["points_written"] == 3
+    assert value(poles, 1, "first_pole") == "INCOMPLETE"
+    assert value(poles, 1, "prev_inc_lat") == 33.1111 and value(poles, 1, "prev_inc_lon") == -118.2222 and value(poles, 1, "prev_inc_elev_ft") == 40.5
+    # last_pole is YES, so the next_inc values (left over from an earlier choice) are not written.
+    assert value(poles, 1, "last_pole") == "YES" and value(poles, 1, "next_inc_lat") is None
+    assert summary["points_written"] == 1
+
+
+def test_children_on_a_parent_keep_their_own_lat_lon_and_on_the_pole_only_elevation():
+    arm = {**point("arm_1", "crossarms", {"arm_key": "Wood"}, z=35.0), "latitude": 33.5, "longitude": -118.5}
+    data, _ = build_collection_workbook(None, POLES, [
+        arm,
+        point("comm_1", "attachments_comm", {"parent_feature_id": "pole"}, z=22.0),       # on the pole
+        point("comm_2", "attachments_comm", {"parent_feature_id": "arm_1"}, z=24.0),      # on arm_1
+        point("eq_1", "equipment", {"parent_feature_id": "pole"}, z=28.0),
+        point("util_1", "attachments_util", {"parent_feature_id": "arm_1"}, z=30.0),
+    ])
+    wb = load_workbook(BytesIO(data)); att, eq = wb["attachments"], wb["equipment"]
+    assert value(att, 1, "comm_1_elev_ft") == 22.0 and value(att, 1, "comm_1_lat") is None and value(att, 1, "comm_1_lon") is None
+    # On a parent: the child's own clicked position (not arm_1's 33.5 / -118.5).
+    assert value(att, 1, "comm_2_lat") == 33.12345679 and value(att, 1, "comm_2_lon") == -118.98765432 and value(att, 1, "comm_2_elev_ft") == 24.0
+    assert value(att, 1, "util_1_lat") == 33.12345679 and value(att, 1, "util_1_elev_ft") == 30.0
+    assert value(eq, 1, "eq_1_elev_ft") == 28.0 and value(eq, 1, "eq_1_lat") is None
+
+
+def test_child_on_the_pole_keeps_existing_lat_lon_cells():
+    base = load_workbook(BytesIO(build_collection_workbook(None, POLES, [])[0]))
+    att = base["attachments"]; names = headers(att)
+    att.cell(row(att, 1), names.index("comm_1_lat") + 1, 34.1); att.cell(row(att, 1), names.index("comm_1_lon") + 1, -118.1)
+    raw = BytesIO(); base.save(raw)
+    data, _ = build_collection_workbook(raw.getvalue(), POLES, [point("comm_1", "attachments_comm", {"parent_feature_id": "pole"}, z=21.5)])
+    att = load_workbook(BytesIO(data))["attachments"]
+    assert value(att, 1, "comm_1_lat") == 34.1 and value(att, 1, "comm_1_lon") == -118.1 and value(att, 1, "comm_1_elev_ft") == 21.5
+
+
+def test_other_poles_in_and_out_of_scope_fill_their_numbered_columns():
+    attrs = {"other_1_type": "OTHER_POLE", "other_1_scope": "IN_SCOPE", "other_1_id": "P-77", "other_1_attach_N": "3",
+             "other_2_type": "OTHER_POLE", "other_2_scope": "OUT_OF_SCOPE", "other_2_lat": "34.1234", "other_2_lon": "-118.4321", "other_2_elev_ft": "45.5",
+             "other_3_type": "BUILDING",
+             "other_5_type": "OTHER_POLE", "other_5_scope": "OUT_OF_SCOPE", "other_5_lat": "34.2", "other_5_lon": "-118.3", "other_5_elev_ft": "50"}
+    data, summary = build_collection_workbook(None, POLES, [point("Pole_Base", "poles", attrs, z=10.0)])
+    poles = load_workbook(BytesIO(data))["poles"]
+    assert value(poles, 1, "other_1_type") == "OTHER_POLE" and value(poles, 1, "other_1_id") == "P-77" and value(poles, 1, "other_1_attach_N") == "3"
+    assert value(poles, 1, "other_1_lat") is None                       # in scope: no position
+    assert value(poles, 1, "other_2_lat") == 34.1234 and value(poles, 1, "other_2_lon") == -118.4321 and value(poles, 1, "other_2_elev_ft") == 45.5
+    assert value(poles, 1, "other_2_id") is None                        # out of scope: no id
+    assert value(poles, 1, "other_3_type") == "BUILDING"
+    # The sheet has other_1…other_4; other_5 gets its own column set.
+    assert value(poles, 1, "other_5_lat") == 34.2 and "poles: other_5_* (6 columns)" in summary["columns_added"]
+    # The scope choice is not a workbook column.
+    assert not any("scope" in str(h) for h in headers(poles))
+
+
+def test_other_pole_saved_before_numbering_is_entry_one():
+    data, _ = build_collection_workbook(None, POLES, [point("Pole_Base", "poles", {"other_type": "OTHER_POLE", "other_id": "P-5", "other_attach_N": "1"}, z=10.0)])
+    poles = load_workbook(BytesIO(data))["poles"]
+    assert value(poles, 1, "other_1_type") == "OTHER_POLE" and value(poles, 1, "other_1_id") == "P-5"

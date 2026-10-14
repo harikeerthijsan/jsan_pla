@@ -106,7 +106,7 @@ def test_production_annotations_are_typed_measured_audited_and_role_protected():
             assert groups[family]['automatic_numbering'] is True
             assert groups[family]['prefix']==prefix and groups[family]['point_types']==[]
             assert 'max_count' not in groups[family]
-        assert groups['poles']['point_types']==['Pole_Base','Pole_Top','prev_inc','next_inc']
+        assert groups['poles']['point_types']==['Pole_Base','Pole_Top']
         assert groups['poles']['automatic_numbering'] is False
 
         first_anchor=client.post(f'/api/projects/{project_id}/production-annotations',headers=admin,json={

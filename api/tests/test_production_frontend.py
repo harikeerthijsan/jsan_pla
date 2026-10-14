@@ -811,3 +811,27 @@ def test_right_double_click_zooms_without_placing_points():
     # Zooms to the LiDAR point under the cursor (open space falls back to the focus distance); Shift zooms out.
     assert "const v=state.productionViewer,hit=productionPointAt(px,py)" in view and "e.shiftKey?ZOOM_OUT:ZOOM_IN" in view
     assert "Right double-click: zoom in (Shift: out)" in html
+
+
+def test_incomplete_pole_asks_for_prev_and_next_inc_with_a_lidar_pick():
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    annotations = (ROOT / "web" / "assets" / "modules" / "production-annotations.js").read_text(encoding="utf-8")
+    # Shown only when first_pole / last_pole is INCOMPLETE (hidden values are cleared), with a "Pick … on LiDAR" button.
+    assert "const applies = f => !f.show_when" in quick and "if (!applies(f) && values[f.key] != null) setAttr(f.key, null);" in quick
+    assert 'data-qs-pick="${esc(f.pick)}"' in quick and "function pickIncoming(side)" in quick
+    # ...placed directly under the field that reveals them (prev_inc_* under first_pole, next_inc_* under last_pole).
+    assert ".flatMap(f => [f, ...dependents(f)]);" in quick and "const dependents = f => visible.filter(d => d.show_when" in quick
+    # The pick converts with the server (project CRS) and stores elevation in feet.
+    assert "coordinates/to-wgs84" in quick and "setAttr(`${side}_elev_ft`" in quick
+    # They are no longer separate pole point types.
+    assert "prev_inc" not in annotations
+
+
+def test_pole_base_card_lists_other_poles_with_scope_and_add():
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    pick = (ROOT / "web" / "assets" / "modules" / "production-pick.js").read_text(encoding="utf-8")
+    # OTHER_POLE asks in/out of scope; in scope -> id + attach_N, out of scope -> lat/lon/elev with a LiDAR pick.
+    assert 'type.toUpperCase() === "OTHER_POLE"' in quick and 'value="IN_SCOPE"' in quick and 'value="OUT_OF_SCOPE"' in quick
+    assert 'data-qs-pick="${p}"' in quick and 'data-other-add' in quick and "function removeOtherEntry(n)" in quick
+    # The numbered entries are sent with the point.
+    assert 'group?.id==="poles"&&feature==="Pole_Base"' in pick and "other_\\d+_(type|scope|id|attach_N|lat|lon|elev_ft)" in pick

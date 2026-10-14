@@ -11,4 +11,6 @@ if (-not $env:ADMIN_PASSWORD) { $env:ADMIN_PASSWORD = "ChangeMe123!" }
 $Python = "C:\Users\admin\miniforge3\envs\pla-qc\python.exe"
 if (-not (Test-Path $Python)) { $Python = (Get-Command python -ErrorAction Stop).Source }
 Set-Location $Api
-& $Python -m uvicorn app.main:app --reload --port 8000
+# Reload only for application code: test, migration and data files changing must not restart the server
+# (a restart drops LiDAR downloads in progress with ERR_CONNECTION_RESET).
+& $Python -m uvicorn app.main:app --reload --reload-dir app --port 8000

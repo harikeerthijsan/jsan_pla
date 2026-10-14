@@ -53,8 +53,7 @@ PRODUCTION_FAMILIES = {
     ],
     # Numbered groups have no fixed list; their point types are validated by is_sequenced_feature_type.
     **{family: [] for family in SEQUENCED_ANNOTATION_GROUPS},
-    # prev_inc / next_inc: where the line heads to a previous / next pole that was not captured (first_pole / last_pole INCOMPLETE).
-    "poles": ["Pole_Base", "Pole_Top", "prev_inc", "next_inc"],
+    "poles": ["Pole_Base", "Pole_Top"],
 }
 
 PRODUCTION_ANNOTATION_GROUPS = [
@@ -79,6 +78,9 @@ PARENT_FAMILIES = {
     "guys": ("anchors",),
 }
 POLE_PARENT = "pole"
+OTHER_ENTRY_KEY = re.compile(r"^other_(\d+)_(type|scope|id|attach_N|lat|lon|elev_ft)$")
+OTHER_SCOPES = {"IN_SCOPE", "OUT_OF_SCOPE"}
+MAX_OTHER_ENTRIES = 50
 
 PRODUCTION_STATUSES = {"NOT_STARTED", "IN_PROGRESS", "COMPLETED", "REWORK", "ON_HOLD", "SUBMITTED_FOR_QC"}
 
@@ -145,7 +147,8 @@ def validate_annotation_values(family: str, feature_type: str, status: str, attr
     if status not in PRODUCTION_STATUSES:
         raise HTTPException(422, "Unsupported production status")
     feature_fields = {f["key"]: f for f in FEATURE_ATTRIBUTES.get(family, [])}
-    unknown = sorted(set(attributes) - set(SECTION3_ATTRIBUTE_FIELDS) - {"placement"} - set(feature_fields))
+    other_keys = {k for k in attributes if family == "poles" and OTHER_ENTRY_KEY.match(k)}
+    unknown = sorted(set(attributes) - set(SECTION3_ATTRIBUTE_FIELDS) - {"placement"} - set(feature_fields) - other_keys)
     if unknown:
         raise HTTPException(422, f"Unsupported production attribute(s): {', '.join(unknown)}")
     if len(json.dumps(attributes, default=str)) > 20000:
@@ -162,6 +165,38 @@ def validate_annotation_values(family: str, feature_type: str, status: str, attr
             raise HTTPException(422, f"{field['label']} is longer than 200 characters")
         if field.get("features") and feature_type not in field["features"]:
             raise HTTPException(422, f"{field['label']} does not apply to {feature_type}")
+        # Picked coordinates (prev_inc_* / next_inc_*) must be numbers, and lat/lon must be valid WGS84.
+        if field.get("pick") and value not in (None, ""):
+            try:
+                number = float(value)
+            except (TypeError, ValueError):
+                raise HTTPException(422, f"{field['label']} must be a number") from None
+            limit = 90 if key.endswith("_lat") else 180 if key.endswith("_lon") else None
+            if not math.isfinite(number) or (limit is not None and abs(number) > limit):
+                raise HTTPException(422, f"{field['label']} is outside the valid range")
+    # Other poles / structures on the pole base: other_N_type, other_N_scope (OTHER_POLE: in or out of scope),
+    # other_N_id / other_N_attach_N (in scope) or other_N_lat / _lon / _elev_ft (out of scope, picked on the LiDAR).
+    for key in sorted(other_keys):
+        n, part = OTHER_ENTRY_KEY.match(key).groups()
+        value = attributes[key]
+        if feature_type != "Pole_Base":
+            raise HTTPException(422, f"{key} does not apply to {feature_type}")
+        if int(n) < 1 or int(n) > MAX_OTHER_ENTRIES:
+            raise HTTPException(422, f"{key}: use other_1 to other_{MAX_OTHER_ENTRIES}")
+        if value in (None, ""):
+            continue
+        if not isinstance(value, (str, int, float)) or len(str(value)) > 200:
+            raise HTTPException(422, f"{key} must be short text")
+        if part == "scope" and value not in OTHER_SCOPES:
+            raise HTTPException(422, f"{key} must be one of: {', '.join(sorted(OTHER_SCOPES))}")
+        if part in ("lat", "lon", "elev_ft"):
+            try:
+                number = float(value)
+            except (TypeError, ValueError):
+                raise HTTPException(422, f"{key} must be a number") from None
+            limit = 90 if part == "lat" else 180 if part == "lon" else None
+            if not math.isfinite(number) or (limit is not None and abs(number) > limit):
+                raise HTTPException(422, f"{key} is outside the valid range")
     if "placement" in attributes and attributes["placement"] not in POINT_PLACEMENTS:
         raise HTTPException(422, f"Unsupported point placement (use one of: {', '.join(sorted(POINT_PLACEMENTS))})")
 

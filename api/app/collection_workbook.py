@@ -45,12 +45,51 @@ FAMILY_SHEETS = {
     "span_guys": ("span_guys", "sgy"), "sidewalk_braces": ("sidewalk_braces", "swb"), "other_poles": ("poles", "other"),
 }
 POLE_BASE_FIELDS = ("first_pole", "last_pole", "environment")
-# Incoming-line points on the poles sheet (lut_enums: first/last_pole INCOMPLETE -> prev/next_inc_lat/lon/elev).
+# Child points (attachments, equipment) that hang from the pole get only their elevation written; those that hang from a
+# parent point (e.g. a crossarm) get their own latitude/longitude and elevation.
+CHILD_FAMILIES = {"attachments_comm", "attachments_util", "equipment"}
+# Older releases saved the incoming line as its own pole points; still written if any exist.
 INCOMING_POINTS = {"prev_inc": "first_pole", "next_inc": "last_pole"}
 OTHER_ON_POLE_BASE = {"other_type": "type", "other_id": "id", "other_attach_N": "attach_N"}
 HEADER_FILL = PatternFill("solid", fgColor="FF375623")
 HEADER_FONT = Font(bold=True, color="FFFFFFFF")
 X14_URI = "{CCE6A557-97BC-4b89-ADB6-D9C93CAAB3DF}"
+
+
+def other_entries(attrs: dict) -> dict[int, dict]:
+    """Other poles / structures entered on a pole base, by number: {n: {column suffix: value}}.
+
+    OTHER_POLE in scope -> other_N_id / other_N_attach_N; OTHER_POLE out of scope -> other_N_lat / _lon / _elev_ft.
+    Other types (BUILDING …) keep whatever was entered. Points saved before numbering (other_type …) are entry 1."""
+    raw: dict[int, dict] = {}
+    for key, value in attrs.items():
+        m = re.match(r"^other_(\d+)_(type|scope|id|attach_N|lat|lon|elev_ft)$", key)
+        if m and value not in (None, ""):
+            raw.setdefault(int(m.group(1)), {})[m.group(2)] = value
+    if 1 not in raw:
+        legacy = {suffix: attrs[key] for key, suffix in OTHER_ON_POLE_BASE.items() if attrs.get(key) not in (None, "")}
+        if legacy:
+            raw[1] = legacy
+    out: dict[int, dict] = {}
+    for n in sorted(raw):
+        entry, scope = raw[n], str(raw[n].get("scope") or "").upper()
+        is_pole = str(entry.get("type") or "").upper() == "OTHER_POLE"
+        keep = (("type", "lat", "lon", "elev_ft") if is_pole and scope == "OUT_OF_SCOPE"
+                else ("type", "id", "attach_N") if is_pole else ("type", "id", "attach_N", "lat", "lon", "elev_ft"))
+        values = {}
+        for suffix in keep:
+            if suffix not in entry:
+                continue
+            value = entry[suffix]
+            if suffix in ("lat", "lon", "elev_ft"):
+                try:
+                    value = round(float(value), 3 if suffix == "elev_ft" else 8)
+                except (TypeError, ValueError):
+                    pass
+            values[suffix] = value
+        if values:
+            out[n] = values
+    return out
 
 
 def _key(value):
@@ -339,11 +378,23 @@ def build_collection_workbook(base: bytes | None, poles: list[dict], points: lis
                 for field in POLE_BASE_FIELDS:
                     if attrs.get(field) not in (None, ""):
                         s.write(row, field, attrs[field], summary)
-                if any(attrs.get(k) not in (None, "") for k in OTHER_ON_POLE_BASE):
-                    s.ensure_set("other", 1, summary)
-                    for key, suffix in OTHER_ON_POLE_BASE.items():
-                        if attrs.get(key) not in (None, ""):
-                            s.write(row, f"other_1_{suffix}", attrs[key], summary)
+                # first_pole / last_pole INCOMPLETE: the picked spot toward the uncaptured pole (prev_inc_* / next_inc_*).
+                for side, flag in (("prev_inc", "first_pole"), ("next_inc", "last_pole")):
+                    if str(attrs.get(flag) or "").upper() != "INCOMPLETE":
+                        continue
+                    for part in ("lat", "lon", "elev_ft"):
+                        raw = attrs.get(f"{side}_{part}")
+                        if raw in (None, ""):
+                            continue
+                        try:
+                            number = round(float(raw), 8 if part != "elev_ft" else 3)
+                        except (TypeError, ValueError):
+                            number = raw
+                        s.write(row, f"{side}_{part}", number, summary)
+                for n, entry in other_entries(attrs).items():
+                    s.ensure_set("other", n, summary)
+                    for suffix, value in entry.items():
+                        s.write(row, f"other_{n}_{suffix}", value, summary)
             elif is_top:
                 s.write(row, "top_lat", lat, summary); s.write(row, "top_lon", lon, summary); s.write(row, "top_elev_ft", elevation(z), summary)
             elif feature in INCOMING_POINTS:
@@ -371,6 +422,8 @@ def build_collection_workbook(base: bytes | None, poles: list[dict], points: lis
         n = int(m.group(1))
         s.ensure_set(prefix, n, summary)
         row = s.rows.get(_key(pole_id))
+        if family in CHILD_FAMILIES and str(attrs.get("parent_feature_id") or "pole").lower() == "pole":
+            lat = lon = ...  # hangs from the pole: only its elevation is written; the lat/lon cells are left as they are
         for suffix in s.suffixes(prefix):
             value = {"lat": lat, "tip_lat": lat, "lon": lon, "tip_lon": lon, "elev_ft": elevation(z)}.get(suffix, ...)
             if value is not ...:

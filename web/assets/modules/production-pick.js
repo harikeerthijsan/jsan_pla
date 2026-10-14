@@ -1,14 +1,14 @@
 // Point picking, editing, saving, deleting and edit-conflict handling.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261014-format-backfill";
-import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261014-format-backfill";
-import { downloadCollectionWorkbook, downloadProductionAnnotations, initFormatControl } from "./production-data.js?v=20261014-format-backfill";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261014-format-backfill";
-import { cancelProductionBox } from "./production-view.js?v=20261014-format-backfill";
-import { cancelProductionMeasure } from "./production-measure.js?v=20261014-format-backfill";
-import { productionPoleTarget } from "./production-poles.js?v=20261014-format-backfill";
-import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261014-format-backfill";
-import { can } from "./workspace.js?v=20261014-format-backfill";
+import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261014-other-poles2";
+import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261014-other-poles2";
+import { downloadCollectionWorkbook, downloadProductionAnnotations, initFormatControl } from "./production-data.js?v=20261014-other-poles2";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261014-other-poles2";
+import { cancelProductionBox } from "./production-view.js?v=20261014-other-poles2";
+import { cancelProductionMeasure } from "./production-measure.js?v=20261014-other-poles2";
+import { productionPoleTarget } from "./production-poles.js?v=20261014-other-poles2";
+import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261014-other-poles2";
+import { can } from "./workspace.js?v=20261014-other-poles2";
 
 // Saved-point quick actions: click a point in the 3D view (or the list / checklist buttons) to edit or remove it.
 export function removeSavedPoint(id){const row=state.productionAnnotations.find(item=>item.id===id);if(!row||!can("production.annotate"))return;closePointMenu();editProductionAnnotation(row);$("annotationDeleteBtn").click()}
@@ -50,7 +50,7 @@ export function startProductionPick(preset=null){if(!state.productionPointclouds
   state.productionPickTool={cancel:()=>{dom.removeEventListener("mousedown",onDown);dom.removeEventListener("mouseup",onUp);dom.classList.remove("production-picking");state.productionPicking=false}}}
 export function productionBlockForCoordinates(coords){const candidates=state.productionBlocks.filter(block=>coords.x>=block.bounds.x_min&&coords.x<=block.bounds.x_max&&coords.y>=block.bounds.y_min&&coords.y<=block.bounds.y_max);if(!candidates.length)return null;const withZ=candidates.filter(block=>block.bounds.z_min==null||block.bounds.z_max==null||(coords.z>=block.bounds.z_min&&coords.z<=block.bounds.z_max));const pool=withZ.length?withZ:candidates;return pool.sort((a,b)=>(a.bounds.x_max-a.bounds.x_min)*(a.bounds.y_max-a.bounds.y_min)-(b.bounds.x_max-b.bounds.x_min)*(b.bounds.y_max-b.bounds.y_min))[0]}
 // Feature fields from the attribute workbook that apply to the chosen group and point type, as entered in the card.
-export function featureAttributes(){const group=productionAnnotationGroups().find(item=>item.id===$("annotationFamily").value),feature=$("annotationFeature").value,out={};for(const field of group?.fields||[]){if(field.features&&!field.features.includes(feature))continue;const value=state.productionDraftAttributes?.[field.key];if(value!=null&&String(value).trim()!=="")out[field.key]=String(value).trim()}return out}
+export function featureAttributes(){const group=productionAnnotationGroups().find(item=>item.id===$("annotationFamily").value),feature=$("annotationFeature").value,out={};for(const field of group?.fields||[]){if(field.features&&!field.features.includes(feature))continue;const value=state.productionDraftAttributes?.[field.key];if(value!=null&&String(value).trim()!=="")out[field.key]=String(value).trim()}if(group?.id==="poles"&&feature==="Pole_Base")for(const [key,value] of Object.entries(state.productionDraftAttributes||{}))if(/^other_\d+_(type|scope|id|attach_N|lat|lon|elev_ft)$/.test(key)&&value!=null&&String(value).trim()!=="")out[key]=String(value).trim();return out}
 export function annotationAttributes(){const group=productionAnnotationGroups().find(item=>item.id===$("annotationFamily").value);return {...(group?.relationship?{relationship:group.relationship}:{}),placement:state.productionDraftPlacement||"lidar",...featureAttributes()}}
 export async function reloadProductionAnnotationsAfterConflict(message,{poleId,family}){try{const [annotations,poles]=await Promise.all([api(`/api/projects/${state.projectId}/production-annotations`),api(`/api/projects/${state.projectId}/poles`)]);state.productionAnnotations=annotations;state.productionPoles=poles;resetAnnotationForm({poleId,family});renderProductionAnnotations();$("annotationError").textContent=message;toast(message,"error",7000)}catch{}}
 
