@@ -3,10 +3,10 @@
 // selects, same submit, same conflict handling); it only mirrors and forwards. It follows the point while the view
 // moves and stays clamped inside the viewer when the point leaves the screen.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, esc, state, toast } from "./core.js?v=20261013-hide-map";
-import { PLACEMENT_LABELS } from "./production-placement.js?v=20261013-hide-map";
-import { openProductionMapPicker } from "./production-map.js?v=20261013-hide-map";
-import { productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261013-hide-map";
+import { $, esc, state, toast } from "./core.js?v=20261014-rdbl-zoom";
+import { PLACEMENT_LABELS } from "./production-placement.js?v=20261014-rdbl-zoom";
+import { openProductionMapPicker } from "./production-map.js?v=20261014-rdbl-zoom";
+import { productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261014-rdbl-zoom";
 
 const MIRRORED = [["qsFamily", "annotationFamily"], ["qsFeature", "annotationFeature"], ["qsParent", "annotationParent"]];
 let card = null, ring = null, shownKey = "", frame = 0;
@@ -47,11 +47,12 @@ function build() {
     const isOther = select.value === OTHER;
     other.classList.toggle("hidden", !isOther);
     setAttr(key, isOther ? other.value : select.value);
+    autoValues.delete(key);  // the user chose; stop following the Parent
     if (isOther) other.focus();
   });
   card.addEventListener("input", event => {
     const input = event.target.closest("[data-attr-other], [data-attr-text]");
-    if (input) setAttr(input.dataset.attrOther || input.dataset.attrText, input.value);
+    if (input) { setAttr(input.dataset.attrOther || input.dataset.attrText, input.value); autoValues.delete(input.dataset.attrOther || input.dataset.attrText); }
   });
   card.addEventListener("change", event => {
     const pair = MIRRORED.find(([mine]) => mine === event.target.id);
@@ -106,31 +107,56 @@ function setAttr(key, value) {
   else state.productionDraftAttributes[key] = value;
 }
 
-// Anchor points already saved for the selected pole (anc_1, anc_2, ...), for fields such as guy_anchor_no.
-function poleAnchors() {
+// Points of one group already saved for the selected pole, e.g. anchors (anc_1, anc_2, ...) for guy_anchor_no or
+// crossarms (arm_1, ...) for comm_arm_no / util_arm_no.
+function poleSaved(family) {
   const poleId = $("annotationPoleId").value;
   return (state.productionAnnotations || [])
-    .filter(row => row.family === "anchors" && String(row.pole_internal_id ?? row.attributes?.pole_internal_id) === poleId)
+    .filter(row => row.family === family && String(row.pole_internal_id ?? row.attributes?.pole_internal_id) === poleId)
     .map(row => row.feature_type)
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+// Dropdowns the app fills in list "pole" plus the saved points of that kind. Their default follows the point's Parent
+// (arm_2 when it hangs from arm_2); with nothing of that kind on the pole yet, or an attachment on the pole itself, it is "pole".
+const POLE = "pole";
+const autoValues = new Map();
+let autoPoint = "";
+function sourceDefault(source, items) {
+  const parent = (state.productionAnnotations || []).find(row => row.id === $("annotationParent").value)?.feature_type;
+  if (parent && items.includes(parent)) return parent;
+  if (!items.length || (source === "crossarms" && !$("annotationParent").value)) return POLE;
+  return "";
 }
 
 // The fields of the chosen group / point type, from the attribute workbook (served in the catalogue).
 function renderFields() {
   const family = $("annotationFamily").value, feature = $("annotationFeature").value;
-  const anchors = poleAnchors();
-  const key = `${family}|${feature}|${$("annotationId").value}|${state.productionDraft ? `${state.productionDraft.x}|${state.productionDraft.y}` : ""}|${$("annotationPoleId").value}|${anchors.join(",")}`;
+  const saved = { anchors: poleSaved("anchors"), crossarms: poleSaved("crossarms") };
+  const point = `${family}|${feature}|${$("annotationId").value}|${state.productionDraft ? `${state.productionDraft.x}|${state.productionDraft.y}` : ""}|${$("annotationPoleId").value}`;
+  const key = `${point}|${$("annotationParent").value}|${saved.anchors.join(",")}|${saved.crossarms.join(",")}`;
   if (key === fieldsKey) return;
   fieldsKey = key;
+  if (point !== autoPoint) { autoPoint = point; autoValues.clear(); }
   const group = productionAnnotationGroups().find(g => g.id === family);
   const fields = (group?.fields || []).filter(f => !f.features || f.features.includes(feature));
   const values = state.productionDraftAttributes || {};
+  // Fill (or keep following) the default of app-filled dropdowns unless the user has chosen a value.
+  for (const f of fields) {
+    if (!saved[f.source]) continue;
+    const current = values[f.key] ?? "";
+    if (current !== "" && autoValues.get(f.key) !== current) continue;
+    const next = sourceDefault(f.source, saved[f.source]);
+    setAttr(f.key, next);
+    if (next) autoValues.set(f.key, next); else autoValues.delete(f.key);
+  }
+  const filled = state.productionDraftAttributes || {};
   $("qsFields").innerHTML = fields.map(f => {
-    const value = values[f.key] ?? "";
+    const value = filled[f.key] ?? "";
     if (f.manual) return `<label class="qs-field">${esc(f.label)}<input data-attr-text="${esc(f.key)}" maxlength="200" value="${esc(value)}" placeholder="Type ${esc(f.label.toLowerCase())}" autocomplete="off"></label>`;
-    const options = f.source === "anchors" ? anchors : f.options;
+    const options = saved[f.source] ? [POLE, ...saved[f.source]] : f.options;
     const known = value === "" || options.includes(value);
-    const empty = f.source === "anchors" && !anchors.length ? '<option value="" disabled>No anchors saved for this pole yet</option>' : "";
+    const empty = saved[f.source] && !saved[f.source].length ? `<option value="" disabled>No ${f.source} saved for this pole yet</option>` : "";
     return `<label class="qs-field">${esc(f.label)}<select data-attr-select="${esc(f.key)}"><option value="">—</option>${empty}${options.map(o => `<option value="${esc(o)}"${o === value ? " selected" : ""}>${esc(o)}</option>`).join("")}<option value="${OTHER}"${known ? "" : " selected"}>Other (type a value)</option></select><input class="qs-other${known ? " hidden" : ""}" data-attr-other="${esc(f.key)}" maxlength="200" value="${known ? "" : esc(value)}" placeholder="Type ${esc(f.label.toLowerCase())}" autocomplete="off"></label>`;
   }).join("");
   $("qsFields").classList.toggle("hidden", !fields.length);

@@ -16,7 +16,7 @@ def test_every_workbook_block_maps_to_a_production_group():
         assert family in groups, family
         assert groups[family]["fields"] == FEATURE_ATTRIBUTES[family]
     assert set(fields("poles")) == {"first_pole", "last_pole", "environment", "other_type", "other_id", "other_attach_N"}
-    assert set(fields("attachments_util")) == {"util_size", "util_support", "util_owner", "util_1_usage"}
+    assert set(fields("attachments_util")) == {"util_size", "util_support", "util_owner", "util_1_usage", "util_arm_no"}
     assert set(fields("span_guys")) == {"sgy_key", "sgy_runs_to", "sgy_end_type", "sgy_owner"}
 
 
@@ -60,3 +60,12 @@ def test_guys_and_sidewalk_braces_have_anchor_and_typed_fields():
     assert braces["swb_length_ft"]["manual"] and braces["swb_guy_nos"]["manual"]
     validate_annotation_values("guys", "guy_1", "IN_PROGRESS", {"guy_anchor_no": "anc_1"})
     validate_annotation_values("sidewalk_braces", "swb_1", "IN_PROGRESS", {"swb_anchor_no": "anc_2", "swb_length_ft": "8.5", "swb_guy_nos": "guy_1, guy_2"})
+
+
+def test_attachment_arm_number_lists_the_poles_crossarms():
+    comm, util = fields("attachments_comm"), fields("attachments_util")
+    # Same choices as the attachment's Parent: the crossarms saved on the pole, or "pole" (filled in by the app).
+    assert comm["comm_arm_no"]["source"] == "crossarms" and not comm["comm_arm_no"]["manual"]
+    assert util["util_arm_no"]["source"] == "crossarms" and not util["util_arm_no"]["manual"]
+    validate_annotation_values("attachments_comm", "comm_1", "IN_PROGRESS", {"comm_arm_no": "arm_2"})
+    validate_annotation_values("attachments_util", "util_1", "IN_PROGRESS", {"util_arm_no": "pole"})

@@ -45,6 +45,8 @@ FAMILY_SHEETS = {
     "span_guys": ("span_guys", "sgy"), "sidewalk_braces": ("sidewalk_braces", "swb"), "other_poles": ("poles", "other"),
 }
 POLE_BASE_FIELDS = ("first_pole", "last_pole", "environment")
+# Incoming-line points on the poles sheet (lut_enums: first/last_pole INCOMPLETE -> prev/next_inc_lat/lon/elev).
+INCOMING_POINTS = {"prev_inc": "first_pole", "next_inc": "last_pole"}
 OTHER_ON_POLE_BASE = {"other_type": "type", "other_id": "id", "other_attach_N": "attach_N"}
 HEADER_FILL = PatternFill("solid", fgColor="FF375623")
 HEADER_FONT = Font(bold=True, color="FFFFFFFF")
@@ -62,6 +64,27 @@ def is_collection_workbook(wb) -> bool:
     if "poles" not in wb.sheetnames or not any(sheet in wb.sheetnames for sheet, _ in FAMILY_SHEETS.values() if sheet != "poles"):
         return False
     return "internal_id" in [c.value for c in wb["poles"][1]]
+
+
+WORKBOOK_FORMATS = ("PLA-1", "PLA-2")
+
+
+def detect_workbook_format(data: bytes) -> str | None:
+    """PLA-2: the COLLECTION group sheets (poles, attachments, …). PLA-1: one ZoneName sheet. None: neither."""
+    try:
+        wb = load_workbook(BytesIO(data), read_only=True)
+    except Exception:
+        return None
+    try:
+        names = {re.sub(r"[\s_]+", "", name).lower() for name in wb.sheetnames}
+        if {"poles", "attachments"} <= names:
+            return "PLA-2"
+        visible = [ws for ws in wb.worksheets if getattr(ws, "sheet_state", "visible") == "visible"]
+        if "zonename" in names or len(visible) == 1:
+            return "PLA-1"
+        return None
+    finally:
+        wb.close()
 
 
 def _shift_ref(ref: str, pos: int, amount: int) -> str:
@@ -323,6 +346,14 @@ def build_collection_workbook(base: bytes | None, poles: list[dict], points: lis
                             s.write(row, f"other_1_{suffix}", attrs[key], summary)
             elif is_top:
                 s.write(row, "top_lat", lat, summary); s.write(row, "top_lon", lon, summary); s.write(row, "top_elev_ft", elevation(z), summary)
+            elif feature in INCOMING_POINTS:
+                s.write(row, f"{feature}_lat", lat, summary); s.write(row, f"{feature}_lon", lon, summary); s.write(row, f"{feature}_elev_ft", elevation(z), summary)
+                # The pole is then INCOMPLETE on that side, unless first_pole / last_pole was chosen on its Pole_Base point.
+                flag = INCOMING_POINTS[feature]
+                base_attrs = next(((p.get("attributes") or {}) for (pid, fam, feat), p in latest.items()
+                                   if pid == pole_id and fam in ("poles", "Pole Points") and feat in ("Pole_Base", "Pole Base / Ground Point")), {})
+                if base_attrs.get(flag) in (None, ""):
+                    s.write(row, flag, "INCOMPLETE", summary)
             else:
                 summary["skipped"].append(f"{feature}: not a workbook column")
                 continue

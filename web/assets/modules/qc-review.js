@@ -1,10 +1,10 @@
 // QC pole list, pole selection, findings, reviewer decisions and evidence focus.
-import { $, api, esc, state, toast } from "./core.js?v=20261013-hide-map";
-import { loadWorkflow } from "./delivery.js?v=20261013-hide-map";
-import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261013-hide-map";
-import { loadProject } from "./qc-run.js?v=20261013-hide-map";
-import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261013-hide-map";
-import { can, currentProject } from "./workspace.js?v=20261013-hide-map";
+import { $, api, esc, state, toast } from "./core.js?v=20261014-rdbl-zoom";
+import { loadWorkflow } from "./delivery.js?v=20261014-rdbl-zoom";
+import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261014-rdbl-zoom";
+import { loadProject } from "./qc-run.js?v=20261014-rdbl-zoom";
+import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261014-rdbl-zoom";
+import { can, currentProject } from "./workspace.js?v=20261014-rdbl-zoom";
 
 function renderRuleCoverage(){const c=state.summary?.rule_coverage,btn=$("kpiCoverageBtn");if(!btn)return;btn.classList.toggle("partial",Boolean(c&&c.ran<c.total));$("kpiCoverage").textContent=c?`${c.ran} / ${c.total} ran`:"—";btn.title=c?`${c.total-c.ran} rule(s) could not run on this workbook. Click for details.`:"Run QC to see which rules apply to this workbook"}
 function openRuleCoverage(){const c=state.summary?.rule_coverage;if(!c){toast("Run QC on this dataset to see which rules apply to its workbook.","info",4200);return}
@@ -46,7 +46,7 @@ export function init() {
   $("refreshProfile").onclick=reloadAnalysisAndSection;
   $("crossStation").oninput=()=>{state.crossStation=Number($("crossStation").value);updateCrossLabel();renderAnalysisViews()};
   $("severityFilter").onchange=()=>{state.severity=$("severityFilter").value;if(state.currentScene)renderFindings(state.currentScene.findings)};
-  $("decisionForm").onsubmit=async ev=>{if(ev.submitter?.value==="cancel")return;ev.preventDefault();try{await api(`/api/findings/${$("decisionFindingId").value}/decision`,{method:"POST",body:JSON.stringify({decision:$("decisionValue").value,comment:$("decisionComment").value||null})});$("decisionDialog").close();await loadProject();if(state.currentPole)await selectPole(state.currentPole.internal_id)}catch(e){alert(e.message)}};
+  $("decisionForm").onsubmit=async ev=>{if(ev.submitter?.value==="cancel")return;ev.preventDefault();try{await api(`/api/findings/${$("decisionFindingId").value}/decision`,{method:"POST",body:JSON.stringify({decision:$("decisionValue").value,comment:$("decisionComment").value||null})});$("decisionDialog").close();toast("Decision recorded.","success");await loadProject();if(state.currentPole)await selectPole(state.currentPole.internal_id)}catch(e){toast(`Decision not saved: ${e.message}`,"error")}};
   $("relatedBtn").onclick=()=>focusAllEvidence();
   $("focusBtn").onclick=()=>focusPrimary();
 }

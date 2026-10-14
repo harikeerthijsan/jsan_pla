@@ -2,12 +2,12 @@
 // view and the values (3D, horizontal, vertical) are listed in the side panel. Measurements are for this session
 // and dataset only; they are not saved.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, esc, state, toast } from "./core.js?v=20261013-hide-map";
-import { annotationUnits } from "./production-annotations.js?v=20261013-hide-map";
-import { pickOrPlace } from "./production-placement.js?v=20261013-hide-map";
-import { cancelProductionPick } from "./production-pick.js?v=20261013-hide-map";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261013-hide-map";
-import { cancelProductionBox } from "./production-view.js?v=20261013-hide-map";
+import { $, esc, state, toast } from "./core.js?v=20261014-rdbl-zoom";
+import { annotationUnits } from "./production-annotations.js?v=20261014-rdbl-zoom";
+import { pickOrPlace } from "./production-placement.js?v=20261014-rdbl-zoom";
+import { cancelProductionPick } from "./production-pick.js?v=20261014-rdbl-zoom";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261014-rdbl-zoom";
+import { cancelProductionBox } from "./production-view.js?v=20261014-rdbl-zoom";
 
 const COLOR = 0x3fe0ff, DRAFT_COLOR = 0xffd24a;
 const tapes = [];

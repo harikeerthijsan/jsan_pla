@@ -1,8 +1,8 @@
 // Team progress dashboard.
-import { openSuperPage } from "./super-admin.js?v=20261013-hide-map";
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261013-hide-map";
-import { openTeamPage } from "./team.js?v=20261013-hide-map";
-import { applyWorkspace, can } from "./workspace.js?v=20261013-hide-map";
+import { openSuperPage } from "./super-admin.js?v=20261014-rdbl-zoom";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261014-rdbl-zoom";
+import { openTeamPage } from "./team.js?v=20261014-rdbl-zoom";
+import { applyWorkspace, can } from "./workspace.js?v=20261014-rdbl-zoom";
 
 export const TEAM_REDUCED=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 export const TEAM_AVATAR_HUES=[206,152,262,28,340,188,96,226];

@@ -754,3 +754,60 @@ def test_confirmations_use_the_in_page_dialog_not_browser_popups():
         assert not re.search(r"(?<![\w.])(window\.)?confirm\(", text), f"{path.name} still uses the browser confirm popup"
     pick = (modules / "production-pick.js").read_text(encoding="utf-8")
     assert 'await confirmAction("Delete this saved production point?' in pick
+
+
+def test_page_titles_logo_home_and_messages():
+    modules = ROOT / "web" / "assets" / "modules"
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    core = (modules / "core.js").read_text(encoding="utf-8")
+    workspace = (modules / "workspace.js").read_text(encoding="utf-8")
+    # Each page sets its own tab title; the sign-in page has its own too.
+    assert "export function updatePageTitle()" in core and 'profile:"My profile",team:"Team progress",super:"Super admin"' in core
+    assert "document.title=`Sign in · ${suffix}`" in core and "updatePageTitle()" in workspace
+    # The logo is a real link that returns to the Production page.
+    assert '<a id="brandHome" class="title brand-title brand-home" href="./"' in html
+    assert '$("brandHome").onclick' in workspace and 'state.workspaces.includes("PRODUCTION")?"PRODUCTION"' in workspace
+    # Readable errors: network failures, status fallbacks, and a safety net for anything unreported.
+    assert "Can't reach the server" in core and "export function httpErrorText(status)" in core
+    assert 'window.addEventListener("unhandledrejection"' in core
+    assert 'el.setAttribute("role",type==="error"?"alert":"status")' in core
+    # No browser alert() popups.
+    for path in sorted(modules.glob("*.js")):
+        assert "alert(e.message)" not in path.read_text(encoding="utf-8"), path.name
+    assert 'toast("Decision recorded.","success")' in (modules / "qc-review.js").read_text(encoding="utf-8")
+
+
+def test_arm_and_anchor_dropdowns_default_to_the_parent_or_pole():
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    # anchors for guy/swb_anchor_no, crossarms for comm/util_arm_no; "pole" is always a choice.
+    assert 'const saved = { anchors: poleSaved("anchors"), crossarms: poleSaved("crossarms") };' in quick
+    assert "[POLE, ...saved[f.source]]" in quick
+    # Default: the Parent when it is one of the choices, else "pole" when none are saved (or an attachment on the pole).
+    assert "if (parent && items.includes(parent)) return parent;" in quick
+    assert '(source === "crossarms" && !$("annotationParent").value)) return POLE;' in quick
+    # A value the user picked is never overwritten.
+    assert "autoValues.delete(key);" in quick
+
+
+def test_import_requires_the_workbook_format_and_download_follows_it():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    shell = (ROOT / "web" / "assets" / "modules" / "production-shell.js").read_text(encoding="utf-8")
+    data = (ROOT / "web" / "assets" / "modules" / "production-data.js").read_text(encoding="utf-8")
+    # Mandatory choice with no default: PLA-1 (single ZoneName sheet) or PLA-2 (COLLECTION).
+    assert '<select id="productionWorkbookFormat" required><option value="" selected disabled>' in html
+    assert '<option value="PLA-1">' in html and '<option value="PLA-2">' in html
+    # The chosen Excel is checked before anything uploads, and the format is stored on the dataset.
+    assert 'api("/api/production/workbook-format"' in shell and "detected!==workbookFormat" in shell
+    assert "workbook_format:workbookFormat" in shell
+    # Download Excel: PLA-1 -> latest saved workbook, PLA-2 -> COLLECTION export (older datasets fall back on 409).
+    assert 'format==="PLA-1"?"latest":"collection"' in data and 'e.status!==409||kind!=="collection"' in data
+
+
+def test_right_double_click_zooms_without_placing_points():
+    view = (ROOT / "web" / "assets" / "modules" / "production-view.js").read_text(encoding="utf-8")
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    # Right button only (left click places points); still clicks only, so right-drag panning is unchanged.
+    assert "installRightDoubleClickZoom(v)" in view and "e.button!==2" in view and "moved>STILL_PX" in view
+    # Zooms to the LiDAR point under the cursor (open space falls back to the focus distance); Shift zooms out.
+    assert "const v=state.productionViewer,hit=productionPointAt(px,py)" in view and "e.shiftKey?ZOOM_OUT:ZOOM_IN" in view
+    assert "Right double-click: zoom in (Shift: out)" in html

@@ -1,10 +1,10 @@
 // QC banner for Production datasets and the Run-QC dialog/job watcher; QC project loading.
-import { $, api, esc, state, toast } from "./core.js?v=20261013-hide-map";
-import { loadWorkflow } from "./delivery.js?v=20261013-hide-map";
-import { loadProduction } from "./production-data.js?v=20261013-hide-map";
-import { renderPoles, renderSummary } from "./qc-review.js?v=20261013-hide-map";
-import { progress, sendFile } from "./uploads.js?v=20261013-hide-map";
-import { bootstrap, can, currentProject } from "./workspace.js?v=20261013-hide-map";
+import { $, api, esc, state, toast } from "./core.js?v=20261014-rdbl-zoom";
+import { loadWorkflow } from "./delivery.js?v=20261014-rdbl-zoom";
+import { loadProduction } from "./production-data.js?v=20261014-rdbl-zoom";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261014-rdbl-zoom";
+import { progress, sendFile } from "./uploads.js?v=20261014-rdbl-zoom";
+import { bootstrap, can, currentProject } from "./workspace.js?v=20261014-rdbl-zoom";
 
 export function renderQcProductionBanner(){const el=$("qcProductionBanner"),s=state.summary||{},canRun=can("upload.create")&&can("processing.run"),files=`${s.lidar_blocks} LiDAR file${s.lidar_blocks===1?"":"s"}`;let html="",action=null;
   if(s.qc_job_id){html='<div><b>QC is running on the shared Production LiDAR</b><small id="qcProductionProgress">Starting…</small></div>'}
@@ -16,7 +16,7 @@ export function renderQcProductionBanner(){const el=$("qcProductionBanner"),s=st
 export function openProjectInQc(projectId){const select=$("projectSelect");select.value=projectId;select.dispatchEvent(new Event("change"))}
 export function setDialogProgress(prefix,p,msg){$(`${prefix}Progress`).classList.remove("hidden");$(`${prefix}Bar`).style.width=`${Math.max(0,Math.min(100,p))}%`;$(`${prefix}Message`).textContent=msg}
 export function openQcRunDialog(target){state.qcRunTarget=target;$("qcRunForm").reset();$("qcRunDataset").textContent=target.sourceName||"this dataset";$("qcRunGeojsonLabel").classList.toggle("hidden",!target.hasGeojson||Boolean(target.qcId));$("qcRunProgress").classList.add("hidden");$("qcRunError").textContent="";$("qcRunDialog").showModal()}
-export async function runQcOnProductionLidar(){const btn=$("qcBannerAction");btn.disabled=true;btn.textContent="Starting…";try{const queued=await api(`/api/projects/${state.projectId}/process`,{method:"POST"});state.summary={...state.summary,qc_runs:(state.summary?.qc_runs||0)+1,qc_job_id:queued.job_id};renderQcProductionBanner()}catch(e){toast(e.message,"error",5200);btn.disabled=false;btn.textContent="Run QC now"}}
+export async function runQcOnProductionLidar(){const btn=$("qcBannerAction");btn.disabled=true;btn.textContent="Starting…";try{const queued=await api(`/api/projects/${state.projectId}/process`,{method:"POST"});state.summary={...state.summary,qc_runs:(state.summary?.qc_runs||0)+1,qc_job_id:queued.job_id};renderQcProductionBanner();toast("QC run started. Results appear here when it finishes.","success")}catch(e){toast(e.message,"error",5200);btn.disabled=false;btn.textContent="Run QC now"}}
 export async function watchQcProductionJob(jobId){if(state.qcProductionWatch===jobId)return;state.qcProductionWatch=jobId;const projectId=state.projectId;let finished=false;try{for(;;){await new Promise(r=>setTimeout(r,2000));if(state.projectId!==projectId||state.qcProductionWatch!==jobId)return;const job=await api(`/api/jobs/${jobId}`);const progress=$("qcProductionProgress");if(progress)progress.textContent=`${job.progress}% · ${job.stage}`;if(job.status==="SUCCEEDED"){toast("QC finished on the Production LiDAR.","success");finished=true;break}if(job.status==="FAILED"){toast((job.error||"QC failed").split("\n")[0],"error",6500);finished=true;break}}}catch(e){toast(e.message,"error",5200)}finally{if(state.qcProductionWatch===jobId)state.qcProductionWatch=null}if(finished&&state.projectId===projectId&&state.workspace==="QC")await loadProject()}
 export async function loadProject(){if(state.workspace==="PRODUCTION"){await loadProduction();return}try{let [summary,poles]=await Promise.all([api(`/api/projects/${state.projectId}/summary`),api(`/api/projects/${state.projectId}/poles`)]);if(summary.production_dataset){poles=[];summary={...summary,poles:0,poles_pass:0,poles_fail:0,poles_review:0,poles_unverifiable:0,findings:0,fail:0,review:0,unverifiable:0,open_findings:0}}state.summary=summary;state.poles=poles;renderSummary();renderPoles();renderQcProductionBanner();await loadWorkflow();if(summary.project_status==="PROCESSING"||summary.project_status==="UPLOADING"){$("viewerTitle").textContent="Dataset is not ready yet";$("viewerSub").textContent=summary.project_status}else if(!poles.length){$("viewerTitle").textContent="No processed poles";$("viewerSub").textContent="Upload/process the dataset or inspect its job status"}}catch(e){toast(e.message,"error",5200)}}
 

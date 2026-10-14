@@ -53,7 +53,8 @@ PRODUCTION_FAMILIES = {
     ],
     # Numbered groups have no fixed list; their point types are validated by is_sequenced_feature_type.
     **{family: [] for family in SEQUENCED_ANNOTATION_GROUPS},
-    "poles": ["Pole_Base", "Pole_Top"],
+    # prev_inc / next_inc: where the line heads to a previous / next pole that was not captured (first_pole / last_pole INCOMPLETE).
+    "poles": ["Pole_Base", "Pole_Top", "prev_inc", "next_inc"],
 }
 
 PRODUCTION_ANNOTATION_GROUPS = [

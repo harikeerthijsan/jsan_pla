@@ -70,6 +70,10 @@ def read_blocks(path: Path) -> dict[str, list[dict]]:
 # Fields that are not in the workbook but are required in the app, appended after the workbook's own fields.
 # "source": "anchors" fills the dropdown with the anchor points already saved for the pole (anc_1, anc_2, ...).
 EXTRA_FIELDS = {
+    # util_N_arm_no is a COLLECTION workbook column; the attribute workbook has no utility arm field, so it is added here.
+    "attachments_util": [
+        {"key": "util_arm_no", "label": "util_arm_no", "options": [], "manual": False, "source": "crossarms", "features": None},
+    ],
     "guys": [
         {"key": "guy_anchor_no", "label": "guy_anchor_no", "options": [], "manual": False, "source": "anchors", "features": None},
     ],
@@ -81,11 +85,22 @@ EXTRA_FIELDS = {
 }
 
 
+# Fields from the workbook whose dropdown the app fills in: the arm the attachment hangs from (the crossarms saved
+# on the pole, or "pole"), the same choices as the point's Parent.
+FIELD_OVERRIDES = {
+    ("attachments_comm", "comm_arm_no"): {"manual": False, "source": "crossarms", "options": []},
+}
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 1:
         print(__doc__)
         return 2
     groups = read_blocks(Path(argv[0]))
+    for (family, key), change in FIELD_OVERRIDES.items():
+        for field in groups.get(family, []):
+            if field["key"] == key:
+                field.update(change)
     for family, extra in EXTRA_FIELDS.items():
         present = {f["key"] for f in groups.setdefault(family, [])}
         groups[family].extend(f for f in extra if f["key"] not in present)

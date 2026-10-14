@@ -50,6 +50,8 @@ class Project(Base):
     source_workbook_key: Mapped[str|None]=mapped_column(Text, nullable=True)
     # Set on a QC dataset created from a Production dataset; it shares that dataset's converted LiDAR.
     source_project_id: Mapped[str|None]=mapped_column(String(80), nullable=True, index=True)
+    # PLA-1 (single ZoneName sheet, filled by hand) or PLA-2 (COLLECTION, filled from saved points); None = detect from the workbook.
+    workbook_format: Mapped[str|None]=mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
     updated_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc, onupdate=now_utc)
 

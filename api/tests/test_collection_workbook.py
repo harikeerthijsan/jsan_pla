@@ -162,3 +162,43 @@ def test_download_route_needs_sign_in_and_returns_the_filled_workbook():
         guys = load_workbook(BytesIO(response.content))["guys"]
         assert value(guys, 1, "guy_9_key") == '1/2" EHS' and value(guys, 1, "guy_9_anchor_no") == "anc_1" and value(guys, 1, "guy_9_elev_ft") == 30.5
         assert client.get("/api/projects/does-not-exist/production-workbook/collection", headers={"Authorization": f"Bearer {token}"}).status_code == 404
+
+
+def test_arm_and_anchor_numbers_land_in_their_columns():
+    data, _ = build_collection_workbook(None, POLES, [
+        point("comm_1", "attachments_comm", {"comm_arm_no": "arm_2"}),
+        point("util_3", "attachments_util", {"util_arm_no": "pole"}),
+        point("guy_1", "guys", {"guy_anchor_no": "pole"}),
+    ])
+    wb = load_workbook(BytesIO(data))
+    assert value(wb["attachments"], 1, "comm_1_arm_no") == "arm_2" and value(wb["attachments"], 1, "util_3_arm_no") == "pole"
+    assert value(wb["guys"], 1, "guy_1_anchor_no") == "pole"
+
+
+def test_poles_sheet_is_overwritten_with_lidar_values():
+    # The template's own latitude/longitude (from the client) are replaced by the LiDAR-picked pole base and top.
+    template = load_workbook(BytesIO(collection_template()))
+    template["poles"]["D2"] = 34.0; template["poles"]["E2"] = -118.0
+    raw = BytesIO(); template.save(raw)
+    data, _ = build_collection_workbook(raw.getvalue(), POLES, [
+        point("Pole_Base", "poles", {"environment": "Crossing Street"}, z=19.25),
+        point("Pole_Top", "poles", {}, z=55.5),
+    ])
+    poles = load_workbook(BytesIO(data))["poles"]
+    assert value(poles, 1, "latitude") == 33.12345679 and value(poles, 1, "longitude") == -118.98765432
+    assert value(poles, 1, "bottom_elev_ft") == 19.25 and value(poles, 1, "top_elev_ft") == 55.5 and value(poles, 1, "top_lat") == 33.12345679
+    assert value(poles, 1, "environment") == "Crossing Street"
+
+
+def test_incoming_line_points_fill_prev_and_next_inc():
+    data, summary = build_collection_workbook(None, POLES, [
+        point("prev_inc", "poles", {}, z=30.0),
+        point("next_inc", "poles", {}, z=31.0),
+        point("Pole_Base", "poles", {"last_pole": "YES"}, z=10.0),
+    ])
+    poles = load_workbook(BytesIO(data))["poles"]
+    assert value(poles, 1, "prev_inc_lat") == 33.12345679 and value(poles, 1, "prev_inc_lon") == -118.98765432 and value(poles, 1, "prev_inc_elev_ft") == 30.0
+    assert value(poles, 1, "next_inc_elev_ft") == 31.0
+    # lut_enums: a captured incoming point means INCOMPLETE on that side, unless the user chose a value on the Pole_Base point.
+    assert value(poles, 1, "first_pole") == "INCOMPLETE" and value(poles, 1, "last_pole") == "YES"
+    assert summary["points_written"] == 3

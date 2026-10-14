@@ -1,14 +1,14 @@
 // Point picking, editing, saving, deleting and edit-conflict handling.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261013-hide-map";
-import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261013-hide-map";
-import { downloadCollectionWorkbook, downloadProductionAnnotations } from "./production-data.js?v=20261013-hide-map";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261013-hide-map";
-import { cancelProductionBox } from "./production-view.js?v=20261013-hide-map";
-import { cancelProductionMeasure } from "./production-measure.js?v=20261013-hide-map";
-import { productionPoleTarget } from "./production-poles.js?v=20261013-hide-map";
-import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261013-hide-map";
-import { can } from "./workspace.js?v=20261013-hide-map";
+import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261014-rdbl-zoom";
+import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261014-rdbl-zoom";
+import { downloadCollectionWorkbook, downloadProductionAnnotations } from "./production-data.js?v=20261014-rdbl-zoom";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261014-rdbl-zoom";
+import { cancelProductionBox } from "./production-view.js?v=20261014-rdbl-zoom";
+import { cancelProductionMeasure } from "./production-measure.js?v=20261014-rdbl-zoom";
+import { productionPoleTarget } from "./production-poles.js?v=20261014-rdbl-zoom";
+import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261014-rdbl-zoom";
+import { can } from "./workspace.js?v=20261014-rdbl-zoom";
 
 // Saved-point quick actions: click a point in the 3D view (or the list / checklist buttons) to edit or remove it.
 export function removeSavedPoint(id){const row=state.productionAnnotations.find(item=>item.id===id);if(!row||!can("production.annotate"))return;closePointMenu();editProductionAnnotation(row);$("annotationDeleteBtn").click()}

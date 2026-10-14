@@ -32,7 +32,7 @@ from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, obj
 from .sections import vector_analysis, build_frame, section_result_key
 from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, wgs84_to_project, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
-from .collection_workbook import build_collection_workbook, restore_validation_extensions
+from .collection_workbook import build_collection_workbook, detect_workbook_format, restore_validation_extensions
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
 APP_VERSION=os.getenv('APP_VERSION','3.4.1-operational')
@@ -88,7 +88,7 @@ app.include_router(super_admin_router)
 app.include_router(email_login_router)
 app.include_router(employee_directory_router)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
-app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag'])
+app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag','Content-Disposition','X-Collection-Summary','X-Workbook-Edited'])
 
 
 @app.middleware('http')
@@ -125,6 +125,8 @@ class SignInLocationIn(BaseModel):
     accuracy:float|None=Field(default=None,ge=0,le=1_000_000)
 class ProjectIn(BaseModel):
     name:str=Field(min_length=2,max_length=255); customer:str='PLA'; crs:str='EPSG:6424'; units:str='US survey foot'
+    # PLA-1: single ZoneName sheet, filled by hand. PLA-2: COLLECTION workbook, filled from saved points.
+    workbook_format:str|None=Field(default=None,pattern=r'^PLA-[12]$')
 class UploadRequest(BaseModel): filename:str; role:str; size_bytes:int|None=None; content_type:str|None=None
 class MultipartComplete(BaseModel): upload_id:str; parts:list[dict]
 class WorkbookReplacementIn(BaseModel): filename:str; size_bytes:int|None=None; content_type:str|None=None
@@ -199,7 +201,7 @@ def validate_upload_request(body:UploadRequest):
 
 def slug(s): return re.sub(r'[^a-z0-9]+','-',s.lower()).strip('-')[:50] or 'dataset'
 
-def project_dict(p): return {'id':p.id,'name':p.name,'customer':p.customer,'status':p.status,'crs':p.crs,'units':p.units,'source_project_id':p.source_project_id,'created_at':p.created_at.isoformat() if p.created_at else None}
+def project_dict(p): return {'id':p.id,'name':p.name,'customer':p.customer,'status':p.status,'crs':p.crs,'units':p.units,'source_project_id':p.source_project_id,'workbook_format':p.workbook_format,'created_at':p.created_at.isoformat() if p.created_at else None}
 def is_production_dataset(db:Session,project_id:str)->bool:
     # Datasets imported in Production run LIDAR_INGEST; they are QC-checked through a linked QC dataset with its own Excel.
     return db.query(ProcessingJob.id).filter_by(project_id=project_id,job_type='LIDAR_INGEST').first() is not None
@@ -491,9 +493,19 @@ def project_pipeline(project_id:str,u:User=Depends(require_permission('project.r
     project=db.query(Project).filter_by(id=project_id).first()
     if not project: raise HTTPException(404,'Project not found')
     return pipeline_snapshot(db,project)
+@app.post('/api/production/workbook-format')
+async def check_production_workbook_format(file:UploadFile=File(...),u:User=Depends(require_permission('upload.create'))):
+    """Which format an Excel is (PLA-1 ZoneName / PLA-2 COLLECTION), checked in the import dialog before anything is uploaded.
+    Only reads the workbook; nothing is stored."""
+    if not (file.filename or '').lower().endswith('.xlsx'): raise HTTPException(422,'Choose an .xlsx workbook')
+    data=await file.read(MAX_WORKBOOK_BYTES+1)
+    if len(data)>MAX_WORKBOOK_BYTES: raise HTTPException(413,'The workbook exceeds the configured size limit')
+    detected=detect_workbook_format(data)
+    return {'workbook_format':detected,'label':WORKBOOK_FORMAT_LABELS.get(detected)}
+
 @app.post('/api/projects')
 def create_project(body:ProjectIn,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
-    pid=f"{slug(body.name)}-{uuid.uuid4().hex[:8]}"; p=Project(id=pid,name=body.name,customer=body.customer,crs=body.crs,units=body.units,status='UPLOADING'); db.add(p); db.flush(); ensure_current_version(db,pid,u.email); db.add(AuditLog(actor=u.email,action='CREATE_PROJECT',entity_type='project',entity_id=pid,detail_json=body.model_dump_json())); db.commit(); return project_dict(p)
+    pid=f"{slug(body.name)}-{uuid.uuid4().hex[:8]}"; p=Project(id=pid,name=body.name,customer=body.customer,crs=body.crs,units=body.units,status='UPLOADING',workbook_format=body.workbook_format); db.add(p); db.flush(); ensure_current_version(db,pid,u.email); db.add(AuditLog(actor=u.email,action='CREATE_PROJECT',entity_type='project',entity_id=pid,detail_json=body.model_dump_json())); db.commit(); return project_dict(p)
 
 @app.post('/api/projects/{project_id}/uploads/prepare')
 def prepare_upload(project_id:str,body:UploadRequest,u:User=Depends(require_permission('upload.create')),db:Session=Depends(get_db)):
@@ -705,17 +717,65 @@ def download_pole_workbook(project_id:str,internal_id:int,u:User=Depends(require
     return Response(content=contents,media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     headers={'Content-Disposition':f'attachment; filename="{filename}"'})
 
+WORKBOOK_FORMAT_LABELS={'PLA-1':'PLA-1 (single ZoneName sheet)','PLA-2':'PLA-2 (COLLECTION workbook)'}
+
+def check_workbook_format(project:Project,data:bytes)->str|None:
+    """Refuse a workbook whose layout contradicts the dataset's chosen format; record the format when none was chosen."""
+    detected=detect_workbook_format(data)
+    if project.workbook_format and detected and detected!=project.workbook_format:
+        raise HTTPException(422,f"This Excel is a {WORKBOOK_FORMAT_LABELS[detected]}, but the dataset is set to {WORKBOOK_FORMAT_LABELS[project.workbook_format]}. "
+                                f"Choose {detected} for this Excel, or upload the {WORKBOOK_FORMAT_LABELS[project.workbook_format].split(' ',1)[1].strip('()')}.")
+    if not project.workbook_format and detected: project.workbook_format=detected
+    return project.workbook_format
+
+def latest_workbook_file(db:Session,project_id:str):
+    """The workbook the dataset works from now: the latest saved edit, else the uploaded source."""
+    version=db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).first()
+    if not version: return None,None
+    files=[f for f in version_files(db,version.id) if f.status=='UPLOADED']
+    edited=[f for f in files if f.role=='WORKBOOK_EDITED']; sources=[f for f in files if f.role=='WORKBOOK']
+    return ((edited or sources)[-1] if (edited or sources) else None),(sources[-1] if sources else None)
+
+def resolve_workbook_format(db:Session,project:Project)->str|None:
+    """Projects created before the format choice: detect it once from their workbook and keep it."""
+    if project.workbook_format: return project.workbook_format
+    current,_=latest_workbook_file(db,project.id)
+    if not current: return None
+    try: detected=detect_workbook_format(read_bytes(current.object_key))
+    except FileNotFoundError: return None
+    if detected: project.workbook_format=detected; db.commit()
+    return detected
+
 def elevation_to_feet(units:str|None)->tuple[float,str]:
     """Workbook elevations are *_elev_ft. Project Z is in project units; only metres need converting."""
     u=(units or '').lower()
     if 'met' in u or u.strip() in {'m','metre','meter'}: return 1/0.3048,'metres converted to feet (x 3.28084)'
     return 1.0,'project units are feet (no conversion)'
 
+@app.get('/api/projects/{project_id}/production-workbook/latest')
+def download_latest_workbook(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    """The Excel as it stands now: every saved Workbook Data edit (PLA-1), else the uploaded workbook. The upload is untouched."""
+    project=db.query(Project).filter_by(id=project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    current,source=latest_workbook_file(db,project_id)
+    if not current: raise HTTPException(404,'No workbook is uploaded for the active dataset version')
+    try: contents=read_bytes(current.object_key)
+    except FileNotFoundError as exc: raise HTTPException(404,'Workbook object is not available in storage') from exc
+    edited=current.role=='WORKBOOK_EDITED'
+    stem=re.sub(r'[^A-Za-z0-9._-]+','_',pathlib.Path((source or current).filename).stem) or 'workbook'
+    db.add(AuditLog(actor=u.email,action='DOWNLOAD_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,
+                    detail_json=json.dumps({'file_id':current.id,'edited':edited,'workbook_format':project.workbook_format})))
+    db.commit()
+    return Response(content=contents,media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    headers={'Content-Disposition':f'attachment; filename="{stem}-{"updated" if edited else "original"}.xlsx"','X-Workbook-Edited':'1' if edited else '0'})
+
 @app.get('/api/projects/{project_id}/production-workbook/collection')
 def download_collection_workbook(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
     """The COLLECTION workbook with every saved point written in (built now from the latest workbook; the upload is untouched)."""
     project=db.query(Project).filter_by(id=project_id).first()
     if not project: raise HTTPException(404,'Project not found')
+    if resolve_workbook_format(db,project)=='PLA-1':
+        raise HTTPException(409,'This dataset uses a PLA-1 workbook: points are not written automatically. Fill each pole in the Workbook Data tab, save, then download the updated Excel.')
     version=db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).first()
     base=None; base_name=project.name
     if version:
@@ -919,6 +979,10 @@ def queue_lidar_process(project_id:str,u:User=Depends(require_permission('proces
     version=ensure_current_version(db,project_id,u.email)
     files=[f for f in version_files(db,version.id) if f.status=='UPLOADED']
     if not any(f.role=='LIDAR_SOURCE' for f in files): raise HTTPException(400,'Upload at least one LAS/LAZ/COPC file first')
+    workbooks=[f for f in files if f.role=='WORKBOOK']
+    if workbooks:
+        try: check_workbook_format(p,read_bytes(workbooks[-1].object_key))
+        except FileNotFoundError: pass
     jid=uuid.uuid4().hex
     job=ProcessingJob(id=jid,project_id=project_id,job_type='LIDAR_INGEST',payload_json=json.dumps({'version_id':version.id}),status='QUEUED',progress=0,stage='Queued LiDAR conversion')
     db.add(job); p.status='PROCESSING'
@@ -971,6 +1035,14 @@ def apply_workbook_replacement(project_id:str,file_id:str,u:User=Depends(require
         db.add(AuditLog(actor=u.email,action='REJECT_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps({'file_id':rec.id,'filename':rec.filename,'reason':str(exc)[:500]})))
         db.commit()
         raise HTTPException(400,f'This Excel cannot be imported: {str(exc).splitlines()[0][:300]}. The current Excel was kept.')
+    # The replacement must be the same kind of workbook as the dataset (PLA-1 ZoneName or PLA-2 COLLECTION).
+    resolve_workbook_format(db,p)
+    try: check_workbook_format(p,read_bytes(rec.object_key))
+    except HTTPException as exc:
+        rec.status='REJECTED'
+        db.add(AuditLog(actor=u.email,action='REJECT_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps({'file_id':rec.id,'filename':rec.filename,'reason':exc.detail[:500]})))
+        db.commit()
+        raise HTTPException(422,f'{exc.detail} The current Excel was kept.') from exc
     rec.status='UPLOADED'
     version=ensure_current_version(db,project_id,u.email)
     replaced=[]
