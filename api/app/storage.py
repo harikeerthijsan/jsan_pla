@@ -131,6 +131,11 @@ def presign_put(key:str,content_type:str|None=None,expires=3600):
     if content_type: params['ContentType']=content_type
     return _s3().generate_presigned_url('put_object',Params=params,ExpiresIn=expires,HttpMethod='PUT')
 
+# The viewer reads LiDAR (COPC) in many small range requests. Chrome's disk cache can fail to combine cached and new
+# ranges (net::ERR_CACHE_OPERATION_NOT_SUPPORTED), and signed URLs change on every load so caching gains nothing:
+# tell the browser not to store them. Set LIDAR_CACHE_CONTROL to empty to send the storage's own headers instead.
+LIDAR_CACHE_CONTROL=os.getenv('LIDAR_CACHE_CONTROL','no-store').strip()
+
 def block_url(key:str,local_base_url:str|None=None)->str|None:
     if not key: return None
     if MODE=='local':
@@ -143,7 +148,9 @@ def block_url(key:str,local_base_url:str|None=None)->str|None:
             base=f'https://{railway_domain}' if railway_domain else ''
         path=f"/api/storage/{quote(key, safe='/')}"
         return f"{base}{path}" if base else path
-    return _s3().generate_presigned_url('get_object',Params={'Bucket':bucket_name(),'Key':key},ExpiresIn=int(os.getenv('SIGNED_URL_TTL','3600')))
+    params={'Bucket':bucket_name(),'Key':key}
+    if LIDAR_CACHE_CONTROL: params['ResponseCacheControl']=LIDAR_CACHE_CONTROL
+    return _s3().generate_presigned_url('get_object',Params=params,ExpiresIn=int(os.getenv('SIGNED_URL_TTL','3600')))
 
 def create_multipart(key:str,content_type:str|None=None):
     if MODE=='local': return None

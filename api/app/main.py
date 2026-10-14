@@ -28,7 +28,7 @@ from . import mailer
 from .notifications import router as notifications_router, safely, notify_correction_requested, notify_correction_resolved, notify_version_approved
 from .deliverables import build_package, ensure_package
 from .network_access import client_ip, get_network_policy, ip_on_listed_network, set_network_policy, user_network_allowed
-from .storage import MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, list_objects, delete_objects, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
+from .storage import LIDAR_CACHE_CONTROL, MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, list_objects, delete_objects, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
 from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, wgs84_to_project, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
@@ -1265,7 +1265,8 @@ def local_storage(key:str):
     if MODE!='local': raise HTTPException(404,'Not available')
     p=local_path(key)
     if not p.exists(): raise HTTPException(404,'Object not found')
-    return FileResponse(p)
+    # Same as the signed bucket links: LiDAR range responses are not stored by the browser (see storage.LIDAR_CACHE_CONTROL).
+    return FileResponse(p,headers={'Cache-Control':LIDAR_CACHE_CONTROL} if LIDAR_CACHE_CONTROL and key.endswith('.laz') else None)
 
 
 # The Railway image serves the static workbench and API from one public domain.
