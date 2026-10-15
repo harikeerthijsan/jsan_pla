@@ -7,7 +7,7 @@ from app.db import Base, initialize_schema
 from app.models import Project
 
 
-HEAD = '20261014_0017'
+HEAD = '20261014_0018'
 
 
 def revision(engine) -> str | None:

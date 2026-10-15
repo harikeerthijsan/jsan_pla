@@ -14,7 +14,7 @@ os.environ.setdefault("ADMIN_PASSWORD", "ChangeMe123!")
 import pytest
 from fastapi.testclient import TestClient
 
-from app import email_login, mailer
+from app import email_login, throttle, mailer
 from app import main as main_module
 from app.auth import hash_password
 from app.db import SessionLocal, initialize_schema
@@ -32,11 +32,9 @@ def outbox(monkeypatch):
     monkeypatch.setenv("EMAIL_PROVIDER", "console")
     sent = []
     monkeypatch.setattr(mailer, "send_email", lambda to, name, subject, text, html: sent.append({"to": to, "subject": subject, "text": text}))
-    email_login._REQUESTS.clear()
-    main_module.LOGIN_FAILURES.clear()
+    throttle.clear()
     yield sent
-    email_login._REQUESTS.clear()
-    main_module.LOGIN_FAILURES.clear()
+    throttle.clear()
 
 
 def account(role="USER", *, sign_in_email=None, active=True, must_change=False, remote=True):
@@ -118,7 +116,7 @@ def test_wrong_codes_lock_the_code_and_expiry_is_enforced(outbox):
         wrong = "000000" if good != "000000" else "111111"
         for _ in range(5):
             assert client.post("/api/auth/email-code/verify", json={"email": address, "code": wrong}).status_code == 401
-        main_module.LOGIN_FAILURES.clear()
+        throttle.clear()
         locked = client.post("/api/auth/email-code/verify", json={"email": address, "code": good})
         assert locked.status_code == 401, "five wrong attempts spend the code"
 

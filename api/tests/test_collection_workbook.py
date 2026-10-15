@@ -252,3 +252,26 @@ def test_other_pole_saved_before_numbering_is_entry_one():
     data, _ = build_collection_workbook(None, POLES, [point("Pole_Base", "poles", {"other_type": "OTHER_POLE", "other_id": "P-5", "other_attach_N": "1"}, z=10.0)])
     poles = load_workbook(BytesIO(data))["poles"]
     assert value(poles, 1, "other_1_type") == "OTHER_POLE" and value(poles, 1, "other_1_id") == "P-5"
+
+
+def test_excel_builds_are_capped_and_busy_answers_503(monkeypatch):
+    import threading
+    from app import main as main_module
+    monkeypatch.setattr(main_module, "WORKBOOK_BUILDS", threading.BoundedSemaphore(1))
+    monkeypatch.setattr(main_module, "WORKBOOK_BUILD_WAIT_SECONDS", 0.05)
+    initialize_schema()
+    project_id = f"busy-{uuid.uuid4().hex[:8]}"
+    db = SessionLocal()
+    try:
+        db.add(Project(id=project_id, name="Busy test", crs="EPSG:6424", units="US survey foot", status="READY")); db.commit()
+    finally:
+        db.close()
+    with TestClient(app) as client:
+        headers = {"Authorization": "Bearer " + client.post("/api/auth/login", json={"email": "admin@jsan.local", "password": "ChangeMe123!"}).json()["token"]}
+        main_module.WORKBOOK_BUILDS.acquire()          # another user's build is running
+        try:
+            busy = client.get(f"/api/projects/{project_id}/production-workbook/collection", headers=headers)
+        finally:
+            main_module.WORKBOOK_BUILDS.release()
+        assert busy.status_code == 503 and busy.headers["retry-after"] == "10" and "try again" in busy.json()["detail"].lower()
+        assert client.get(f"/api/projects/{project_id}/production-workbook/collection", headers=headers).status_code == 200

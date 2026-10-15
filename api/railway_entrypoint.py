@@ -105,6 +105,41 @@ def stop_children() -> None:
             process.wait()
 
 
+PROCESS_ROLES = ("all", "web", "worker")
+
+
+def web_command() -> list[str]:
+    """uvicorn for the UI + API. WEB_CONCURRENCY processes share the port; WEB_LIMIT_CONCURRENCY makes an overloaded
+    process answer 503 straight away instead of queueing requests until everything hangs."""
+    command = [
+        sys.executable, "-m", "uvicorn", "app.main:app",
+        "--host", "0.0.0.0", "--port", os.getenv("PORT", "8000"),
+        "--proxy-headers", "--forwarded-allow-ips=*",
+        "--timeout-keep-alive", str(int(os.getenv("WEB_KEEPALIVE_SECONDS", "5"))),
+    ]
+    workers = int(os.getenv("WEB_CONCURRENCY", "1"))
+    if workers > 1:
+        command += ["--workers", str(workers)]
+    limit = os.getenv("WEB_LIMIT_CONCURRENCY", "").strip()
+    if limit:
+        command += ["--limit-concurrency", str(int(limit))]
+    return command
+
+
+def process_commands() -> list[list[str]]:
+    """PROCESS_ROLE=all (default) runs the worker and the web app together, as before; "web" and "worker" run one
+    of them, so LiDAR processing can live in its own Railway service and never starve or crash the website."""
+    role = os.getenv("PROCESS_ROLE", "all").strip().lower()
+    if role not in PROCESS_ROLES:
+        raise RuntimeError(f"PROCESS_ROLE must be one of: {', '.join(PROCESS_ROLES)}")
+    commands = []
+    if role in ("all", "worker"):
+        commands.append([sys.executable, "worker.py"])
+    if role in ("all", "web"):
+        commands.append(web_command())
+    return commands
+
+
 def main() -> int:
     global STOPPING
 
@@ -118,22 +153,7 @@ def main() -> int:
     initialize_schema()
     print("Database schema ready", flush=True)
 
-    port = os.getenv("PORT", "8000")
-    commands = [
-        [sys.executable, "worker.py"],
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "app.main:app",
-            "--host",
-            "0.0.0.0",
-            "--port",
-            port,
-            "--proxy-headers",
-            "--forwarded-allow-ips=*",
-        ],
-    ]
+    commands = process_commands()
 
     for command in commands:
         print("Starting " + " ".join(command), flush=True)

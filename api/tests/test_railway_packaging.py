@@ -144,6 +144,31 @@ def test_schema_initializer_registers_v34_tables():
 
 def test_railway_entrypoint_initializes_schema_before_children():
     source = (REPOSITORY_ROOT / 'api' / 'railway_entrypoint.py').read_text(encoding='utf-8')
-    schema_pos = source.index('initialize_schema()')
-    worker_pos = source.index('[sys.executable, "worker.py"]')
-    assert schema_pos < worker_pos
+    main = source[source.index('def main() -> int:'):]
+    # Children (worker and/or web, by PROCESS_ROLE) are only built and started after the schema is ready.
+    assert main.index('initialize_schema()') < main.index('process_commands()') < main.index('subprocess.Popen(command)')
+
+
+def test_process_roles_split_web_and_worker(monkeypatch):
+    import railway_entrypoint as entry
+    for name in ("PROCESS_ROLE", "WEB_CONCURRENCY", "WEB_LIMIT_CONCURRENCY", "WEB_KEEPALIVE_SECONDS"):
+        monkeypatch.delenv(name, raising=False)
+    # Default: worker + one web process in one container, exactly as before.
+    commands = entry.process_commands()
+    assert [c[-1] if c[-1] == "worker.py" else "web" for c in commands] == ["worker.py", "web"]
+    assert "--workers" not in commands[1] and "--limit-concurrency" not in commands[1]
+    monkeypatch.setenv("PROCESS_ROLE", "web"); monkeypatch.setenv("WEB_CONCURRENCY", "3"); monkeypatch.setenv("WEB_LIMIT_CONCURRENCY", "200")
+    (web,) = entry.process_commands()
+    assert web[web.index("--workers") + 1] == "3" and web[web.index("--limit-concurrency") + 1] == "200" and "worker.py" not in web
+    monkeypatch.setenv("PROCESS_ROLE", "worker")
+    assert entry.process_commands() == [[entry.sys.executable, "worker.py"]]
+    monkeypatch.setenv("PROCESS_ROLE", "everything")
+    with pytest.raises(RuntimeError, match="PROCESS_ROLE"):
+        entry.process_commands()
+
+
+def test_database_pool_is_configurable_for_postgres(monkeypatch):
+    from app.db import pool_options
+    assert pool_options("sqlite:///./x.db") == {}
+    monkeypatch.setenv("DB_POOL_SIZE", "8"); monkeypatch.setenv("DB_MAX_OVERFLOW", "4"); monkeypatch.setenv("DB_POOL_TIMEOUT", "10")
+    assert pool_options("postgresql+psycopg://u:p@h/db") == {"pool_size": 8, "max_overflow": 4, "pool_timeout": 10, "pool_recycle": 1800}

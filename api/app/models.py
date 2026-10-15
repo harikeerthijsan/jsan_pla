@@ -298,3 +298,10 @@ class AppSetting(Base):
     value_json: Mapped[str]=mapped_column(Text, default='{}')
     updated_by: Mapped[str|None]=mapped_column(String(255), nullable=True)
     updated_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
+
+class AuthThrottleEvent(Base):
+    """One failed sign-in or email-code request, counted per key (ip|email, addr|email, ip|…) in a sliding window."""
+    __tablename__='auth_throttle_events'
+    id: Mapped[int]=mapped_column(Integer, primary_key=True)
+    key: Mapped[str]=mapped_column(String(255))
+    at: Mapped[float]=mapped_column(Float)

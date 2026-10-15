@@ -27,6 +27,8 @@ from .models import AuditLog, EmailLoginCode, User
 from .network_access import client_ip, user_network_allowed
 from .signin import complete_sign_in
 
+from . import throttle
+
 router = APIRouter()
 log = logging.getLogger(__name__)
 
@@ -37,7 +39,6 @@ WINDOW_SECONDS = 15 * 60
 MAX_PER_ADDRESS = 5
 MAX_PER_IP = 20
 SENT_MESSAGE = "If an account uses this email, a sign-in code is on its way. It is valid for 10 minutes."
-_REQUESTS: dict[str, list[float]] = {}
 
 
 class CodeRequestIn(BaseModel):
@@ -63,15 +64,9 @@ def code_hash(user_id: int, code: str) -> str:
 
 
 def _throttled(key: str, limit: int) -> bool:
-    """Record one request for ``key``; True when the window already holds ``limit`` requests."""
-    cutoff = time.time() - WINDOW_SECONDS
-    hits = [t for t in _REQUESTS.get(key, []) if t >= cutoff]
-    if len(hits) >= limit:
-        _REQUESTS[key] = hits
-        return True
-    hits.append(time.time())
-    _REQUESTS[key] = hits
-    return False
+    """Record one request for ``key``; True when the window already holds ``limit`` requests.
+    Counted in the database (app.throttle) so every API process and replica shares the limit."""
+    return throttle.check_and_record(f"email-code|{key}", limit, WINDOW_SECONDS)
 
 
 def _find_user(db: Session, name: str) -> User | None:
@@ -143,11 +138,11 @@ def request_code(body: CodeRequestIn, request: Request, db: Session = Depends(ge
 
 @router.post("/api/auth/email-code/verify")
 def verify_code(body: CodeVerifyIn, request: Request, db: Session = Depends(get_db)):
-    from .main import LOGIN_FAILURES, LOGIN_MAX_FAILURES, _login_key, _prune_login_failures, account_dict  # main includes this router
+    from .main import LOGIN_MAX_FAILURES, LOGIN_WINDOW_SECONDS, _login_key, account_dict  # main includes this router
 
-    key = _login_key(request, body.email)
-    _prune_login_failures(key)
-    if len(LOGIN_FAILURES.get(key, [])) >= LOGIN_MAX_FAILURES:
+    # Same shared lockout as password sign-in (one count per address and sign-in name, in the database).
+    key = f"login|{_login_key(request, body.email)}"
+    if throttle.hits(key, LOGIN_WINDOW_SECONDS) >= LOGIN_MAX_FAILURES:
         raise HTTPException(429, "Too many failed sign-in attempts. Try again later.")
     code = "".join(ch for ch in body.code if ch.isdigit())
     user = _find_user(db, body.email)
@@ -156,14 +151,14 @@ def verify_code(body: CodeVerifyIn, request: Request, db: Session = Depends(get_
     valid = bool(row and len(code) == 6 and _aware(row.expires_at) > _now() and row.attempts < MAX_ATTEMPTS
                  and hmac.compare_digest(row.code_hash, code_hash(user.id, code)))
     if not valid:
-        LOGIN_FAILURES.setdefault(key, []).append(time.time())
+        throttle.record(key)
         if row:
             row.attempts = (row.attempts or 0) + 1
             if row.attempts >= MAX_ATTEMPTS or _aware(row.expires_at) <= _now():
                 row.used_at = _now()  # spent: ask for a new code
             db.commit()
         raise HTTPException(401, "That code is incorrect or has expired. Check the latest email or ask for a new code.")
-    LOGIN_FAILURES.pop(key, None)
+    throttle.clear(key)
     row.used_at = _now()
     db.commit()
     complete_sign_in(db, user, request, "email_code")

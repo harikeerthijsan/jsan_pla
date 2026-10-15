@@ -17,7 +17,23 @@ def normalized_database_url() -> str:
 
 DB_URL = normalized_database_url()
 connect_args = {'check_same_thread': False} if DB_URL.startswith('sqlite') else {}
-engine = create_engine(DB_URL, pool_pre_ping=True, connect_args=connect_args)
+
+
+def pool_options(url: str = DB_URL) -> dict:
+    """Connection pool per process (Postgres). Size it so WEB_CONCURRENCY x replicas x (size + overflow), plus the
+    worker, stays under the database's connection limit. A short timeout turns pool exhaustion into a quick error
+    instead of a request hanging for 30 s."""
+    if url.startswith('sqlite'):
+        return {}
+    return {
+        'pool_size': int(os.getenv('DB_POOL_SIZE', '5')),
+        'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', '10')),
+        'pool_timeout': int(os.getenv('DB_POOL_TIMEOUT', '15')),
+        'pool_recycle': int(os.getenv('DB_POOL_RECYCLE', '1800')),
+    }
+
+
+engine = create_engine(DB_URL, pool_pre_ping=True, connect_args=connect_args, **pool_options())
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
 class Base(DeclarativeBase):

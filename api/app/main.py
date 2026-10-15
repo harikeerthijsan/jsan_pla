@@ -1,4 +1,4 @@
-import json, logging, os, re, uuid, pathlib, time, tempfile
+import json, logging, os, re, threading, uuid, pathlib, time, tempfile
 from datetime import datetime, timedelta, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, Request
@@ -34,6 +34,7 @@ from .production import annotations_feature_collection, parent_attributes, resol
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
 from .collection_workbook import build_collection_workbook, detect_workbook_format, restore_validation_extensions
 from .workbook_format import latest_workbook_file, resolve_workbook_format
+from . import throttle
 
 APP_ENV=os.getenv('APP_ENV','development').lower()
 APP_VERSION=os.getenv('APP_VERSION','3.4.1-operational')
@@ -166,7 +167,6 @@ class Wgs84TransformIn(BaseModel):
 class Wgs84BatchTransformIn(BaseModel):
     points:list[Wgs84TransformIn]=Field(min_length=1,max_length=400)
 
-LOGIN_FAILURES={}
 LOGIN_WINDOW_SECONDS=int(os.getenv('LOGIN_WINDOW_SECONDS','300'))
 LOGIN_MAX_FAILURES=int(os.getenv('LOGIN_MAX_FAILURES','8'))
 MAX_WORKBOOK_BYTES=int(os.getenv('MAX_WORKBOOK_BYTES',str(50*1024*1024)))
@@ -176,11 +176,6 @@ MAX_GEOJSON_BYTES=int(os.getenv('MAX_GEOJSON_BYTES',str(50*1024*1024)))
 def _login_key(request:Request,email:str):
     host=request.client.host if request.client else 'unknown'
     return f'{host}|{email.strip().lower()}'
-
-def _prune_login_failures(key:str):
-    cutoff=time.time()-LOGIN_WINDOW_SECONDS
-    LOGIN_FAILURES[key]=[x for x in LOGIN_FAILURES.get(key,[]) if x>=cutoff]
-    if not LOGIN_FAILURES[key]: LOGIN_FAILURES.pop(key,None)
 
 def validate_upload_request(body:UploadRequest):
     safe=pathlib.Path(body.filename).name
@@ -263,14 +258,15 @@ def health_ready():
     return JSONResponse(body,status_code=200 if ready else 503)
 @app.post('/api/auth/login')
 def login(body:LoginIn,request:Request,db:Session=Depends(get_db)):
-    key=_login_key(request,body.email); _prune_login_failures(key)
-    if len(LOGIN_FAILURES.get(key,[]))>=LOGIN_MAX_FAILURES: raise HTTPException(429,'Too many failed login attempts. Try again later.')
+    # Failed attempts are counted in the database so every API process and replica enforces the same lockout.
+    key=f'login|{_login_key(request,body.email)}'
+    if throttle.hits(key,LOGIN_WINDOW_SECONDS)>=LOGIN_MAX_FAILURES: raise HTTPException(429,'Too many failed login attempts. Try again later.')
     # The sign-in field accepts a username (JSAN001, Admin001) or an email address.
     login_name=body.email.strip().lower()
     u=db.query(User).filter(or_(func.lower(User.email)==login_name,func.lower(User.username)==login_name)).first()
     if not u or not verify_password(body.password,u.password_hash):
-        LOGIN_FAILURES.setdefault(key,[]).append(time.time()); raise HTTPException(401,'Invalid username or password')
-    LOGIN_FAILURES.pop(key,None)
+        throttle.record(key); raise HTTPException(401,'Invalid username or password')
+    throttle.clear(key)
     complete_sign_in(db,u,request,'password')
     return {'token':create_token(u),'user':account_dict(u)}
 @app.get('/api/auth/me')
@@ -748,6 +744,9 @@ def check_workbook_format(project:Project,data:bytes)->str|None:
     if not project.workbook_format and detected: project.workbook_format=detected
     return project.workbook_format
 
+WORKBOOK_BUILDS=threading.BoundedSemaphore(max(1,int(os.getenv('WORKBOOK_BUILD_CONCURRENCY','2'))))
+WORKBOOK_BUILD_WAIT_SECONDS=float(os.getenv('WORKBOOK_BUILD_WAIT_SECONDS','20'))
+
 def elevation_to_feet(units:str|None)->tuple[float,str]:
     """Workbook elevations are *_elev_ft. Project Z is in project units; only metres need converting."""
     u=(units or '').lower()
@@ -793,10 +792,15 @@ def download_collection_workbook(project_id:str,u:User=Depends(require_permissio
     points=[{'pole_internal_id':r.pole_internal_id,'family':r.family,'feature_type':r.feature_type,'latitude':r.latitude,'longitude':r.longitude,
              'z':r.z,'attributes':json.loads(r.attributes_json or '{}'),'updated_at':iso_utc(r.updated_at)} for r in rows]
     factor,note=elevation_to_feet(project.units)
+    # Building the workbook is CPU-heavy: only a few run at once per process, others wait briefly, then get a quick 503.
+    if not WORKBOOK_BUILDS.acquire(timeout=WORKBOOK_BUILD_WAIT_SECONDS):
+        raise HTTPException(503,'The Excel is being prepared for other users right now. Try again in a moment.',headers={'Retry-After':'10'})
     try:
         data,summary=build_collection_workbook(base,poles,points,elevation_to_ft=factor)
     except Exception as exc:
         raise HTTPException(422,f'The workbook could not be updated: {exc}') from exc
+    finally:
+        WORKBOOK_BUILDS.release()
     summary['elevation']=note
     db.add(AuditLog(actor=u.email,action='DOWNLOAD_COLLECTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps(
         {k:summary[k] for k in ('source','points_written','columns_added','rows_added','elevation')}|{'skipped':len(summary['skipped']),'unmapped':summary['unmapped'][:50]})))

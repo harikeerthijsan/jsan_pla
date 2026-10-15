@@ -17,10 +17,31 @@ Staging and production must never share PostgreSQL credentials, buckets, JWT sec
 ## Recommended topology
 
 ### Railway
-Current topology (`.railway/railway.ts`): one Railway project with service `pla-qc` (root `Dockerfile`:
-UI + API + PDAL worker in one container, one replica), `Postgres`, and bucket `pla-files`. Splitting API
-and worker into separate services is deferred to Task 05; `api/Dockerfile`, `railway-api.json` and
-`railway-worker.json` describe that future split and are not what production builds today.
+Topology (`.railway/railway.ts`): one Railway project with two services built from the root `Dockerfile`, plus
+`Postgres` and bucket `pla-files`:
+
+- `pla-qc` (`PROCESS_ROLE=web`): UI + API, public domain, healthcheck `/health/ready`.
+- `pla-qc-worker` (`PROCESS_ROLE=worker`): the PDAL worker only, no domain or healthcheck.
+
+LiDAR conversions therefore never share CPU or memory with web requests. An existing single-service deployment
+without `PROCESS_ROLE` keeps running both in one container (`all`, the default). `api/Dockerfile`,
+`railway-api.json` and `railway-worker.json` are not what production builds.
+
+### Capacity under load
+
+| Variable (service) | Default | Purpose |
+|---|---|---|
+| `PROCESS_ROLE` (both) | `all` | `web`, `worker` or `all` (both in one container). |
+| `WEB_CONCURRENCY` (pla-qc) | `1` (IaC: `2`) | uvicorn processes per replica. Each uses roughly 250–400 MB. |
+| `WEB_LIMIT_CONCURRENCY` (pla-qc) | unset (IaC: `200`) | Open requests per process before it answers 503 at once instead of hanging. |
+| `WEB_KEEPALIVE_SECONDS` (pla-qc) | `5` | Idle keep-alive per connection. |
+| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` / `DB_POOL_TIMEOUT` | `5` / `10` / `15` s | Postgres pool per process. |
+| `WORKBOOK_BUILD_CONCURRENCY` (pla-qc) | `2` | COLLECTION Excel builds at once per process; others wait up to 20 s, then get 503. |
+
+Keep `replicas x WEB_CONCURRENCY x (DB_POOL_SIZE + DB_MAX_OVERFLOW)` plus the worker's pool under the Postgres connection
+limit (Railway default: 100). Sign-in throttles (failed logins, email-code requests) are stored in Postgres
+(`auth_throttle_events`), so limits hold across processes and replicas. Raise the `pla-qc` replica count for more
+traffic. Keep `pla-qc-worker` at one replica unless processing queues build up, since job claims are atomic.
 
 Maintain two persistent Railway environments in the same project: `production` and `staging`. Each has
 its **own** `Postgres` and `pla-files` instances; variables use reference syntax (`${{Postgres.DATABASE_URL}}`,

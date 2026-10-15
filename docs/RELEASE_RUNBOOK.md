@@ -46,9 +46,12 @@ workflow fails is never deployed. No Railway or Vercel token is stored in GitHub
 ## Rollback
 Decide within the first 30 minutes after a production deploy; the previous deployment is the known-good release.
 
+0. **Load settings (fastest, no redeploy of code):** if the split or extra web processes misbehave, set
+   `PROCESS_ROLE=all` and `WEB_CONCURRENCY=1` on `pla-qc`, then scale `pla-qc-worker` to 0 replicas. The app
+   returns to the single-container layout. The `auth_throttle_events` table is ignored by older releases.
 1. **Application (Railway):** service `pla-qc` → Deployments → previous successful deployment →
-   **Rollback**. This restores that image *and* its variables. API and worker are in one image, so they
-   always roll back together.
+   **Rollback**. This restores that image *and* its variables. With the split topology, roll back
+   `pla-qc-worker` to the same release as well: both services build the same image.
 2. **Git:** open a PR reverting the merge commit on `main` (and on `staging`) so the next autodeploy does
    not reintroduce the change. Never force-push `main` or `staging`.
 3. **Healthcheck path:** if a deploy is blocked only because `/health/ready` is failing on an older image

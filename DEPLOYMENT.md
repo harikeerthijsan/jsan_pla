@@ -35,16 +35,22 @@ The configuration in `.railway/railway.ts` provisions the app service,
 PostgreSQL, and a Singapore-region storage bucket. Review the plan before
 applying it, especially if you are applying it to an existing project.
 
-Set the required secrets on the `pla-qc` service before its first deployment:
+Set the required secrets on **both** services (`pla-qc` for the website/API and `pla-qc-worker` for LiDAR
+processing) before their first deployment. Use the same values on both:
 
 ```powershell
 railway variable set --service pla-qc ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD="use-a-unique-password" JWT_SECRET="use-at-least-32-random-characters"
+railway variable set --service pla-qc-worker ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD="use-a-unique-password" JWT_SECRET="use-at-least-32-random-characters"
 ```
+
+The worker service builds the same root `Dockerfile` with `PROCESS_ROLE=worker`. Do not give it a domain or a
+healthcheck. See "Capacity under load" in `docs/PRODUCTION_ENVIRONMENTS.md` for the scaling variables.
 
 Deploy the repository and generate its public domain:
 
 ```powershell
 railway up --service pla-qc
+railway up --service pla-qc-worker
 railway domain --service pla-qc
 ```
 
