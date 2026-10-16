@@ -995,3 +995,14 @@ a.brand-home:focus-visible{outline:2px solid #2aa7d8;outline-offset:4px}
 .qs-other-add{justify-self:start;padding:6px 10px;border-radius:8px;border:1px dashed #2aa7d8;background:#fff;color:#0d4f6b;font-size:11.5px;font-weight:700;cursor:pointer}
 .qs-other-add:hover{background:#e6f6fc}
 .qs-other-remove{display:inline-flex;align-items:center;justify-content:center;padding:0;font-weight:700}
+/* Import dialog: what the Excel check found (blocking errors, notes). */
+.wb-check{margin:2px 0 8px;padding:9px 11px;border:1px solid #e9c7cc;border-radius:9px;background:#fff7f8;font-size:12px;line-height:1.45}
+.wb-check ul{margin:4px 0 6px;padding-left:18px}.wb-check li{margin:2px 0}
+.wb-check-title{display:block;font-size:12px}.wb-check-title.is-error{color:#a3303d}.wb-check-title.is-warn{color:#8a5a00}
+/* Poles imported without an Internal ID: marked in the list, and set from the pole header. */
+.pole-id-missing{color:#a3303d;font-weight:700}
+.pole-id-control{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;padding:6px 8px;border:1px solid #e9c7cc;border-radius:8px;background:#fff7f8;font-size:11.5px}
+.pole-id-control label{font-weight:700;color:#a3303d}
+.pole-id-control input{width:110px;padding:4px 6px;font-size:12px}
+.pole-id-error{flex-basis:100%;color:#a3303d}.pole-id-error:empty{display:none}
+

@@ -21,12 +21,12 @@ from app.models import Project
 
 def zone_name_workbook():
     wb = Workbook(); ws = wb.active; ws.title = "ZoneName"
-    ws.append(["Pole Number", "Latitude", "Longitude", "1 Attachment Owner"]); ws.append(["P-1", 33.1, -118.2, ""])
+    ws.append(["Internal ID", "Pole Number", "Latitude", "Longitude", "1 Attachment Owner"]); ws.append([1, "P-1", 33.1, -118.2, ""])
     out = BytesIO(); wb.save(out); return out.getvalue()
 
 
 def collection_workbook():
-    wb = Workbook(); wb.active.title = "poles"; wb["poles"].append(["internal_id", "pole_number"])
+    wb = Workbook(); wb.active.title = "poles"; wb["poles"].append(["internal_id", "pole_number", "latitude", "longitude"]); wb["poles"].append([1, "P-1", 33.1, -118.2])
     for name in ("attachments", "crossarms", "anchors", "lut_owners"): wb.create_sheet(name)
     out = BytesIO(); wb.save(out); return out.getvalue()
 

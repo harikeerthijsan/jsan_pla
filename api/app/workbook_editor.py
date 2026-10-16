@@ -220,3 +220,25 @@ def apply_workbook_updates(contents: bytes, pole_number, updates: list[dict], *,
     stream = BytesIO()
     workbook.save(stream)
     return stream.getvalue()
+
+
+def set_pole_internal_id(contents: bytes, pole_number, internal_id: int, previous=None) -> bytes:
+    """Write ``internal_id`` into the Internal ID cell of the pole's rows (found by Pole Number) on the pole catalogue.
+
+    A pole can span several rows (e.g. one per attachment in a ZoneName sheet): every row of that Pole Number whose
+    Internal ID is blank, is the pole's previous id, or already is ``internal_id`` gets it. Rows of the same Pole Number
+    that carry a different Internal ID belong to another pole and are left alone."""
+    workbook = load_workbook(BytesIO(contents), data_only=False, read_only=False)
+    poles_sheet, _ = detect_pole_sheet(workbook, require_location=False)
+    _, rows, pole_column, internal_columns = _matching_rows(poles_sheet, pole_number)
+    if not pole_column or not internal_columns:
+        raise ValueError(f"Worksheet {poles_sheet.title!r} has no Pole Number / Internal ID column")
+    accept = {None, normalize_pole_number(internal_id)} | ({normalize_pole_number(previous)} if previous is not None else set())
+    targets = [row for row in rows if normalize_pole_number(poles_sheet.cell(row, internal_columns[0]).value) in accept]
+    if not targets:
+        raise ValueError(f"Pole Number {pole_number} has no row in {poles_sheet.title!r} without another Internal ID")
+    for row in targets:
+        poles_sheet.cell(row, internal_columns[0]).value = int(internal_id)
+    stream = BytesIO()
+    workbook.save(stream)
+    return stream.getvalue()

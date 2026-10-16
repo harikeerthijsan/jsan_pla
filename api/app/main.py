@@ -17,7 +17,7 @@ from .auth import current_user, verify_password, create_token, hash_password
 from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission, normalize_role, is_admin_role, is_super_admin
 from .workflow import DatasetVersion, VersionFile, CorrectionRequest, FindingRevision, FindingComparison, ReviewDecisionArchive, ProcessingLease, QCRun, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
 from .seed import promote_super_admins, seed_database, seed_admin, seed_staff_accounts
-from .ingest import parse_workbook
+from .ingest import check_production_workbook, parse_workbook
 from .pipeline import pipeline as pipeline_snapshot, production_project_ids
 from .team import router as team_router, hidden_authors
 from .super_admin import router as super_admin_router
@@ -31,7 +31,7 @@ from .network_access import client_ip, get_network_policy, ip_on_listed_network,
 from .storage import LIDAR_CACHE_CONTROL, MODE, LOCAL_ROOT, bucket_name, local_path, presign_put, object_exists, list_objects, delete_objects, block_url, create_multipart, presign_upload_part, complete_multipart, read_bytes, upload_bytes, configure_bucket_cors
 from .sections import vector_analysis, build_frame, section_result_key
 from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, wgs84_to_project, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
-from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number
+from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number, set_pole_internal_id
 from .collection_workbook import build_collection_workbook, detect_workbook_format, restore_validation_extensions
 from .workbook_format import latest_workbook_file, resolve_workbook_format
 from . import throttle
@@ -498,7 +498,8 @@ async def check_production_workbook_format(file:UploadFile=File(...),u:User=Depe
     data=await file.read(MAX_WORKBOOK_BYTES+1)
     if len(data)>MAX_WORKBOOK_BYTES: raise HTTPException(413,'The workbook exceeds the configured size limit')
     detected=detect_workbook_format(data)
-    return {'workbook_format':detected,'label':WORKBOOK_FORMAT_LABELS.get(detected)}
+    # Read only the pole catalogue: missing required columns / bad rows are reported now, before any LiDAR uploads.
+    return {'workbook_format':detected,'label':WORKBOOK_FORMAT_LABELS.get(detected),'check':check_production_workbook(data)}
 
 class WorkbookFormatIn(BaseModel):
     workbook_format:str=Field(pattern=r'^PLA-[12]$')
@@ -720,6 +721,58 @@ def save_pole_workbook(project_id:str,internal_id:int,body:PoleWorkbookSaveIn,u:
                    'internal_id_editable':has_permission(u,'workbook.edit_internal_id')})
     return result
 
+class PoleInternalIdIn(BaseModel):
+    internal_id:int=Field(gt=0,lt=2**31)
+
+# Every table that refers to a pole by its internal id within a dataset.
+POLE_ID_REFERENCES=((ProductionAnnotation,'pole_internal_id'),(ProductionGeoFeature,'pole_internal_id'),(PoleAssignment,'pole_internal_id'),
+                    (PolePresence,'pole_internal_id'),(SceneFeature,'internal_id'),(Notification,'pole_internal_id'))
+
+@app.put('/api/projects/{project_id}/poles/{internal_id}/internal-id')
+def set_pole_internal_id_route(project_id:str,internal_id:int,body:PoleInternalIdIn,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+    """Give a pole its Internal ID (poles imported with a blank Internal ID have a provisional negative id). The pole and all
+    its work move to the new id, and the Internal ID cell of its row is written into an updated copy of the Excel."""
+    pole=db.query(Pole).filter_by(project_id=project_id,internal_id=internal_id).first()
+    if not pole: raise HTTPException(404,'Pole not found')
+    if internal_id>0 and not has_permission(u,'workbook.edit_internal_id'):
+        raise HTTPException(403,'This pole already has an Internal ID; only an admin can change it')
+    new_id=body.internal_id
+    if new_id==internal_id: return {'internal_id':new_id,'pole_number':pole.pole_number,'workbook_updated':False}
+    other=db.query(Pole).filter_by(project_id=project_id,internal_id=new_id).first()
+    if other: raise HTTPException(409,f'Internal ID {new_id} is already used by pole {other.pole_number or other.internal_id}')
+    version=(db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).with_for_update().first())
+    if version and version.status in {'APPROVED','ARCHIVED'}: raise HTTPException(409,'Create a new dataset revision before changing Internal IDs')
+    # 1) The Excel: the latest workbook (saved edits, else the upload) with this pole's Internal ID cell filled in.
+    current,source=latest_workbook_file(db,project_id); new_file_id=None
+    if current and version:
+        try: contents=read_bytes(current.object_key)
+        except FileNotFoundError as exc: raise HTTPException(404,'Workbook object is not available in storage') from exc
+        try:
+            updated=restore_validation_extensions(contents,set_pole_internal_id(contents,pole.pole_number,new_id,previous=internal_id if internal_id>0 else None))
+        except ValueError as exc:
+            raise HTTPException(422,f'The Excel could not be updated: {exc}') from exc
+        if len(updated)>MAX_WORKBOOK_BYTES: raise HTTPException(413,'Updated workbook exceeds configured size limit')
+        stem=pathlib.Path((source or current).filename).stem or 'workbook'
+        filename=f'{stem}-updated.xlsx'; new_file_id=uuid.uuid4().hex
+        key=f'{project_id}/versions/v{version.version_no}/derived/workbooks/{new_file_id}-{filename}'
+        upload_bytes(updated,key,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        db.add(DatasetFile(id=new_file_id,project_id=project_id,filename=filename,role='WORKBOOK_EDITED',object_key=key,
+                           content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',size_bytes=len(updated),status='UPLOADED'))
+        db.flush(); db.add(VersionFile(version_id=version.id,file_id=new_file_id))
+    # 2) The pole and everything that refers to it.
+    moved={}
+    for model,column in POLE_ID_REFERENCES:
+        moved[model.__tablename__]=db.query(model).filter(model.project_id==project_id,getattr(model,column)==internal_id).update({column:new_id},synchronize_session=False)
+    for row in db.query(ProductionAnnotation).filter(ProductionAnnotation.project_id==project_id,ProductionAnnotation.pole_internal_id==new_id).all():
+        attributes=json.loads(row.attributes_json or '{}')
+        if str(attributes.get('pole_internal_id'))==str(internal_id): attributes['pole_internal_id']=new_id; row.attributes_json=json.dumps(attributes,default=str)
+    pole.internal_id=new_id
+    db.add(AuditLog(actor=u.email,action='SET_POLE_INTERNAL_ID',entity_type='pole',entity_id=f'{project_id}:{new_id}',detail_json=json.dumps({
+        'project_id':project_id,'pole_number':pole.pole_number,'from':internal_id,'to':new_id,'snapshot_file_id':current.id if current else None,
+        'updated_file_id':new_file_id,'moved':moved})))
+    db.commit()
+    return {'internal_id':new_id,'pole_number':pole.pole_number,'workbook_updated':bool(new_file_id)}
+
 @app.get('/api/projects/{project_id}/poles/{internal_id}/workbook-download')
 def download_pole_workbook(project_id:str,internal_id:int,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
     _,_,version,workbook_file,contents,_=_pole_workbook_context(project_id,internal_id,db)
@@ -787,10 +840,14 @@ def download_collection_workbook(project_id:str,u:User=Depends(require_permissio
             base_name=pathlib.Path((sources[-1] if sources else workbook_file).filename).stem
             try: base=read_bytes(workbook_file.object_key)
             except FileNotFoundError: base=None
-    poles=[{'internal_id':p.internal_id,'pole_number':p.pole_number} for p in db.query(Pole).filter_by(project_id=project_id).order_by(Pole.internal_id).all()]
+    all_poles=db.query(Pole).filter_by(project_id=project_id).order_by(Pole.internal_id).all()
+    # Poles still without an Internal ID (provisional negative id) can't be matched to workbook rows until it is set.
+    without_id=[p.pole_number for p in all_poles if p.internal_id<0]
+    poles=[{'internal_id':p.internal_id,'pole_number':p.pole_number} for p in all_poles if p.internal_id>0]
     rows=visible_annotations(db,u,project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
     points=[{'pole_internal_id':r.pole_internal_id,'family':r.family,'feature_type':r.feature_type,'latitude':r.latitude,'longitude':r.longitude,
-             'z':r.z,'attributes':json.loads(r.attributes_json or '{}'),'updated_at':iso_utc(r.updated_at)} for r in rows]
+             'z':r.z,'attributes':json.loads(r.attributes_json or '{}'),'updated_at':iso_utc(r.updated_at)} for r in rows
+            if r.pole_internal_id is None or r.pole_internal_id>0]
     factor,note=elevation_to_feet(project.units)
     # Building the workbook is CPU-heavy: only a few run at once per process, others wait briefly, then get a quick 503.
     if not WORKBOOK_BUILDS.acquire(timeout=WORKBOOK_BUILD_WAIT_SECONDS):
@@ -809,7 +866,7 @@ def download_collection_workbook(project_id:str,u:User=Depends(require_permissio
     filename=f'{stem}-collection-updated.xlsx'
     return Response(content=data,media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     headers={'Content-Disposition':f'attachment; filename="{filename}"',
-                             'X-Collection-Summary':json.dumps({'source':summary['source'],'points':summary['points_written'],
+                             'X-Collection-Summary':json.dumps({'source':summary['source'],'points':summary['points_written'],'poles_without_id':len(without_id),
                                                                 'columns_added':len(summary['columns_added']),'rows_added':summary['rows_added']}),
                              'Access-Control-Expose-Headers':'Content-Disposition, X-Collection-Summary'})
 
@@ -987,8 +1044,14 @@ def queue_lidar_process(project_id:str,u:User=Depends(require_permission('proces
     if not any(f.role=='LIDAR_SOURCE' for f in files): raise HTTPException(400,'Upload at least one LAS/LAZ/COPC file first')
     workbooks=[f for f in files if f.role=='WORKBOOK']
     if workbooks:
-        try: check_workbook_format(p,read_bytes(workbooks[-1].object_key))
-        except FileNotFoundError: pass
+        try: workbook_bytes=read_bytes(workbooks[-1].object_key)
+        except FileNotFoundError: workbook_bytes=None
+        if workbook_bytes is not None:
+            check_workbook_format(p,workbook_bytes)
+            # Refuse before the (long) LiDAR conversion when the Excel can't be imported, listing what is wrong.
+            report=check_production_workbook(workbook_bytes)
+            if report['errors']:
+                raise HTTPException(422,'The Excel cannot be imported: '+' '.join(report['errors'][:10]))
     jid=uuid.uuid4().hex
     job=ProcessingJob(id=jid,project_id=project_id,job_type='LIDAR_INGEST',payload_json=json.dumps({'version_id':version.id}),status='QUEUED',progress=0,stage='Queued LiDAR conversion')
     db.add(job); p.status='PROCESSING'

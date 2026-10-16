@@ -399,6 +399,10 @@ def process_job(job_id:str):
     try:
         files=version_files(db,version_id) if version_id else db.query(DatasetFile).filter_by(project_id=project.id).all()
         workbook=next((f for f in reversed(files) if f.role=='WORKBOOK' and f.status=='UPLOADED'),None)
+        if lidar_only:
+            # Production re-imports the Excel as it stands now: saved Workbook Data edits and Internal IDs set in the
+            # Production view (WORKBOOK_EDITED) win over the original upload, so a reprocess never forgets them.
+            workbook=next((f for f in reversed(files) if f.role=='WORKBOOK_EDITED' and f.status=='UPLOADED'),None) or workbook
         lidar=[f for f in files if f.role=='LIDAR_SOURCE' and f.status=='UPLOADED']
         geojson=next((f for f in reversed(files) if f.role=='GEOJSON' and f.status=='UPLOADED'),None)
         if not workbook and not lidar_only: raise RuntimeError('No uploaded workbook is available')

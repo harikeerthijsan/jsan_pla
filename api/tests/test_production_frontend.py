@@ -835,3 +835,23 @@ def test_pole_base_card_lists_other_poles_with_scope_and_add():
     assert 'data-qs-pick="${p}"' in quick and 'data-other-add' in quick and "function removeOtherEntry(n)" in quick
     # The numbered entries are sent with the point.
     assert 'group?.id==="poles"&&feature==="Pole_Base"' in pick and "other_\\d+_(type|scope|id|attach_N|lat|lon|elev_ft)" in pick
+
+
+def test_hidden_3d_viewers_skip_frames():
+    workspace = (ROOT / "web" / "assets" / "modules" / "workspace.js").read_text(encoding="utf-8")
+    # A 0x0 canvas (viewer on a hidden page) is neither updated nor drawn: no GL_INVALID_FRAMEBUFFER_OPERATION spam.
+    assert "export function pauseWhenHidden(v)" in workspace and "dom.clientWidth>0&&dom.clientHeight>0" in workspace
+    assert workspace.count("pauseWhenHidden(v);") == 2
+
+
+
+def test_import_dialog_shows_excel_check_and_poles_without_id_can_be_set():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    shell = (ROOT / "web" / "assets" / "modules" / "production-shell.js").read_text(encoding="utf-8")
+    poles = (ROOT / "web" / "assets" / "modules" / "production-poles.js").read_text(encoding="utf-8")
+    # The Excel's check is shown as soon as it is chosen, and errors stop the upload before any LiDAR is sent.
+    assert 'id="productionWorkbookCheck"' in html and "function renderWorkbookCheck(report)" in shell
+    assert "if(report?.check?.errors?.length)throw new Error(`Fix the Excel first:" in shell
+    # Poles imported without an Internal ID: marked in the list, set from the pole header.
+    assert 'id="productionPoleIdControl"' in html and 'id="productionPoleIdSave"' in html
+    assert "ID not set" in poles and "/internal-id`,{method:\"PUT\"" in poles and "pole.internal_id<0&&can(\"production.annotate\")" in poles
