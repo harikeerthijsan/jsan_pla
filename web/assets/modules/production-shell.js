@@ -1,12 +1,12 @@
 // Production full screen, profile/pick buttons, import and Replace Excel dialogs.
-import { $, api, esc, state, toast } from "./core.js?v=20261016-internal-ids";
-import { loadProduction, productionProgress } from "./production-data.js?v=20261016-internal-ids";
-import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261016-internal-ids";
-import { startProductionPick } from "./production-pick.js?v=20261016-internal-ids";
-import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261016-internal-ids";
-import { setDialogProgress } from "./qc-run.js?v=20261016-internal-ids";
-import { sendFile } from "./uploads.js?v=20261016-internal-ids";
-import { bootstrap, currentProject } from "./workspace.js?v=20261016-internal-ids";
+import { $, api, esc, state, toast } from "./core.js?v=20261019-register-alert";
+import { loadProduction, productionProgress } from "./production-data.js?v=20261019-register-alert";
+import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261019-register-alert";
+import { startProductionPick } from "./production-pick.js?v=20261019-register-alert";
+import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261019-register-alert";
+import { setDialogProgress } from "./qc-run.js?v=20261019-register-alert";
+import { sendFile } from "./uploads.js?v=20261019-register-alert";
+import { bootstrap, currentProject } from "./workspace.js?v=20261019-register-alert";
 
 // In full screen the pole panel is a drawer over the LiDAR: closed at first, opened by choosing a pole.
 export function setProductionDrawer(open){const layout=document.querySelector(".production-layout");if(!layout.classList.contains("is-fullscreen"))return;layout.classList.toggle("drawer-open",open);const button=$("productionPanelToggleBtn");button.textContent=open?"Close panel":"Open panel";button.classList.toggle("active",open);button.setAttribute("aria-expanded",String(open))}

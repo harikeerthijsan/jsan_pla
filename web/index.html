@@ -10,13 +10,13 @@
   <link rel="stylesheet" href="potree/libs/openlayers3/ol.css" />
   <link rel="stylesheet" href="potree/libs/spectrum/spectrum.css" />
   <link rel="stylesheet" href="potree/libs/jstree/themes/mixed/style.css" />
-  <link rel="stylesheet" href="assets/app.css?v=20261016-internal-ids" />
-  <link rel="stylesheet" href="assets/login-lidar.css?v=20261016-internal-ids" />
+  <link rel="stylesheet" href="assets/app.css?v=20261019-register-alert" />
+  <link rel="stylesheet" href="assets/login-lidar.css?v=20261019-register-alert" />
 </head>
 <body>
   <div id="loginView" class="login-shell">
     <canvas id="loginBackground" class="login-background" aria-hidden="true"></canvas>
-    <div class="login-page-brand"><img src="assets/logo.jpg" width="174" height="56" alt="JSAN" /></div>
+    <div class="login-page-brand"><img src="assets/jsan-logo.png" width="172" height="56" alt="JSAN" /></div>
     <div class="login-card">
       <div class="login-status" aria-live="polite"><span id="loginStatusDot" class="login-status-dot"></span><span id="loginServerStatus">Connecting to server…</span></div>
       <h1>JSAN PoleGrid<sup class="tm">™</sup></h1>
@@ -40,8 +40,26 @@
           <div class="login-code-links"><button type="button" id="codeResendBtn" class="login-link">Resend code</button><button type="button" id="codeChangeBtn" class="login-link">Use a different email</button></div>
         </div>
       </div>
+      <div id="loginRegisterPane" class="hidden" aria-label="Register">
+        <div id="registerStep1">
+          <p class="login-note">Register with the work email listed in the JSAN employee directory.</p>
+          <label>Work email<input id="registerEmail" type="email" placeholder="you@company.com" autocomplete="email" autocapitalize="off" spellcheck="false" /></label>
+          <button type="button" id="registerCheckBtn" class="primary">Submit</button>
+        </div>
+        <div id="registerStep2" class="hidden">
+          <p class="login-note">Setting up the account for <b id="registerWho"></b></p>
+          <label>Username<input id="registerUsername" autocomplete="username" autocapitalize="off" spellcheck="false" /></label>
+          <label>Password<input id="registerPassword" type="password" autocomplete="new-password" minlength="12" placeholder="At least 12 characters" /></label>
+          <label>Confirm password<input id="registerConfirm" type="password" autocomplete="new-password" /></label>
+          <button type="button" id="registerSubmitBtn" class="primary">Create my account</button>
+          <div class="login-code-links"><button type="button" id="registerBackBtn" class="login-link">Use a different email</button></div>
+        </div>
+        <div id="registerError" class="login-alert hidden" role="alert" aria-live="assertive"></div>
+        <div class="login-code-links"><button type="button" id="registerCancel" class="login-link">Already have an account? Sign in</button></div>
+      </div>
       <div id="loginError" class="error"></div>
-      <div class="hint">Use your assigned JSAN PoleGrid account.</div>
+      <div id="loginRegisterDone" class="login-register-done hidden" role="status"></div>
+      <div id="loginSignInHint" class="hint">Use your assigned JSAN PoleGrid account. New here? <button type="button" id="registerOpen" class="login-link">Register</button></div>
       <div class="login-ticker" aria-hidden="true"><span class="login-ticker-tag">Inside</span><span id="loginTicker" class="login-ticker-text">Synchronized Plan · Profile · Cross · 3D evidence</span></div>
     </div>
     <div id="loginEnter" class="login-enter" role="status" aria-live="polite">
@@ -55,7 +73,7 @@
 
   <div id="appView" class="app-shell hidden">
     <header class="topbar">
-      <div class="brand-block"><a id="brandHome" class="title brand-title brand-home" href="./" title="Go to the Production page" aria-label="JSAN PoleGrid: go to the Production page"><img class="brand-logo" src="assets/logo.jpg" width="81" height="26" alt="JSAN" /><span>PoleGrid<sup class="tm">™</sup></span></a><div class="brand-subline">LiDAR Utility <span class="brand-engineering-wrap"><span id="brandEngineering" class="brand-engineering" aria-label="Engineering">ENGINEERING</span></span> Platform</div></div>
+      <div class="brand-block"><a id="brandHome" class="title brand-title brand-home" href="./" title="Go to the Production page" aria-label="JSAN PoleGrid: go to the Production page"><img class="brand-logo" src="assets/jsan-logo.png" width="80" height="26" alt="JSAN" /><span>PoleGrid<sup class="tm">™</sup></span></a><div class="brand-subline">LiDAR Utility <span class="brand-engineering-wrap"><span id="brandEngineering" class="brand-engineering" aria-label="Engineering">ENGINEERING</span></span> Platform</div></div>
       <div class="top-actions"><div id="workspaceSwitch" class="workspace-switch hidden"><button id="productionWorkspaceBtn" class="workspace-btn">Production</button><button id="qcWorkspaceBtn" class="workspace-btn">QC</button><button id="deliveryWorkspaceBtn" class="workspace-btn">Delivery</button></div><select id="projectSelect" class="project-select"></select><button id="superAdminBtn" type="button" class="ghost hidden" title="Super admin: everyone's work, accounts and access">Super admin</button><button id="reprocessBtn" class="ghost" title="Re-run LiDAR mapping, geometry build and QC using the files already uploaded for this dataset">Reprocess</button><span class="notify-wrap"><button type="button" id="notifyBtn" class="notify-btn" aria-label="Notifications" aria-haspopup="true" aria-expanded="false" title="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg><span id="notifyCount" class="notify-count hidden">0</span></button><div id="notifyPanel" class="notify-panel hidden" role="region" aria-label="Notifications"><div class="notify-head"><b>Notifications</b><button type="button" id="notifyReadAll" class="compact-btn">Mark all read</button></div><div id="notifyList" class="notify-list"></div></div></span><button type="button" id="userBadge" class="badge muted profile-chip" title="Open your profile"></button><button id="logoutBtn" class="ghost">Logout</button></div>
     </header>
 
@@ -371,7 +389,7 @@
   <dialog id="decisionDialog"><form method="dialog" id="decisionForm"><h3 id="decisionTitle">Review finding</h3><input type="hidden" id="decisionFindingId" /><label>Decision<select id="decisionValue"><option value="CONFIRMED_FAIL">Confirm fail</option><option value="ACCEPTED_EXCEPTION">Accept exception</option><option value="NEEDS_FIELD_REVIEW">Needs field review</option><option value="CORRECTED">Corrected</option><option value="OPEN">Re-open</option></select></label><label>Reviewer comment<textarea id="decisionComment" rows="4" placeholder="Evidence / correction note"></textarea></label><div class="dialog-actions"><button value="cancel">Cancel</button><button id="saveDecision" value="default" class="primary">Save decision</button></div></form></dialog>
 
   <script src="potree/libs/jquery/jquery-3.1.1.min.js"></script><script src="potree/libs/spectrum/spectrum.js"></script><script src="potree/libs/jquery-ui/jquery-ui.min.js"></script><script src="potree/libs/other/BinaryHeap.js"></script><script src="potree/libs/tween/tween.min.js"></script><script src="potree/libs/d3/d3.js"></script><script src="potree/libs/proj4/proj4.js"></script><script src="potree/libs/openlayers3/ol.js"></script><script src="potree/libs/i18next/i18next.js"></script><script src="potree/libs/jstree/jstree.js"></script><script src="potree/libs/copc/index.js"></script><script src="potree/build/potree/potree.js"></script><script src="potree/libs/plasio/js/laslaz.js"></script>
-  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261016-internal-ids"></script>
+  <script src="config.js"></script><script type="module" src="assets/app.js?v=20261019-register-alert"></script>
 <div id="toastStack" class="toast-stack" aria-live="polite"></div>
 </body>
 </html>

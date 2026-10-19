@@ -36,15 +36,15 @@
 #loginView .login-page-brand,
 #loginView .login-card { z-index: 2; }
 
-/* Logo sits on a deliberate rounded plate instead of a hard white rectangle. */
+/* Let the logo sit directly on the animated background without a white plate. */
 #loginView .login-page-brand {
-  padding: 6px 12px;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 10px 34px rgba(0, 0, 0, .45), 0 0 0 1px rgba(255, 255, 255, .6), 0 0 32px rgba(94, 230, 245, .18);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   animation: loginRise .7s cubic-bezier(.2, .8, .2, 1) both;
 }
-#loginView .login-page-brand img { width: 150px; height: 48px; }
+#loginView .login-page-brand img { width: 150px; height: 48px; mix-blend-mode: multiply; }
 
 /* ---- Card ---------------------------------------------------------------- */
 #loginView .login-card {
@@ -237,3 +237,104 @@
 /* The car arrives: the logo swells and glows. */
 .login-enter-mark.absorb{opacity:1;animation:loginAbsorb .7s cubic-bezier(.2,.8,.2,1) forwards}
 @keyframes loginAbsorb{0%{transform:scale(1);box-shadow:0 0 0 1px rgba(110,230,248,.45),0 0 50px rgba(94,230,245,.35)}35%{transform:scale(1.22);box-shadow:0 0 0 2px rgba(190,250,255,.9),0 0 90px rgba(94,230,245,.85)}100%{transform:scale(1);box-shadow:0 0 0 1px rgba(110,230,248,.6),0 0 60px rgba(94,230,245,.5)}}
+
+/* ===================================================================================
+   Light theme. Overrides the dark sign-in styles above: pale sky backdrop, white glass
+   panels and card, dark text, deep teal accents. Remove this block to return to dark.
+   =================================================================================== */
+#loginView {
+  --lx-accent: #0a8fb8;
+  --lx-accent-2: #2a7fd6;
+  --lx-ok: #12a26c;
+  --lx-warn: #c27a06;
+  --lx-bad: #c2384b;
+  --lx-text: #0d2d46;
+  --lx-muted: #4f6f80;
+  --lx-line: rgba(13, 90, 120, .18);
+  background: #eef5f9;
+}
+#loginBackground { background: linear-gradient(180deg, #f6fafd 0%, #e7f2f8 42%, #d3e6ef 100%); filter: none; }
+#loginView::after {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, .35) 0, rgba(255, 255, 255, .05) 32%, rgba(255, 255, 255, 0) 55%, rgba(255, 255, 255, .45) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, .25), transparent 42%, rgba(210, 230, 240, .25));
+  box-shadow: inset 0 0 120px rgba(120, 170, 195, .18);
+}
+#loginView .login-page-brand { box-shadow: none; }
+
+#loginView .login-card {
+  background: linear-gradient(165deg, rgba(255, 255, 255, .92), rgba(244, 249, 252, .9));
+  box-shadow: 0 26px 70px rgba(20, 60, 85, .18), 0 0 0 1px rgba(13, 90, 120, .08), inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+#loginView .login-card::after { background: radial-gradient(320px circle at var(--mx) var(--my), rgba(10, 143, 184, .07), transparent 60%); }
+#loginView .login-card h1, #loginView .login-card .login-title {
+  background: linear-gradient(100deg, #0d2d46 10%, #11597a 55%, var(--lx-accent) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+#loginView .login-card label { color: #24465c; }
+#loginView .login-card input {
+  background: #ffffff;
+  color: var(--lx-text);
+  border-color: rgba(13, 90, 120, .22);
+}
+#loginView .login-card input::placeholder { color: #8aa5b3; }
+#loginView .login-card input:focus {
+  border-color: rgba(10, 143, 184, .8);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(10, 143, 184, .16);
+}
+#loginView .login-card input:-webkit-autofill { -webkit-box-shadow: 0 0 0 40px #ffffff inset; -webkit-text-fill-color: var(--lx-text); }
+.login-status { background: rgba(18, 162, 108, .08); color: #1d5f48; }
+.login-eye { color: #5c7f90; }
+.login-eye:hover, .login-eye:focus-visible { background: rgba(10, 143, 184, .1); }
+#loginView .login-card .primary {
+  border-color: rgba(10, 120, 160, .35);
+  background: linear-gradient(120deg, #0b7fa6, #0f9cc6 45%, #16b3b0);
+  box-shadow: 0 12px 28px rgba(11, 127, 166, .28), inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+#loginView .login-card .primary:hover { background: linear-gradient(120deg, #0a8ab4, #13a9d4 45%, #1cc2be); box-shadow: 0 14px 34px rgba(11, 127, 166, .36); }
+#loginView .login-card .primary:focus-visible { outline: 2px solid #0a8fb8; outline-offset: 2px; }
+#loginView .login-tabs { background: rgba(13, 90, 120, .06); }
+#loginView .login-tabs button:not(.active):hover { color: var(--lx-text); background: rgba(10, 143, 184, .08); }
+#loginView .login-link { color: #0a7fa6; }
+#loginView .login-card .hint { color: #5c7f90; }
+.login-ticker { border-top-color: rgba(13, 90, 120, .14); color: #3e6074; }
+.login-ticker-tag { color: #ffffff; }
+
+/* Entrance ("Welcome … now entering PoleGrid World"): light glass with dark text. */
+.login-enter-mark { background: radial-gradient(circle, rgba(10, 143, 184, .16), rgba(255, 255, 255, .85) 70%); box-shadow: 0 0 0 1px rgba(10, 143, 184, .3), 0 14px 40px rgba(20, 60, 85, .18); }
+.login-enter-orbit { stroke: rgba(10, 143, 184, .85); }
+.login-enter-pole { stroke: #0d2d46; }
+.login-enter-hello { background: rgba(255, 255, 255, .85); border-color: rgba(10, 143, 184, .3); color: #11597a; }
+.login-enter-name { background: linear-gradient(100deg, #0d2d46 20%, #11597a 55%, var(--lx-accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.login-enter-steps { background: rgba(255, 255, 255, .88); border-color: rgba(13, 90, 120, .18); box-shadow: 0 14px 40px rgba(20, 60, 85, .14); }
+.login-enter-steps li { color: rgba(13, 45, 70, .45); }
+.login-enter-steps li::before { border-color: rgba(10, 143, 184, .35); }
+.login-enter-bar { background: rgba(10, 143, 184, .16); }
+.login-enter-bar span { box-shadow: 0 0 10px rgba(10, 143, 184, .45); }
+@keyframes loginStepLight { to { color: #0d2d46; } }
+.login-enter-steps li { animation-name: loginStepLight; }
+
+/* Self-registration on the sign-in card. */
+#loginView .login-card .hint .login-link { padding: 0; font: inherit; font-weight: 700; }
+#loginRegisterPane .login-note { margin: 0 0 12px; color: var(--lx-muted); font-size: 13px; line-height: 1.45; }
+#loginRegisterPane .login-note b { color: var(--lx-text); }
+.login-register-done { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: rgba(18, 162, 108, .1); border: 1px solid rgba(18, 162, 108, .3); color: #135c42; font-size: 13px; line-height: 1.45; }
+
+/* Error messages on the sign-in card (sign-in and register): a clear alert box, not loose red text. */
+#loginView .login-alert,
+#loginView .login-card > .error:not(:empty) {
+  display: flex; gap: 9px; align-items: flex-start;
+  margin: 12px 0 4px; padding: 10px 12px;
+  border: 1px solid rgba(194, 56, 75, .32); border-radius: 10px;
+  background: #fff4f5; color: #9b2335;
+  font-size: 13px; font-weight: 600; line-height: 1.45;
+}
+#loginView .login-alert.hidden { display: none; }
+#loginView .login-alert::before,
+#loginView .login-card > .error:not(:empty)::before {
+  content: "!"; flex: none; display: inline-grid; place-items: center;
+  width: 18px; height: 18px; margin-top: 1px; border-radius: 50%;
+  background: #c2384b; color: #fff; font-size: 12px; font-weight: 800;
+}
+

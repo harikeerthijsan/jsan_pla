@@ -1,15 +1,15 @@
 // Viewer creation, permissions, workspace switching, dataset selection and bootstrap.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { applyProductionPointSettings } from "./production-points.js?v=20261016-internal-ids";
-import { $, api, state, rememberPage, updatePageTitle } from "./core.js?v=20261016-internal-ids";
-import { loadWorkflow } from "./delivery.js?v=20261016-internal-ids";
-import { loadNotifications } from "./notifications.js?v=20261016-internal-ids";
-import { loadProduction } from "./production-data.js?v=20261016-internal-ids";
-import { installProductionNavigation } from "./production-view.js?v=20261016-internal-ids";
-import { clearCanvases } from "./qc-analysis.js?v=20261016-internal-ids";
-import { renderPoles, renderSummary } from "./qc-review.js?v=20261016-internal-ids";
-import { loadProject } from "./qc-run.js?v=20261016-internal-ids";
-import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261016-internal-ids";
+import { applyProductionPointSettings } from "./production-points.js?v=20261019-register-alert";
+import { $, api, state, rememberPage, updatePageTitle } from "./core.js?v=20261019-register-alert";
+import { loadWorkflow } from "./delivery.js?v=20261019-register-alert";
+import { loadNotifications } from "./notifications.js?v=20261019-register-alert";
+import { loadProduction } from "./production-data.js?v=20261019-register-alert";
+import { installProductionNavigation } from "./production-view.js?v=20261019-register-alert";
+import { clearCanvases } from "./qc-analysis.js?v=20261019-register-alert";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261019-register-alert";
+import { loadProject } from "./qc-run.js?v=20261019-register-alert";
+import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261019-register-alert";
 
 // A viewer on a hidden page (QC while in Production, and the other way round) has a 0×0 canvas. Potree would still
 // update and draw it every frame, which wastes CPU/GPU and floods the console with GL_INVALID_FRAMEBUFFER_OPERATION

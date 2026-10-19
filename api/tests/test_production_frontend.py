@@ -361,8 +361,9 @@ def test_login_page_has_brand_and_animated_background_without_api_url():
     background = (ROOT / "web" / "assets" / "login-background.js").read_text(encoding="utf-8")
 
     assert '<h1>JSAN PoleGrid<sup class="tm">™</sup></h1>' in html and "<p>LiDAR Utility Engineering Platform</p>" in html
-    assert '<div class="login-page-brand"><img src="assets/logo.jpg" width="174" height="56" alt="JSAN" /></div>' in html
-    assert (ROOT / "web" / "assets" / "logo.jpg").read_bytes()[:3] == b"\xff\xd8\xff"
+    assert '<div class="login-page-brand"><img src="assets/jsan-logo.png" width="172" height="56" alt="JSAN" /></div>' in html
+    assert (ROOT / "web" / "assets" / "jsan-logo.png").read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    assert 'class="brand-logo" src="assets/jsan-logo.png"' in html
     assert '<div class="brand-mark">J</div>' not in html
     assert "JSAN CONSULTING" not in html
     assert 'id="apiUrl"' not in html and "API URL" not in html
@@ -392,7 +393,7 @@ def test_login_page_has_brand_and_animated_background_without_api_url():
     assert "VISIBLE RETURNS" in lidar_background
     assert 'const modes = ["PLAN", "PROFILE", "CROSS", "3D"]' in lidar_background
     assert "Recognisable trees" in lidar_background
-    assert "point-cloud building shells" in lidar_background
+    assert "Point-cloud buildings" in lidar_background
     assert "cylindrical transformer" in lidar_background
     assert "function drawScanPlane(" not in lidar_background
     assert "function cameraInspectionState(" in lidar_background
@@ -855,3 +856,25 @@ def test_import_dialog_shows_excel_check_and_poles_without_id_can_be_set():
     # Poles imported without an Internal ID: marked in the list, set from the pole header.
     assert 'id="productionPoleIdControl"' in html and 'id="productionPoleIdSave"' in html
     assert "ID not set" in poles and "/internal-id`,{method:\"PUT\"" in poles and "pole.internal_id<0&&can(\"production.annotate\")" in poles
+
+
+def test_login_page_uses_the_light_theme():
+    css = (ROOT / "web" / "assets" / "login-lidar.css").read_text(encoding="utf-8")
+    scene = (ROOT / "web" / "assets" / "lidar-login-scene.js").read_text(encoding="utf-8")
+    # Pale sky backdrop, dark text, white card; the canvas draws normally (additive glow only works on black).
+    assert "Light theme." in css and "--lx-text: #0d2d46;" in css and 'gradient.addColorStop(0, "#f6fafd");' in scene
+    assert 'globalCompositeOperation = "lighter"' not in scene
+    # The JPG's white pixels blend into the scene; no separate plate or shadow should frame the logo.
+    assert "#loginView .login-page-brand img { width: 150px; height: 48px; mix-blend-mode: multiply; }" in css
+    assert "background: transparent;" in css and "#loginView .login-page-brand { box-shadow: none; }" in css
+
+
+def test_sign_in_page_offers_self_registration():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    app_js = (ROOT / "web" / "assets" / "app.js").read_text(encoding="utf-8")
+    registration = (ROOT / "web" / "assets" / "modules" / "registration.js").read_text(encoding="utf-8")
+    assert 'id="registerOpen"' in html and 'id="loginRegisterPane"' in html and 'id="registerSubmitBtn"' in html
+    assert "initRegistration();" in app_js
+    assert '"/api/auth/register/check"' in registration and '"/api/auth/register"' in registration
+    # The browser never sends a role: the server always creates a User account.
+    assert "role" not in registration.split('JSON.stringify({ email, username, password })')[0].split("function createAccount")[1]
