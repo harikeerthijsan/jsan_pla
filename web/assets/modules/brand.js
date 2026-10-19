@@ -1,6 +1,6 @@
 // Top-bar brand line: "ENGINEERING" decodes like a robot terminal, letter by letter,
 // on load and again every few seconds while the app is visible.
-import { $ } from "./core.js?v=20261019-crs-checks2";
+import { $ } from "./core.js?v=20261020-session-work3";
 
 const WORD = "ENGINEERING";
 const GLYPHS = "01#<>/\\[]{}=+*%$&ABCDEFGHIJKLMNOPQRSTUVWXYZ";

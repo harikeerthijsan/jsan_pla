@@ -890,3 +890,17 @@ def test_import_dialog_reads_and_checks_the_source_crs():
     # A mismatch blocks the upload; admins can correct an existing dataset's CRS from the header.
     assert "const crsProblems=await checkSourceCrs({fill:false});if(crsProblems.length)throw new Error" in shell
     assert 'id="productionCrsControl"' in html and "/crs`, { method: \"PUT\"" in crs
+
+
+def test_session_work_dialog_and_saved_measurements():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    work = (ROOT / "web" / "assets" / "modules" / "production-work.js").read_text(encoding="utf-8")
+    measure = (ROOT / "web" / "assets" / "modules" / "production-measure.js").read_text(encoding="utf-8")
+    core = (ROOT / "web" / "assets" / "modules" / "core.js").read_text(encoding="utf-8")
+    # Admin-only button; clear only after a download in this dialog; archives open read-only (violet overlay).
+    assert 'id="sessionWorkBtn"' in html and 'can("project.create")' in work
+    assert '$("sessionWorkClear").disabled = !lastExport.id;' in work and "/work-archive/view`" in work and "ARCHIVE_COLOR = 0x8b5cf6" in work
+    # Measurements are saved with the dataset and show who measured.
+    assert "/measurements`, { method: \"POST\"" in measure and "export async function loadProductionMeasurements" in measure
+    # Confirmations show above an open modal dialog (top layer), not behind it.
+    assert '(document.querySelector("dialog[open]")||document.body).appendChild(overlay)' in core

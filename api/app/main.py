@@ -1,4 +1,4 @@
-import json, logging, os, re, threading, uuid, pathlib, time, tempfile
+import hashlib, hmac, json, logging, math, os, re, threading, uuid, pathlib, time, tempfile
 from datetime import datetime, timedelta, timezone
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File, Request
@@ -11,7 +11,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, text
 from .db import Base, engine, get_db, SessionLocal, initialize_schema
-from .models import iso_utc,User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog,PoleAssignment,PolePresence,Notification,EmailLoginCode
+from .models import ProductionMeasurement,WorkArchive,iso_utc,User,Project,DatasetFile,ProcessingJob,Pole,LidarBlock,ProductionAnnotation,ProductionGeoFeature,Finding,SceneFeature,ReviewDecision,AuditLog,PoleAssignment,PolePresence,Notification,EmailLoginCode
 from .geojson_import import geo_feature_dict, pole_locations
 from .auth import current_user, verify_password, create_token, hash_password
 from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission, normalize_role, is_admin_role, is_super_admin
@@ -94,7 +94,7 @@ app.include_router(email_login_router)
 app.include_router(employee_directory_router)
 app.include_router(registration_router)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
-app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag','Content-Disposition','X-Collection-Summary','X-Workbook-Edited'])
+app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag','Content-Disposition','X-Collection-Summary','X-Workbook-Edited','X-Work-Archive-Id'])
 
 
 @app.middleware('http')
@@ -1108,6 +1108,207 @@ def delete_production_annotation(project_id:str,annotation_id:str,expected_revis
     snapshot=annotation_dict(row); _clear_pole_verification_for_annotation(db,project_id,row.id); db.delete(row)
     db.add(AuditLog(actor=u.email,action='DELETE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,detail_json=json.dumps(snapshot,default=str)))
     db.commit(); return {'ok':True,'id':annotation_id}
+
+# ---- Measurements saved with the dataset ------------------------------------------------------------------------------
+class MeasurePointIn(BaseModel):
+    x:float; y:float; z:float
+class MeasurementIn(BaseModel):
+    a:MeasurePointIn; b:MeasurePointIn; pole_internal_id:int|None=None
+
+def _person_names(db:Session,emails)->dict:
+    emails={e for e in emails if e}
+    return {u.email:(u.name or u.username or u.email) for u in db.query(User).filter(User.email.in_(emails)).all()} if emails else {}
+
+def measurement_dict(row:ProductionMeasurement,names:dict|None=None)->dict:
+    dx,dy,dz=row.bx-row.ax,row.by-row.ay,row.bz-row.az
+    return {'id':row.id,'a':{'x':row.ax,'y':row.ay,'z':row.az},'b':{'x':row.bx,'y':row.by,'z':row.bz},'distance':row.distance,
+            'horizontal':math.hypot(dx,dy),'vertical':abs(dz),'pole_internal_id':row.pole_internal_id,
+            'created_by':row.created_by,'created_by_name':(names or {}).get(row.created_by,row.created_by),'created_at':iso_utc(row.created_at)}
+
+def visible_measurements(db:Session,u:User,project_id:str):
+    query=db.query(ProductionMeasurement).filter_by(project_id=project_id)
+    hidden=hidden_authors(db,u)
+    return query.filter(ProductionMeasurement.created_by.notin_(hidden)) if hidden else query
+
+@app.get('/api/projects/{project_id}/measurements')
+def list_measurements(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
+    rows=visible_measurements(db,u,project_id).order_by(ProductionMeasurement.created_at).all()
+    names=_person_names(db,[r.created_by for r in rows])
+    return [measurement_dict(r,names) for r in rows]
+
+@app.post('/api/projects/{project_id}/measurements')
+def create_measurement(project_id:str,body:MeasurementIn,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+    if not db.query(Project).filter_by(id=project_id).first(): raise HTTPException(404,'Project not found')
+    for point in (body.a,body.b): validate_coordinates(point.x,point.y,point.z)
+    distance=math.dist((body.a.x,body.a.y,body.a.z),(body.b.x,body.b.y,body.b.z))
+    row=ProductionMeasurement(id=uuid.uuid4().hex,project_id=project_id,pole_internal_id=body.pole_internal_id,ax=body.a.x,ay=body.a.y,az=body.a.z,
+                              bx=body.b.x,by=body.b.y,bz=body.b.z,distance=distance,created_by=u.email,created_at=datetime.now(timezone.utc))
+    db.add(row); db.commit()
+    return measurement_dict(row,{u.email:u.name or u.username or u.email})
+
+@app.delete('/api/projects/{project_id}/measurements/{measurement_id}')
+def delete_measurement(project_id:str,measurement_id:str,u:User=Depends(require_permission('production.annotate')),db:Session=Depends(get_db)):
+    row=visible_measurements(db,u,project_id).filter(ProductionMeasurement.id==measurement_id).first()
+    if not row: raise HTTPException(404,'Measurement not found')
+    db.delete(row); db.commit(); return {'ok':True,'id':measurement_id}
+
+# ---- Session work: export (signed archive), clear exactly that, view an archive read-only ------------------------------
+WORK_ARCHIVE_FORMAT='jsan-polegrid-work-archive'
+WORK_ARCHIVE_CLEAR_HOURS=24
+MAX_WORK_ARCHIVE_BYTES=25*1024*1024
+
+def _archive_signature(payload:dict)->str:
+    secret=(os.getenv('ARCHIVE_SECRET') or os.getenv('JWT_SECRET') or 'dev-only-change-me').encode()
+    body=json.dumps(payload,sort_keys=True,separators=(',',':'),default=str).encode()
+    return hmac.new(secret,body,hashlib.sha256).hexdigest()
+
+def _pole_verification_dict(pole:Pole)->dict:
+    return {'internal_id':pole.internal_id,'pole_number':pole.pole_number,'verified_lat':pole.verified_lat,'verified_lon':pole.verified_lon,
+            'verified_x':pole.verified_x,'verified_y':pole.verified_y,'verified_z':pole.verified_z,
+            'bottom_elevation':pole.verified_bottom_elevation,'top_elevation':pole.verified_top_elevation,'height':pole.verified_height,
+            'verified_by':pole.location_verified_by,'verified_at':iso_utc(pole.location_verified_at)}
+
+@app.post('/api/projects/{project_id}/work-archive')
+def export_work_archive(project_id:str,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
+    """Download every piece of this dataset's session work the admin can see, with who did it; record exactly what it holds."""
+    project=db.query(Project).filter_by(id=project_id).first()
+    if not project: raise HTTPException(404,'Project not found')
+    points=visible_annotations(db,u,project_id).order_by(ProductionAnnotation.created_at,ProductionAnnotation.id).all()
+    measurements=visible_measurements(db,u,project_id).order_by(ProductionMeasurement.created_at).all()
+    assignments=db.query(PoleAssignment).filter_by(project_id=project_id).all()
+    poles={p.internal_id:p for p in db.query(Pole).filter_by(project_id=project_id).all()}
+    point_ids={r.id for r in points}
+    verified=[p for p in poles.values() if (p.verified_annotation_id in point_ids or p.verified_bottom_annotation_id in point_ids or p.verified_top_annotation_id in point_ids)]
+    users={x.id:x for x in db.query(User).filter(User.id.in_({a.user_id for a in assignments})).all()} if assignments else {}
+    names=_person_names(db,[r.created_by for r in points]+[r.modified_by for r in points]+[m.created_by for m in measurements]+[a.assigned_by for a in assignments])
+    people={}
+    def person(email):
+        return people.setdefault(email,{'email':email,'name':names.get(email,email),'points_created':0,'points_modified':0,'measurements':0})
+    for r in points:
+        person(r.created_by)['points_created']+=1
+        if r.modified_by and r.modified_by!=r.created_by: person(r.modified_by)['points_modified']+=1
+    for m in measurements: person(m.created_by)['measurements']+=1
+    archive_id=uuid.uuid4().hex; now=datetime.now(timezone.utc)
+    payload={
+        'format':WORK_ARCHIVE_FORMAT,'version':1,'archive_id':archive_id,'exported_at':iso_utc(now),
+        'exported_by':{'email':u.email,'name':u.name or u.username or u.email},
+        'project':{'id':project.id,'name':project.name,'crs':project.crs,'units':project.units,'workbook_format':project.workbook_format},
+        'summary':{'points':len(points),'measurements':len(measurements),'assignments':len(assignments),'verified_poles':len(verified),
+                   'people':sorted(people.values(),key=lambda p:(-p['points_created'],p['email'] or ''))},
+        'points':[{**annotation_dict(r),'pole_number':poles[r.pole_internal_id].pole_number if r.pole_internal_id in poles else None,
+                   'created_by_name':names.get(r.created_by,r.created_by),'modified_by_name':names.get(r.modified_by,r.modified_by)} for r in points],
+        'measurements':[measurement_dict(m,names) for m in measurements],
+        'assignments':[{'pole_internal_id':a.pole_internal_id,'pole_number':poles[a.pole_internal_id].pole_number if a.pole_internal_id in poles else None,
+                        'user_email':users[a.user_id].email if a.user_id in users else None,'user_name':(users[a.user_id].name or users[a.user_id].username) if a.user_id in users else None,
+                        'assigned_by':a.assigned_by,'assigned_at':iso_utc(a.assigned_at)} for a in assignments],
+        'pole_verification':[_pole_verification_dict(p) for p in verified],
+    }
+    document={**payload,'signature':_archive_signature(payload)}
+    items={'points':{r.id:(r.revision or 1) for r in points},'measurements':[m.id for m in measurements],
+           'assignments':[{'id':a.id,'pole_internal_id':a.pole_internal_id,'user_id':a.user_id} for a in assignments]}
+    counts=payload['summary']|{'people':len(people)}
+    db.add(WorkArchive(id=archive_id,project_id=project_id,created_by=u.email,created_at=now,items_json=json.dumps(items),counts_json=json.dumps(counts)))
+    db.add(AuditLog(actor=u.email,action='EXPORT_WORK_ARCHIVE',entity_type='project',entity_id=project_id,detail_json=json.dumps({'archive_id':archive_id,**counts})))
+    db.commit()
+    stem=re.sub(r'[^A-Za-z0-9._-]+','_',project.name).strip('._') or 'dataset'
+    return Response(content=json.dumps(document,ensure_ascii=False,indent=1,default=str),media_type='application/json',
+                    headers={'Content-Disposition':f'attachment; filename="{stem}-session-work-{now.strftime("%Y%m%d-%H%M")}.json"','X-Work-Archive-Id':archive_id})
+
+@app.post('/api/projects/{project_id}/work-archive/{archive_id}/clear')
+def clear_work_session(project_id:str,archive_id:str,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
+    """Delete exactly the work an archive holds (unchanged since export), so the next session starts clean."""
+    archive=db.query(WorkArchive).filter_by(id=archive_id,project_id=project_id).with_for_update().first()
+    if not archive: raise HTTPException(404,'Archive not found for this dataset')
+    if archive.created_by!=u.email: raise HTTPException(403,'Only the admin who downloaded this archive can clear its work')
+    if archive.cleared_at: raise HTTPException(409,'This archive\'s work was already cleared')
+    created=archive.created_at if archive.created_at.tzinfo else archive.created_at.replace(tzinfo=timezone.utc)
+    if datetime.now(timezone.utc)-created>timedelta(hours=WORK_ARCHIVE_CLEAR_HOURS):
+        raise HTTPException(409,f'Archives can be cleared only within {WORK_ARCHIVE_CLEAR_HOURS} hours of download. Download a new archive first.')
+    items=json.loads(archive.items_json); listed=items.get('points',{})
+    rows={r.id:r for r in db.query(ProductionAnnotation).filter(ProductionAnnotation.project_id==project_id,ProductionAnnotation.id.in_(list(listed))).all()} if listed else {}
+    skipped=[]
+    remove={i for i,r in rows.items() if (r.revision or 1)==listed[i]}
+    skipped+=[{'id':i,'feature_type':rows[i].feature_type,'reason':'changed after the archive was downloaded'} for i in rows if i not in remove]
+    # A point that a newer (not archived) point hangs from stays, so the newer point keeps its parent.
+    while True:
+        blocked={r.reference_annotation_id for r in db.query(ProductionAnnotation).filter(ProductionAnnotation.project_id==project_id,
+                 ProductionAnnotation.reference_annotation_id.in_(list(remove))).all() if r.id not in remove} if remove else set()
+        if not blocked: break
+        skipped+=[{'id':i,'feature_type':rows[i].feature_type,'reason':'a newer point is attached to it'} for i in blocked]
+        remove-=blocked
+    ordered=sorted((rows[i] for i in remove),key=lambda r:0 if r.reference_annotation_id in remove else 1)
+    for row in ordered:
+        snapshot=annotation_dict(row); _clear_pole_verification_for_annotation(db,project_id,row.id)
+        db.add(AuditLog(actor=u.email,action='DELETE_PRODUCTION_ANNOTATION',entity_type='production_annotation',entity_id=row.id,
+                        detail_json=json.dumps({**snapshot,'cleared_with_archive':archive_id},default=str)))
+        db.delete(row); db.flush()
+    measurements=db.query(ProductionMeasurement).filter(ProductionMeasurement.project_id==project_id,ProductionMeasurement.id.in_(items.get('measurements',[]))).delete(synchronize_session=False) if items.get('measurements') else 0
+    assignments=0
+    for entry in items.get('assignments',[]):
+        assignments+=db.query(PoleAssignment).filter_by(id=entry['id'],project_id=project_id,user_id=entry['user_id']).delete(synchronize_session=False)
+    archive.cleared_at=datetime.now(timezone.utc); archive.cleared_by=u.email
+    result={'archive_id':archive_id,'points_deleted':len(ordered),'measurements_deleted':measurements,'assignments_deleted':assignments,'skipped':skipped[:200]}
+    db.add(AuditLog(actor=u.email,action='CLEAR_WORK_SESSION',entity_type='project',entity_id=project_id,detail_json=json.dumps({**result,'skipped':len(skipped)})))
+    db.commit()
+    return result
+
+def _text(value,limit=300):
+    return None if value is None else str(value)[:limit]
+
+def _number(value):
+    try:
+        number=float(value)
+        return number if math.isfinite(number) else None
+    except (TypeError,ValueError): return None
+
+@app.post('/api/projects/{project_id}/work-archive/view')
+async def view_work_archive(project_id:str,file:UploadFile=File(...),u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
+    """Read an archive file (untrusted) and return it as read-only data, with whether its signature is intact."""
+    raw=await file.read(MAX_WORK_ARCHIVE_BYTES+1)
+    if len(raw)>MAX_WORK_ARCHIVE_BYTES: raise HTTPException(413,'The archive file is larger than 25 MB')
+    try: document=json.loads(raw.decode('utf-8-sig'))
+    except (UnicodeDecodeError,json.JSONDecodeError): raise HTTPException(422,'This file is not a Session work archive (not valid JSON)') from None
+    if not isinstance(document,dict) or document.get('format')!=WORK_ARCHIVE_FORMAT: raise HTTPException(422,'This file is not a Session work archive from JSAN PoleGrid')
+    payload={k:v for k,v in document.items() if k!='signature'}
+    verified=isinstance(document.get('signature'),str) and hmac.compare_digest(document['signature'],_archive_signature(payload))
+    project=document.get('project') if isinstance(document.get('project'),dict) else {}
+    def as_list(key,limit=50000): value=document.get(key); return value[:limit] if isinstance(value,list) else []
+    points=[]
+    for r in as_list('points'):
+        if not isinstance(r,dict): continue
+        c=r.get('coordinates') if isinstance(r.get('coordinates'),dict) else {}; g=r.get('geographic_coordinates') if isinstance(r.get('geographic_coordinates'),dict) else {}
+        if None in (_number(c.get('x')),_number(c.get('y')),_number(c.get('z'))): continue
+        attrs=r.get('attributes') if isinstance(r.get('attributes'),dict) else {}
+        points.append({'id':_text(r.get('id'),64),'family':_text(r.get('family'),80),'feature_type':_text(r.get('feature_type'),80),
+                       'coordinates':{'x':_number(c['x']),'y':_number(c['y']),'z':_number(c['z'])},
+                       'geographic_coordinates':{'latitude':_number(g.get('latitude')),'longitude':_number(g.get('longitude'))},
+                       'pole_internal_id':r.get('pole_internal_id') if isinstance(r.get('pole_internal_id'),int) else None,'pole_number':_text(r.get('pole_number'),80),
+                       'attributes':{_text(k,80):_text(v,200) for k,v in list(attrs.items())[:80]},
+                       'created_by':_text(r.get('created_by'),255),'created_by_name':_text(r.get('created_by_name'),255),'created_at':_text(r.get('created_at'),40),
+                       'modified_by':_text(r.get('modified_by'),255),'modified_by_name':_text(r.get('modified_by_name'),255),'updated_at':_text(r.get('updated_at'),40)})
+    measurements=[]
+    for m in as_list('measurements'):
+        a=m.get('a') if isinstance(m,dict) and isinstance(m.get('a'),dict) else None; b=m.get('b') if isinstance(m,dict) and isinstance(m.get('b'),dict) else None
+        if not a or not b or None in (_number(a.get('x')),_number(a.get('y')),_number(a.get('z')),_number(b.get('x')),_number(b.get('y')),_number(b.get('z'))): continue
+        measurements.append({'a':{k:_number(a[k]) for k in 'xyz'},'b':{k:_number(b[k]) for k in 'xyz'},'distance':_number(m.get('distance')),
+                             'created_by':_text(m.get('created_by'),255),'created_by_name':_text(m.get('created_by_name'),255),'created_at':_text(m.get('created_at'),40)})
+    summary=document.get('summary') if isinstance(document.get('summary'),dict) else {}
+    people=[{'email':_text(x.get('email'),255),'name':_text(x.get('name'),255),'points_created':int(_number(x.get('points_created')) or 0),
+             'points_modified':int(_number(x.get('points_modified')) or 0),'measurements':int(_number(x.get('measurements')) or 0)}
+            for x in (summary.get('people') or [])[:500] if isinstance(x,dict)]
+    assignments=[{k:_text(a.get(k),255) for k in ('pole_number','user_email','user_name','assigned_by','assigned_at')} for a in as_list('assignments',20000) if isinstance(a,dict)]
+    verification=[{k:(_number(v.get(k)) if k not in ('pole_number','verified_by','verified_at') else _text(v.get(k),255))
+                   for k in ('pole_number','verified_lat','verified_lon','bottom_elevation','top_elevation','height','verified_by','verified_at')}
+                  for v in as_list('pole_verification',20000) if isinstance(v,dict)]
+    exported_by=document.get('exported_by') if isinstance(document.get('exported_by'),dict) else {}
+    db.add(AuditLog(actor=u.email,action='VIEW_WORK_ARCHIVE',entity_type='project',entity_id=project_id,detail_json=json.dumps(
+        {'archive_id':_text(document.get('archive_id'),64),'verified':verified,'points':len(points),'archive_project':_text(project.get('id'),80)})))
+    db.commit()
+    return {'verified':verified,'same_project':project.get('id')==project_id,'archive_id':_text(document.get('archive_id'),64),
+            'exported_at':_text(document.get('exported_at'),40),'exported_by':{'email':_text(exported_by.get('email'),255),'name':_text(exported_by.get('name'),255)},
+            'project':{'id':_text(project.get('id'),80),'name':_text(project.get('name'),255),'crs':_text(project.get('crs'),80)},
+            'summary':{'points':len(points),'measurements':len(measurements),'assignments':len(assignments),'verified_poles':len(verification),'people':people},
+            'points':points,'measurements':measurements,'assignments':assignments,'pole_verification':verification}
 
 @app.post('/api/projects/{project_id}/process-lidar')
 def queue_lidar_process(project_id:str,u:User=Depends(require_permission('processing.run')),db:Session=Depends(get_db)):

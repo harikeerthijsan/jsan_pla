@@ -1,7 +1,7 @@
 // Configuration, shared state, DOM/API helpers and sign-in/sign-out.
-import { startLidarLoginBackground as startLoginBackground } from "../lidar-login-scene.js?v=20261019-crs-checks2";
-import { openProfilePage, roleLabel } from "./profile.js?v=20261019-crs-checks2";
-import { bootstrap } from "./workspace.js?v=20261019-crs-checks2";
+import { startLidarLoginBackground as startLoginBackground } from "../lidar-login-scene.js?v=20261020-session-work3";
+import { openProfilePage, roleLabel } from "./profile.js?v=20261020-session-work3";
+import { bootstrap } from "./workspace.js?v=20261020-session-work3";
 
 // After a real sign-in, ask the browser for its location (the person may refuse); only the latest is stored.
 export function captureSignInLocation(){const report=body=>api("/api/auth/sign-in-location",{method:"POST",body:JSON.stringify(body)}).then(result=>{state.user={...(state.user||{}),...result};localStorage.setItem("pla_user",JSON.stringify(state.user))}).catch(()=>{});if(!("geolocation" in navigator)){report({status:"unavailable"});return}navigator.geolocation.getCurrentPosition(p=>report({status:"shared",latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy}),error=>report({status:error.code===1?"denied":"unavailable"}),{enableHighAccuracy:true,timeout:15000,maximumAge:60000})}
@@ -27,7 +27,8 @@ const PAGE_TITLES={profile:"My profile",team:"Team progress",super:"Super admin"
 export function updatePageTitle(){const env=String(state.runtime?.railway_environment||state.runtime?.app_env||"").toUpperCase(),suffix=`JSAN PoleGrid${env&&env!=="PRODUCTION"?` (${env.charAt(0)+env.slice(1).toLowerCase()})`:""}`;if(appView.classList.contains("hidden")){document.title=`Sign in · ${suffix}`;return}const page=PAGE_TITLES[state.page];if(page){document.title=`${page} · ${suffix}`;return}const project=state.projects?.find(p=>p.id===state.projectId)?.name;document.title=[WORKSPACE_TITLES[state.workspace]||"Workspace",project,suffix].filter(Boolean).join(" · ")}
 export function savedPage(){try{return JSON.parse(localStorage.getItem("pla_page")||"null")}catch{return null}}
 export function esc(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
-// In-page replacement for window.confirm(): resolves true/false. The question (up to the first "?") is the heading;
+// In-page replacement for window.confirm(): resolves true/false. Shown inside an open modal <dialog> when there is one
+// (open dialogs sit on the browser's top layer, above anything attached to <body>). The question (up to the first "?") is the heading;
 // the rest is the explanation. Destructive verbs (Delete, Remove, Deactivate, Reset) get a red confirm button.
 export function confirmAction(message,{confirmLabel=null,danger=null}={}){return new Promise(resolve=>{const text=String(message??""),cut=text.indexOf("?"),title=cut>=0?text.slice(0,cut+1):text,detail=cut>=0?text.slice(cut+1).trim():"",verb=(title.match(/^(Delete|Remove|Deactivate|Reactivate|Reset|Restore|Reprocess|Change|Give)\b/)||[])[1],isDanger=danger??/^(Delete|Remove|Deactivate|Reset)$/.test(verb||""),previous=document.activeElement,overlay=document.createElement("div");
   overlay.className="confirm-overlay";overlay.innerHTML=`<div class="confirm-dialog${isDanger?" is-danger":""}" role="alertdialog" aria-modal="true" aria-labelledby="confirmDialogTitle" aria-describedby="confirmDialogText"><div class="confirm-icon" aria-hidden="true">${isDanger?"!":"?"}</div><div class="confirm-body"><h3 id="confirmDialogTitle"></h3><p id="confirmDialogText"></p></div><div class="confirm-actions"><button type="button" class="confirm-cancel">Cancel</button><button type="button" class="confirm-ok"></button></div></div>`;
@@ -37,7 +38,7 @@ export function confirmAction(message,{confirmLabel=null,danger=null}={}){return
   const onKey=e=>{if(e.key==="Escape"){e.preventDefault();e.stopPropagation();done(false)}else if(e.key==="Tab"){const b=[...overlay.querySelectorAll("button")],i=b.indexOf(document.activeElement);e.preventDefault();b[(i+(e.shiftKey?-1:1)+b.length)%b.length].focus()}};
   overlay.addEventListener("mousedown",e=>{if(e.target===overlay)done(false)});overlay.querySelector(".confirm-cancel").onclick=()=>done(false);overlay.querySelector(".confirm-ok").onclick=()=>done(true);
   // Keep focus in the dialog even if something behind it (e.g. the point card opening) grabs it.
-  document.addEventListener("keydown",onKey,true);document.addEventListener("focusin",onFocus,true);document.body.appendChild(overlay);first().focus();requestAnimationFrame(()=>{if(overlay.isConnected&&!overlay.contains(document.activeElement))first().focus({preventScroll:true})})})}
+  document.addEventListener("keydown",onKey,true);document.addEventListener("focusin",onFocus,true);(document.querySelector("dialog[open]")||document.body).appendChild(overlay);first().focus();requestAnimationFrame(()=>{if(overlay.isConnected&&!overlay.contains(document.activeElement))first().focus({preventScroll:true})})})}
 export function toast(message,type="info",timeout=null){const root=$("toastStack");if(!root||!message)return;const el=document.createElement("div");el.className=`toast ${type}`;el.setAttribute("role",type==="error"?"alert":"status");el.title="Click to dismiss";el.textContent=message;el.onclick=()=>el.remove();root.appendChild(el);while(root.children.length>4)root.firstElementChild.remove();setTimeout(()=>el.remove(),timeout??(type==="error"?7000:3600))}
 export let stopLoginBackground=null;
 // The sign-in page can register an entrance animation that plays over the app while it loads.

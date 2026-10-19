@@ -1,13 +1,13 @@
 // Distance measurement in the Production 3D view: click two LiDAR points; the line and its length appear in the
-// view and the values (3D, horizontal, vertical) are listed in the side panel. Measurements are for this session
-// and dataset only; they are not saved.
+// view and the values (3D, horizontal, vertical) are listed in the side panel. Measurements are saved with the dataset
+// (and who measured), so they are part of a session's work: admins export and clear them with "Session work".
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, esc, state, toast } from "./core.js?v=20261019-crs-checks2";
-import { annotationUnits } from "./production-annotations.js?v=20261019-crs-checks2";
-import { pickOrPlace } from "./production-placement.js?v=20261019-crs-checks2";
-import { cancelProductionPick } from "./production-pick.js?v=20261019-crs-checks2";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261019-crs-checks2";
-import { cancelProductionBox } from "./production-view.js?v=20261019-crs-checks2";
+import { $, api, esc, state, toast } from "./core.js?v=20261020-session-work3";
+import { annotationUnits } from "./production-annotations.js?v=20261020-session-work3";
+import { pickOrPlace } from "./production-placement.js?v=20261020-session-work3";
+import { cancelProductionPick } from "./production-pick.js?v=20261020-session-work3";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261020-session-work3";
+import { cancelProductionBox } from "./production-view.js?v=20261020-session-work3";
 
 const COLOR = 0x3fe0ff, DRAFT_COLOR = 0xffd24a;
 const tapes = [];
@@ -143,16 +143,18 @@ export function startProductionMeasure() {
       hint(`<b>${fmt(values(picked[0], point).distance)}</b> · click the second point · Esc to cancel`);
     });
   };
-  const finish = (a, b) => {
-    const v = values(a, b);
-    counter += 1;
-    const id = `m${Date.now()}${counter}`;
-    const tape = { id, name: `M${counter}`, a, b, ...v, projectId: state.projectId, measure: null };
-    tape.measure = makeMeasure([a, b], { name: tape.name, color: COLOR, label: true });
-    tape.tag = tag(`${tape.name} · ${fmt(v.distance)}`);
-    tapes.push(tape);
-    selectedId = id;
+  const finish = async (a, b) => {
+    const v = values(a, b), projectId = state.projectId;
     cancelProductionMeasure();
+    let saved;
+    try {
+      saved = await api(`/api/projects/${encodeURIComponent(projectId)}/measurements`, { method: "POST",
+        body: JSON.stringify({ a: { x: a.x, y: a.y, z: a.z }, b: { x: b.x, y: b.y, z: b.z }, pole_internal_id: Number($("annotationPoleId")?.value) || null }) });
+    } catch (e) { toast(`Measurement not saved: ${e.message}`, "error", 6000); return; }
+    if (projectId !== state.projectId) return;
+    const tape = addTape(saved, projectId);
+    selectedId = tape.id;
+    renderMeasurePanel();
     toast(`${tape.name}: ${fmt(v.distance)} (horizontal ${fmt(v.horizontal)}, vertical ${fmt(v.vertical)})`, "success", 5000);
   };
   dom.addEventListener("mousedown", onDown);
@@ -173,6 +175,41 @@ export function startProductionMeasure() {
   };
   hint(`<b>Measure distance</b> · click the first point on the point cloud · Esc to cancel`);
   renderMeasurePanel();
+}
+
+// A saved measurement as an on-screen tape (line + label).
+function addTape(saved, projectId) {
+  counter += 1;
+  const a = new THREE.Vector3(saved.a.x, saved.a.y, saved.a.z), b = new THREE.Vector3(saved.b.x, saved.b.y, saved.b.z);
+  const tape = { id: saved.id, name: `M${counter}`, a, b, ...values(a, b), projectId, by: saved.created_by_name || saved.created_by || "", measure: null };
+  tape.measure = makeMeasure([a, b], { name: tape.name, color: COLOR, label: true });
+  tape.tag = tag(`${tape.name} · ${fmt(tape.distance)}`);
+  tapes.push(tape);
+  return tape;
+}
+
+// Load the dataset's saved measurements once the viewer has it (also after "Session work" cleared them).
+let loadedFor = null;
+export async function loadProductionMeasurements(force = false) {
+  const projectId = state.projectId;
+  if (!projectId || !state.productionViewer || (!force && loadedFor === projectId)) return;
+  loadedFor = projectId;
+  for (const tape of tapes.filter(t => t.projectId === projectId)) removeTape(tape.id);
+  try {
+    const rows = await api(`/api/projects/${encodeURIComponent(projectId)}/measurements`);
+    if (projectId !== state.projectId) return;
+    counter = 0;
+    for (const row of rows) addTape(row, projectId);
+  } catch { loadedFor = null; }
+  renderMeasurePanel();
+}
+
+async function deleteTape(id) {
+  const tape = tapes.find(t => t.id === id);
+  if (!tape) return;
+  try { await api(`/api/projects/${encodeURIComponent(tape.projectId)}/measurements/${encodeURIComponent(id)}`, { method: "DELETE" }); }
+  catch (e) { toast(`${tape.name} not removed: ${e.message}`, "error"); return; }
+  removeTape(id);
 }
 
 function removeTape(id) {
@@ -204,7 +241,7 @@ export function renderMeasurePanel() {
   const mine = tapes.filter(t => t.projectId === state.projectId);
   const rows = mine.map(t => `<div class="measure-row${t.id === selectedId ? " active" : ""}" data-measure="${esc(t.id)}">
       <span class="measure-tag">${esc(t.name)}</span>
-      <span class="measure-values"><b>${fmt(t.distance)}</b><small>H ${fmt(t.horizontal)} · V ${fmt(t.vertical)} · ${t.slope.toFixed(1)}°</small></span>
+      <span class="measure-values"><b>${fmt(t.distance)}</b><small>H ${fmt(t.horizontal)} · V ${fmt(t.vertical)} · ${t.slope.toFixed(1)}°${t.by ? ` · ${esc(t.by)}` : ""}</small></span>
       <button type="button" class="check-remove" data-measure-remove="${esc(t.id)}" title="Remove ${esc(t.name)}" aria-label="Remove ${esc(t.name)}">×</button>
     </div>`).join("");
   const unit = measurementUnit();
@@ -225,8 +262,8 @@ export function init() {
     if (!target) return;
     if (target.matches("[data-measure-start]")) startProductionMeasure();
     else if (target.matches("[data-measure-cancel]")) cancelProductionMeasure();
-    else if (target.matches("[data-measure-clear]")) { for (const t of tapes.filter(x => x.projectId === state.projectId)) removeTape(t.id); renderMeasurePanel(); }
-    else if (target.matches("[data-measure-remove]")) { removeTape(target.dataset.measureRemove); renderMeasurePanel(); }
+    else if (target.matches("[data-measure-clear]")) { Promise.all(tapes.filter(x => x.projectId === state.projectId).map(t => deleteTape(t.id))).then(renderMeasurePanel); }
+    else if (target.matches("[data-measure-remove]")) { deleteTape(target.dataset.measureRemove).then(renderMeasurePanel); }
     else if (target.matches(".measure-row")) { const tape = tapes.find(t => t.id === target.dataset.measure); if (tape) focusTape(tape); }
   });
   panel.addEventListener("change", event => {
@@ -238,5 +275,6 @@ export function init() {
   });
   document.addEventListener("keydown", event => { if (event.key === "Escape" && tool) { event.stopPropagation(); cancelProductionMeasure(); } }, true);
   requestAnimationFrame(tagLoop);
+  document.addEventListener("production-route-data-changed", () => loadProductionMeasurements());
   renderMeasurePanel();
 }

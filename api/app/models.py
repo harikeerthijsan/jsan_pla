@@ -305,3 +305,27 @@ class AuthThrottleEvent(Base):
     id: Mapped[int]=mapped_column(Integer, primary_key=True)
     key: Mapped[str]=mapped_column(String(255))
     at: Mapped[float]=mapped_column(Float)
+
+class ProductionMeasurement(Base):
+    """A distance measured between two points in the Production viewer, saved with the dataset and who measured it."""
+    __tablename__='production_measurements'
+    id: Mapped[str]=mapped_column(String(64), primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    pole_internal_id: Mapped[int|None]=mapped_column(Integer, nullable=True)
+    ax: Mapped[float]=mapped_column(Float); ay: Mapped[float]=mapped_column(Float); az: Mapped[float]=mapped_column(Float)
+    bx: Mapped[float]=mapped_column(Float); by: Mapped[float]=mapped_column(Float); bz: Mapped[float]=mapped_column(Float)
+    distance: Mapped[float]=mapped_column(Float)
+    created_by: Mapped[str]=mapped_column(String(255))
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+
+class WorkArchive(Base):
+    """One "Session work" export: exactly which items (and revisions) it contains, so only those can be cleared."""
+    __tablename__='work_archives'
+    id: Mapped[str]=mapped_column(String(64), primary_key=True)
+    project_id: Mapped[str]=mapped_column(ForeignKey('projects.id'), index=True)
+    created_by: Mapped[str]=mapped_column(String(255))
+    created_at: Mapped[datetime]=mapped_column(DateTime(timezone=True), default=now_utc)
+    items_json: Mapped[str]=mapped_column(Text)
+    counts_json: Mapped[str]=mapped_column(Text)
+    cleared_at: Mapped[datetime|None]=mapped_column(DateTime(timezone=True), nullable=True)
+    cleared_by: Mapped[str|None]=mapped_column(String(255), nullable=True)

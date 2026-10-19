@@ -1,15 +1,15 @@
 // Production dataset loading, LiDAR blocks and clip/measurement helpers.
-import { $, api, errorText, esc, httpErrorText, state, toast } from "./core.js?v=20261019-crs-checks2";
-import { colourProductionPointCloud } from "./production-colour.js?v=20261019-crs-checks2";
-import { styleProductionPointCloud } from "./production-points.js?v=20261019-crs-checks2";
-import { fillProductionCatalogue, fillProductionPoles, renderProductionAnnotationMarkers, renderProductionAnnotations, resetAnnotationForm } from "./production-annotations.js?v=20261019-crs-checks2";
-import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261019-crs-checks2";
-import { cancelProductionPick } from "./production-pick.js?v=20261019-crs-checks2";
-import { renderProductionChecklist, selectProductionPole } from "./production-poles.js?v=20261019-crs-checks2";
-import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261019-crs-checks2";
-import { cancelProductionBox } from "./production-view.js?v=20261019-crs-checks2";
-import { presenceTick, setPoleAssignments } from "./team.js?v=20261019-crs-checks2";
-import { can, currentProject } from "./workspace.js?v=20261019-crs-checks2";
+import { $, api, errorText, esc, httpErrorText, state, toast } from "./core.js?v=20261020-session-work3";
+import { colourProductionPointCloud } from "./production-colour.js?v=20261020-session-work3";
+import { styleProductionPointCloud } from "./production-points.js?v=20261020-session-work3";
+import { fillProductionCatalogue, fillProductionPoles, renderProductionAnnotationMarkers, renderProductionAnnotations, resetAnnotationForm } from "./production-annotations.js?v=20261020-session-work3";
+import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261020-session-work3";
+import { cancelProductionPick } from "./production-pick.js?v=20261020-session-work3";
+import { renderProductionChecklist, selectProductionPole } from "./production-poles.js?v=20261020-session-work3";
+import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261020-session-work3";
+import { cancelProductionBox } from "./production-view.js?v=20261020-session-work3";
+import { presenceTick, setPoleAssignments } from "./team.js?v=20261020-session-work3";
+import { can, currentProject } from "./workspace.js?v=20261020-session-work3";
 
 export function productionProgress(p,msg){$("productionUploadProgress").classList.remove("hidden");$("productionUploadBar").style.width=`${Math.max(0,Math.min(100,p))}%`;$("productionUploadMessage").textContent=msg}
 export function humanBytes(value){const n=Number(value||0);if(!n)return "0 B";const units=["B","KB","MB","GB","TB"],i=Math.min(units.length-1,Math.floor(Math.log(n)/Math.log(1024)));return `${(n/Math.pow(1024,i)).toFixed(i>1?1:0)} ${units[i]}`}

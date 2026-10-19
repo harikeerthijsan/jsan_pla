@@ -3,7 +3,7 @@
 // noise) don't wash the colours out, and every tile shares one range so the same height or return strength
 // looks the same everywhere in the combined model.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, state, toast } from "./core.js?v=20261019-crs-checks2";
+import { $, state, toast } from "./core.js?v=20261020-session-work3";
 
 const MODES = { intensity: "intensity", rgb: "rgba", elevation: "elevation" };
 const KEY = "pla_production_colour";
