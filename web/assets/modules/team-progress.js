@@ -1,8 +1,8 @@
 // Team progress dashboard.
-import { openSuperPage } from "./super-admin.js?v=20261019-register-alert";
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261019-register-alert";
-import { openTeamPage } from "./team.js?v=20261019-register-alert";
-import { applyWorkspace, can } from "./workspace.js?v=20261019-register-alert";
+import { openSuperPage } from "./super-admin.js?v=20261019-crs-checks2";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261019-crs-checks2";
+import { openTeamPage } from "./team.js?v=20261019-crs-checks2";
+import { applyWorkspace, can } from "./workspace.js?v=20261019-crs-checks2";
 
 export const TEAM_REDUCED=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 export const TEAM_AVATAR_HUES=[206,152,262,28,340,188,96,226];

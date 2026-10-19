@@ -1,15 +1,15 @@
 // Production pole list, status, header, checklist and pole navigation.
-import { $, api, esc, state, toast } from "./core.js?v=20261019-register-alert";
-import { renderMeasurePanel } from "./production-measure.js?v=20261019-register-alert";
-import { fillProductionPoles, isPoleBase, isPoleTop, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261019-register-alert";
-import { clearProductionClip } from "./production-data.js?v=20261019-register-alert";
-import { chooseProductionPole, closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261019-register-alert";
-import { editProductionAnnotation, productionBlockForCoordinates, removeSavedPoint, startProductionPick } from "./production-pick.js?v=20261019-register-alert";
-import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261019-register-alert";
-import { productionPickPresets } from "./production-shell.js?v=20261019-register-alert";
-import { cancelProductionBox, productionUnitLabel, setProductionView } from "./production-view.js?v=20261019-register-alert";
-import { poleAssignee, poleTeamChips, renderPoleTeamInfo, setPoleAssignments } from "./team.js?v=20261019-register-alert";
-import { can } from "./workspace.js?v=20261019-register-alert";
+import { $, api, esc, state, toast } from "./core.js?v=20261019-crs-checks2";
+import { renderMeasurePanel } from "./production-measure.js?v=20261019-crs-checks2";
+import { fillProductionPoles, isPoleBase, isPoleTop, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261019-crs-checks2";
+import { clearProductionClip } from "./production-data.js?v=20261019-crs-checks2";
+import { chooseProductionPole, closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261019-crs-checks2";
+import { editProductionAnnotation, productionBlockForCoordinates, removeSavedPoint, startProductionPick } from "./production-pick.js?v=20261019-crs-checks2";
+import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261019-crs-checks2";
+import { productionPickPresets } from "./production-shell.js?v=20261019-crs-checks2";
+import { cancelProductionBox, productionUnitLabel, setProductionView } from "./production-view.js?v=20261019-crs-checks2";
+import { poleAssignee, poleTeamChips, renderPoleTeamInfo, setPoleAssignments } from "./team.js?v=20261019-crs-checks2";
+import { can } from "./workspace.js?v=20261019-crs-checks2";
 
 export function productionPoleStatus(pole){const rows=state.productionAnnotations.filter(row=>String(row.pole_internal_id??row.attributes?.pole_internal_id)===String(pole.internal_id)),base=rows.find(isPoleBase),top=rows.find(isPoleTop);return {rows,base,top,state:base&&top?"done":rows.length?"progress":"todo"}}
 export function productionGeoForPole(pole){return state.productionGeoFeatures.find(f=>f.geometry_type==="Point"&&f.pole_internal_id===pole.internal_id)}

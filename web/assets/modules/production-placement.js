@@ -6,9 +6,9 @@
 //                               crossarms and pole tops beside the pole), or through the view's pivot if no pole.
 // Every point records how it was placed ("placement"), so QC can tell snapped points from free ones.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, state } from "./core.js?v=20261019-register-alert";
-import { productionGeoGround, productionGeoPoleRange } from "./production-geo.js?v=20261019-register-alert";
-import { productionProfileFrame } from "./production-profile.js?v=20261019-register-alert";
+import { $, state } from "./core.js?v=20261019-crs-checks2";
+import { productionGeoGround, productionGeoPoleRange } from "./production-geo.js?v=20261019-crs-checks2";
+import { productionProfileFrame } from "./production-profile.js?v=20261019-crs-checks2";
 
 export const PLACEMENT_LABELS = {
   lidar: "Snapped to a LiDAR point",

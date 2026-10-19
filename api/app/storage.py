@@ -168,3 +168,12 @@ def read_bytes(key:str)->bytes:
     if MODE=='local': return local_path(key).read_bytes()
     obj=_s3().get_object(Bucket=bucket_name(),Key=key)
     return obj['Body'].read()
+
+def read_range(key:str,start:int,length:int)->bytes:
+    """Bytes [start, start+length) of a stored object, without reading the rest (e.g. a LiDAR header)."""
+    if length<=0: return b''
+    if MODE=='local':
+        with open(local_path(key),'rb') as fh:
+            fh.seek(start); return fh.read(length)
+    obj=_s3().get_object(Bucket=bucket_name(),Key=key,Range=f'bytes={start}-{start+length-1}')
+    return obj['Body'].read()

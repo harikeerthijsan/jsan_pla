@@ -1005,4 +1005,9 @@ a.brand-home:focus-visible{outline:2px solid #2aa7d8;outline-offset:4px}
 .pole-id-control label{font-weight:700;color:#a3303d}
 .pole-id-control input{width:110px;padding:4px 6px;font-size:12px}
 .pole-id-error{flex-basis:100%;color:#a3303d}.pole-id-error:empty{display:none}
+/* Dataset header: current CRS, with an admin "Change" (checked against the LiDAR on the server). */
+.crs-control{display:inline-flex;align-items:center;gap:6px;margin-left:10px;font-size:11px;color:var(--muted,#5b7183)}
+.crs-control b{color:var(--brand-deep,#0d2d46)}
+.crs-control .login-link{padding:0;border:0;background:none;color:#0a7fa6;font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline}
+.crs-edit{display:inline-flex;gap:5px;align-items:center}.crs-edit input{width:110px;padding:2px 6px;font-size:11px}
 

@@ -8,6 +8,7 @@ from .notifications import notify_qc_finished, safely
 from .workflow import DatasetVersion, QCRun, version_files, record_findings_for_run, complete_qc_run, archive_review_decisions
 from .storage import MODE, local_path, download_to, upload_from, read_bytes, object_exists
 from pyproj import Transformer
+from .crs_check import crs_epsg, lidar_mismatch_message, object_lidar_epsg
 from .ingest import make_finding, parse_workbook, rule_status
 from .geojson_import import GeoJSONError, _is_feet, import_project_geojson, match_tolerances, summary_message
 from .sections import generate_lidar_section
@@ -407,6 +408,14 @@ def process_job(job_id:str):
         geojson=next((f for f in reversed(files) if f.role=='GEOJSON' and f.status=='UPLOADED'),None)
         if not workbook and not lidar_only: raise RuntimeError('No uploaded workbook is available')
         if not lidar: raise RuntimeError('No LAS/LAZ/COPC LiDAR files are uploaded')
+        # The LiDAR's own CRS (header only) must be the dataset's Source CRS: otherwise poles and GeoJSON would be placed
+        # in a different coordinate system from the points. Checked before any conversion; nothing is reprojected.
+        project_code=crs_epsg(project.crs)
+        for f in lidar:
+            try: file_code=object_lidar_epsg(f.object_key)
+            except (ValueError,FileNotFoundError): file_code=None  # no readable CRS: the Source CRS is assigned as before
+            if file_code and project_code and file_code!=project_code:
+                raise RuntimeError(lidar_mismatch_message(f.filename,file_code,project.crs))
 
         setjob(db,job,5,'Preparing source files')
         # In local mode read the uploaded workbook/LiDAR in-place to avoid duplicating multi-GB files.

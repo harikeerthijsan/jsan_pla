@@ -3,42 +3,43 @@
 //
 // All module imports must use the same ?v= value everywhere (scripts/set_web_version.py keeps them in sync); a
 // mismatched specifier would load a second copy of a module with its own state.
-import "./workbook-editor.js?v=20261019-register-alert";
-import { init as initCore, $, api, showApp, showLogin, state, savedPage } from "./modules/core.js?v=20261019-register-alert";
-import { init as initRegistration } from "./modules/registration.js?v=20261019-register-alert";
-import { init as initWorkspace, bootstrap } from "./modules/workspace.js?v=20261019-register-alert";
-import { init as initQcRun } from "./modules/qc-run.js?v=20261019-register-alert";
-import { init as initDelivery, init2 as init2Delivery } from "./modules/delivery.js?v=20261019-register-alert";
-import { init as initQcReview } from "./modules/qc-review.js?v=20261019-register-alert";
-import { init as initQcScene } from "./modules/qc-scene.js?v=20261019-register-alert";
-import { init as initQcAnalysis } from "./modules/qc-analysis.js?v=20261019-register-alert";
-import { init as initQcLayout } from "./modules/qc-layout.js?v=20261019-register-alert";
-import { init as initUploads } from "./modules/uploads.js?v=20261019-register-alert";
-import { init as initProductionData } from "./modules/production-data.js?v=20261019-register-alert";
-import { init as initProductionAnnotations } from "./modules/production-annotations.js?v=20261019-register-alert";
-import { init as initProductionPoles } from "./modules/production-poles.js?v=20261019-register-alert";
-import { init as initProductionPick } from "./modules/production-pick.js?v=20261019-register-alert";
-import { init as initProductionView } from "./modules/production-view.js?v=20261019-register-alert";
-import { init as initProductionProfile } from "./modules/production-profile.js?v=20261019-register-alert";
-import { init as initProductionGeo } from "./modules/production-geo.js?v=20261019-register-alert";
-import { init as initProductionShell } from "./modules/production-shell.js?v=20261019-register-alert";
-import { init as initProfile, init2 as init2Profile, openProfilePage } from "./modules/profile.js?v=20261019-register-alert";
-import { init as initTeam, openTeamPage } from "./modules/team.js?v=20261019-register-alert";
-import { init as initPointHistory } from "./modules/point-history.js?v=20261019-register-alert";
-import { init as initNotifications } from "./modules/notifications.js?v=20261019-register-alert";
-import { init as initTeamProgress } from "./modules/team-progress.js?v=20261019-register-alert";
-import { init as initSuperAdmin, openSuperPage } from "./modules/super-admin.js?v=20261019-register-alert";
-import { init as initLoginExperience } from "./modules/login-experience.js?v=20261019-register-alert";
-import { init as initBrand } from "./modules/brand.js?v=20261019-register-alert";
-import { init as initEmployeeDirectory } from "./modules/employee-directory.js?v=20261019-register-alert";
-import { init as initProductionMeasure } from "./modules/production-measure.js?v=20261019-register-alert";
-import { init as initProductionQuickSave } from "./modules/production-quicksave.js?v=20261019-register-alert";
-import { init as initProductionColour } from "./modules/production-colour.js?v=20261019-register-alert";
-import { init as initProductionPoints } from "./modules/production-points.js?v=20261019-register-alert";
-import { init as initProductionPlacement } from "./modules/production-placement.js?v=20261019-register-alert";
-import { init as initProductionMap } from "./modules/production-map.js?v=20261019-register-alert";
-import { init as initProductionDirection } from "./modules/production-direction.js?v=20261019-register-alert";
-import { init as initIdleTimeout } from "./modules/idle-timeout.js?v=20261019-register-alert";
+import "./workbook-editor.js?v=20261019-crs-checks2";
+import { init as initCore, $, api, showApp, showLogin, state, savedPage } from "./modules/core.js?v=20261019-crs-checks2";
+import { init as initProductionCrs } from "./modules/production-crs.js?v=20261019-crs-checks2";
+import { init as initRegistration } from "./modules/registration.js?v=20261019-crs-checks2";
+import { init as initWorkspace, bootstrap } from "./modules/workspace.js?v=20261019-crs-checks2";
+import { init as initQcRun } from "./modules/qc-run.js?v=20261019-crs-checks2";
+import { init as initDelivery, init2 as init2Delivery } from "./modules/delivery.js?v=20261019-crs-checks2";
+import { init as initQcReview } from "./modules/qc-review.js?v=20261019-crs-checks2";
+import { init as initQcScene } from "./modules/qc-scene.js?v=20261019-crs-checks2";
+import { init as initQcAnalysis } from "./modules/qc-analysis.js?v=20261019-crs-checks2";
+import { init as initQcLayout } from "./modules/qc-layout.js?v=20261019-crs-checks2";
+import { init as initUploads } from "./modules/uploads.js?v=20261019-crs-checks2";
+import { init as initProductionData } from "./modules/production-data.js?v=20261019-crs-checks2";
+import { init as initProductionAnnotations } from "./modules/production-annotations.js?v=20261019-crs-checks2";
+import { init as initProductionPoles } from "./modules/production-poles.js?v=20261019-crs-checks2";
+import { init as initProductionPick } from "./modules/production-pick.js?v=20261019-crs-checks2";
+import { init as initProductionView } from "./modules/production-view.js?v=20261019-crs-checks2";
+import { init as initProductionProfile } from "./modules/production-profile.js?v=20261019-crs-checks2";
+import { init as initProductionGeo } from "./modules/production-geo.js?v=20261019-crs-checks2";
+import { init as initProductionShell } from "./modules/production-shell.js?v=20261019-crs-checks2";
+import { init as initProfile, init2 as init2Profile, openProfilePage } from "./modules/profile.js?v=20261019-crs-checks2";
+import { init as initTeam, openTeamPage } from "./modules/team.js?v=20261019-crs-checks2";
+import { init as initPointHistory } from "./modules/point-history.js?v=20261019-crs-checks2";
+import { init as initNotifications } from "./modules/notifications.js?v=20261019-crs-checks2";
+import { init as initTeamProgress } from "./modules/team-progress.js?v=20261019-crs-checks2";
+import { init as initSuperAdmin, openSuperPage } from "./modules/super-admin.js?v=20261019-crs-checks2";
+import { init as initLoginExperience } from "./modules/login-experience.js?v=20261019-crs-checks2";
+import { init as initBrand } from "./modules/brand.js?v=20261019-crs-checks2";
+import { init as initEmployeeDirectory } from "./modules/employee-directory.js?v=20261019-crs-checks2";
+import { init as initProductionMeasure } from "./modules/production-measure.js?v=20261019-crs-checks2";
+import { init as initProductionQuickSave } from "./modules/production-quicksave.js?v=20261019-crs-checks2";
+import { init as initProductionColour } from "./modules/production-colour.js?v=20261019-crs-checks2";
+import { init as initProductionPoints } from "./modules/production-points.js?v=20261019-crs-checks2";
+import { init as initProductionPlacement } from "./modules/production-placement.js?v=20261019-crs-checks2";
+import { init as initProductionMap } from "./modules/production-map.js?v=20261019-crs-checks2";
+import { init as initProductionDirection } from "./modules/production-direction.js?v=20261019-crs-checks2";
+import { init as initIdleTimeout } from "./modules/idle-timeout.js?v=20261019-crs-checks2";
 
 initCore();
 initRegistration();
@@ -77,6 +78,7 @@ initProductionPlacement();
 initProductionMap();
 initProductionDirection();
 initIdleTimeout();
+initProductionCrs();
 
 // Reopen the page the person was on before a reload (workspace views are restored by chooseWorkspace itself).
 function restorePage(page){const allowed=new Set(state.permissions||[]);if(page?.page==="profile"){openProfilePage();return true}

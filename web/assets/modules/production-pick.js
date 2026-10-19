@@ -1,14 +1,14 @@
 // Point picking, editing, saving, deleting and edit-conflict handling.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261019-register-alert";
-import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261019-register-alert";
-import { downloadCollectionWorkbook, downloadProductionAnnotations, initFormatControl } from "./production-data.js?v=20261019-register-alert";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261019-register-alert";
-import { cancelProductionBox } from "./production-view.js?v=20261019-register-alert";
-import { cancelProductionMeasure } from "./production-measure.js?v=20261019-register-alert";
-import { productionPoleTarget } from "./production-poles.js?v=20261019-register-alert";
-import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261019-register-alert";
-import { can } from "./workspace.js?v=20261019-register-alert";
+import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261019-crs-checks2";
+import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261019-crs-checks2";
+import { downloadCollectionWorkbook, downloadProductionAnnotations, initFormatControl } from "./production-data.js?v=20261019-crs-checks2";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261019-crs-checks2";
+import { cancelProductionBox } from "./production-view.js?v=20261019-crs-checks2";
+import { cancelProductionMeasure } from "./production-measure.js?v=20261019-crs-checks2";
+import { productionPoleTarget } from "./production-poles.js?v=20261019-crs-checks2";
+import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261019-crs-checks2";
+import { can } from "./workspace.js?v=20261019-crs-checks2";
 
 // Saved-point quick actions: click a point in the 3D view (or the list / checklist buttons) to edit or remove it.
 export function removeSavedPoint(id){const row=state.productionAnnotations.find(item=>item.id===id);if(!row||!can("production.annotate"))return;closePointMenu();editProductionAnnotation(row);$("annotationDeleteBtn").click()}

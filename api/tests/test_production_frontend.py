@@ -878,3 +878,15 @@ def test_sign_in_page_offers_self_registration():
     assert '"/api/auth/register/check"' in registration and '"/api/auth/register"' in registration
     # The browser never sends a role: the server always creates a User account.
     assert "role" not in registration.split('JSON.stringify({ email, username, password })')[0].split("function createAccount")[1]
+
+
+def test_import_dialog_reads_and_checks_the_source_crs():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    crs = (ROOT / "web" / "assets" / "modules" / "production-crs.js").read_text(encoding="utf-8")
+    shell = (ROOT / "web" / "assets" / "modules" / "production-shell.js").read_text(encoding="utf-8")
+    # Read from the GeoJSON "crs" member and the LiDAR header (file.slice, no upload); WKT identified by the server.
+    assert "async function lidarEpsg(file)" in crs and "file.slice(0, 375)" in crs and '"/api/crs/identify"' in crs
+    assert 'id="productionCrsNote"' in html and "Change Source CRS to EPSG:" in crs
+    # A mismatch blocks the upload; admins can correct an existing dataset's CRS from the header.
+    assert "const crsProblems=await checkSourceCrs({fill:false});if(crsProblems.length)throw new Error" in shell
+    assert 'id="productionCrsControl"' in html and "/crs`, { method: \"PUT\"" in crs

@@ -12,6 +12,7 @@ import math
 import re
 from collections import defaultdict
 
+from .crs_check import crs_epsg, describe
 from pyproj import CRS, Transformer
 from sqlalchemy.orm import Session
 
@@ -117,6 +118,11 @@ def parse_features(raw: bytes | str, project_crs: str) -> tuple[str, list[dict]]
         transformer = Transformer.from_crs(crs, project_crs, always_xy=True)
     except Exception as exc:
         raise GeoJSONError(f"GeoJSON CRS {crs} cannot be transformed to the project CRS {project_crs}") from exc
+    # A projected GeoJSON must already be in the dataset's CRS. Converting between two projected systems would hide a
+    # wrong Source CRS (pins shifted between zones), so it is refused; WGS84 / CRS84 GeoJSON is converted as before.
+    if not geographic and crs_epsg(crs) and crs_epsg(project_crs) and crs_epsg(crs) != crs_epsg(project_crs):
+        raise GeoJSONError(f"The GeoJSON is in {describe(crs_epsg(crs))}, but this dataset's Source CRS is "
+                           f"{describe(crs_epsg(project_crs))}. Use Source CRS {crs}, or ask an admin to change this dataset's CRS.")
 
     def transform(x: float, y: float) -> tuple[float, float]:
         if geographic and not (-180 <= x <= 180 and -90 <= y <= 90):

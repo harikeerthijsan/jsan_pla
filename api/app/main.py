@@ -17,6 +17,8 @@ from .auth import current_user, verify_password, create_token, hash_password
 from .rbac import ROLE_PERMISSIONS, require_permission, workspaces_for, has_permission, normalize_role, is_admin_role, is_super_admin
 from .workflow import DatasetVersion, VersionFile, CorrectionRequest, FindingRevision, FindingComparison, ReviewDecisionArchive, ProcessingLease, QCRun, ensure_current_version, create_revision, attach_file_to_current_version, version_files, create_qc_run, create_correction, resolve_correction, approve_version, workflow_snapshot, version_dict
 from .seed import promote_super_admins, seed_database, seed_admin, seed_staff_accounts
+from .crs_check import crs_epsg, crs_name, describe as describe_crs, lidar_mismatch_message, object_lidar_epsg
+from .geojson_import import source_crs as geojson_source_crs, GeoJSONError as _GeoJSONError
 from .ingest import check_production_workbook, parse_workbook
 from .pipeline import pipeline as pipeline_snapshot, production_project_ids
 from .team import router as team_router, hidden_authors
@@ -492,6 +494,23 @@ def project_pipeline(project_id:str,u:User=Depends(require_permission('project.r
     project=db.query(Project).filter_by(id=project_id).first()
     if not project: raise HTTPException(404,'Project not found')
     return pipeline_snapshot(db,project)
+class CrsIdentifyIn(BaseModel):
+    wkt:str=Field(min_length=10,max_length=20000)
+
+@app.post('/api/crs/identify')
+def crs_identify(body:CrsIdentifyIn,u:User=Depends(current_user)):
+    """EPSG code of a WKT read from a LiDAR header in the browser (WKT often names the projection without an id)."""
+    epsg=crs_epsg(body.wkt)
+    if not epsg: raise HTTPException(404,'The coordinate system could not be identified')
+    return {'crs':f'EPSG:{epsg}','epsg':epsg,'name':crs_name(epsg)}
+
+@app.get('/api/crs/{code}')
+def crs_info(code:str,u:User=Depends(current_user)):
+    """Name of a CRS (for the import dialog's note), e.g. 6426 -> NAD83(2011) / California zone 6 (ftUS)."""
+    epsg=crs_epsg(code)
+    if not epsg: raise HTTPException(404,'Unknown coordinate system')
+    return {'crs':f'EPSG:{epsg}','name':crs_name(epsg)}
+
 @app.post('/api/production/workbook-format')
 async def check_production_workbook_format(file:UploadFile=File(...),u:User=Depends(require_permission('upload.create'))):
     """Which format an Excel is (PLA-1 ZoneName / PLA-2 COLLECTION), checked in the import dialog before anything is uploaded.
@@ -502,6 +521,42 @@ async def check_production_workbook_format(file:UploadFile=File(...),u:User=Depe
     detected=detect_workbook_format(data)
     # Read only the pole catalogue: missing required columns / bad rows are reported now, before any LiDAR uploads.
     return {'workbook_format':detected,'label':WORKBOOK_FORMAT_LABELS.get(detected),'check':check_production_workbook(data)}
+
+class ProjectCrsIn(BaseModel):
+    crs:str=Field(min_length=4,max_length=80)
+
+@app.put('/api/projects/{project_id}/crs')
+def change_project_crs(project_id:str,body:ProjectCrsIn,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
+    """Correct a dataset imported with the wrong Source CRS. The LiDAR is never reprojected: the new CRS must match its
+    headers. Saved points' latitude/longitude are recomputed from their X/Y, and poles + GeoJSON are re-imported."""
+    p=db.query(Project).filter_by(id=project_id).first()
+    if not p: raise HTTPException(404,'Project not found')
+    code=crs_epsg(body.crs)
+    if not code: raise HTTPException(422,f'{body.crs} is not a recognised coordinate system. Use an EPSG code such as EPSG:6426.')
+    new_crs=f'EPSG:{code}'
+    if crs_epsg(p.crs)==code: return {**project_dict(p),'reprocess_job_id':None,'recomputed_points':0}
+    if _active_processing(db,project_id): raise HTTPException(409,'Processing is running for this dataset; try again when it finishes')
+    conflicts=crs_conflicts(db,project_id,new_crs)
+    if conflicts: raise HTTPException(422,' '.join(conflicts))
+    previous=p.crs; p.crs=new_crs
+    recomputed=0
+    for row in db.query(ProductionAnnotation).filter_by(project_id=project_id).all():
+        try: row.latitude,row.longitude=project_to_wgs84(new_crs,row.x,row.y); recomputed+=1
+        except HTTPException: pass
+    for pole in db.query(Pole).filter(Pole.project_id==project_id,Pole.verified_x.isnot(None),Pole.verified_y.isnot(None)).all():
+        try: pole.verified_lat,pole.verified_lon=project_to_wgs84(new_crs,pole.verified_x,pole.verified_y)
+        except HTTPException: pass
+    version=ensure_current_version(db,project_id,u.email)
+    job_id=None
+    if any(f.role=='LIDAR_SOURCE' and f.status=='UPLOADED' for f in version_files(db,version.id)):
+        job_id=uuid.uuid4().hex
+        db.add(ProcessingJob(id=job_id,project_id=project_id,job_type='LIDAR_INGEST',payload_json=json.dumps({'version_id':version.id,'crs_change':True}),
+                             status='QUEUED',progress=0,stage='Queued re-import with the corrected CRS'))
+        p.status='PROCESSING'
+    db.add(AuditLog(actor=u.email,action='CHANGE_PROJECT_CRS',entity_type='project',entity_id=project_id,
+                    detail_json=json.dumps({'from':previous,'to':new_crs,'recomputed_points':recomputed,'job_id':job_id})))
+    db.commit()
+    return {**project_dict(p),'reprocess_job_id':job_id,'recomputed_points':recomputed,'crs_name':crs_name(code)}
 
 class WorkbookFormatIn(BaseModel):
     workbook_format:str=Field(pattern=r'^PLA-[12]$')
@@ -788,6 +843,23 @@ def download_pole_workbook(project_id:str,internal_id:int,u:User=Depends(require
     return Response(content=contents,media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                     headers={'Content-Disposition':f'attachment; filename="{filename}"'})
 
+def crs_conflicts(db:Session,project_id:str,crs:str)->list[str]:
+    """Messages for files of the dataset's current version whose own CRS contradicts ``crs`` (LiDAR header / projected GeoJSON)."""
+    version=db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).first()
+    files=[f for f in version_files(db,version.id) if f.status=='UPLOADED'] if version else []
+    target=crs_epsg(crs); problems=[]
+    for f in [f for f in files if f.role=='LIDAR_SOURCE'][:50]:
+        try: code=object_lidar_epsg(f.object_key)
+        except (ValueError,FileNotFoundError): code=None
+        if code and target and code!=target: problems.append(lidar_mismatch_message(f.filename,code,crs)); break
+    for f in [f for f in files if f.role=='GEOJSON'][-1:]:
+        try: declared=geojson_source_crs(json.loads(read_bytes(f.object_key).decode('utf-8-sig')))
+        except (FileNotFoundError,ValueError,_GeoJSONError): declared=None
+        code=crs_epsg(declared) if declared else None
+        if code and code!=4326 and target and code!=target:
+            problems.append(f"The GeoJSON is in {describe_crs(code)}, but the CRS is {describe_crs(target)}. Use EPSG:{code}.")
+    return problems
+
 WORKBOOK_FORMAT_LABELS={'PLA-1':'PLA-1 (single ZoneName sheet)','PLA-2':'PLA-2 (COLLECTION workbook)'}
 
 def check_workbook_format(project:Project,data:bytes)->str|None:
@@ -1054,6 +1126,8 @@ def queue_lidar_process(project_id:str,u:User=Depends(require_permission('proces
             report=check_production_workbook(workbook_bytes)
             if report['errors']:
                 raise HTTPException(422,'The Excel cannot be imported: '+' '.join(report['errors'][:10]))
+    conflicts=crs_conflicts(db,project_id,p.crs)
+    if conflicts: raise HTTPException(422,' '.join(conflicts))
     jid=uuid.uuid4().hex
     job=ProcessingJob(id=jid,project_id=project_id,job_type='LIDAR_INGEST',payload_json=json.dumps({'version_id':version.id}),status='QUEUED',progress=0,stage='Queued LiDAR conversion')
     db.add(job); p.status='PROCESSING'
