@@ -904,3 +904,12 @@ def test_session_work_dialog_and_saved_measurements():
     assert "/measurements`, { method: \"POST\"" in measure and "export async function loadProductionMeasurements" in measure
     # Confirmations show above an open modal dialog (top layer), not behind it.
     assert '(document.querySelector("dialog[open]")||document.body).appendChild(overlay)' in core
+
+
+def test_point_card_can_be_dragged_by_its_header():
+    quick = (ROOT / "web" / "assets" / "modules" / "production-quicksave.js").read_text(encoding="utf-8")
+    css = (ROOT / "web" / "assets" / "app.css").read_text(encoding="utf-8")
+    # Drag by the header (not its buttons); stays where it was put; double-click or a new point puts it back by the point.
+    assert "function installDrag()" in quick and 'head.addEventListener("pointerdown"' in quick and 'event.target.closest("button, select, input, a")' in quick
+    assert "if (dragged) { left = dragged.left; top = dragged.top;" in quick and 'head.addEventListener("dblclick"' in quick
+    assert "dragged = null;  // a new point: the card starts beside it again" in quick and ".qs-card header{cursor:grab" in css

@@ -1031,4 +1031,8 @@ a.brand-home:focus-visible{outline:2px solid #2aa7d8;outline-offset:4px}
 .sw-file-row{display:flex;gap:8px;align-items:center}.sw-file-row input[type=file]{flex:1;min-width:0}
 .sw-remove{flex:none;padding:7px 12px;border-radius:8px;border:1px solid #e3b3b9;background:#fff;color:#a3303d;font-size:12.5px;font-weight:700;cursor:pointer}
 .sw-remove:hover{background:#fde8ea}.sw-remove.hidden{display:none}
+/* Point card: drag it by its header (double-click the header to put it back beside the point). */
+.qs-card header{cursor:grab;user-select:none;touch-action:none}
+.qs-card.qs-dragging{transition:none!important;box-shadow:0 22px 50px rgba(15,44,65,.32)}
+.qs-card.qs-dragging header{cursor:grabbing}
 

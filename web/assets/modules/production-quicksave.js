@@ -3,10 +3,10 @@
 // selects, same submit, same conflict handling); it only mirrors and forwards. It follows the point while the view
 // moves and stays clamped inside the viewer when the point leaves the screen.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, esc, state, toast } from "./core.js?v=20261020-session-work3";
-import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261020-session-work3";
-import { openProductionMapPicker } from "./production-map.js?v=20261020-session-work3";
-import { annotationUnits, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261020-session-work3";
+import { $, api, esc, state, toast } from "./core.js?v=20261020-drag-card";
+import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261020-drag-card";
+import { openProductionMapPicker } from "./production-map.js?v=20261020-drag-card";
+import { annotationUnits, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261020-drag-card";
 
 const MIRRORED = [["qsFamily", "annotationFamily"], ["qsFeature", "annotationFeature"], ["qsParent", "annotationParent"]];
 let card = null, ring = null, shownKey = "", frame = 0;
@@ -315,6 +315,7 @@ function place() {
   const fresh = key !== shownKey;
   if (fresh) {
     shownKey = key;
+    dragged = null;  // a new point: the card starts beside it again
     card.classList.remove("hidden");
     ring.classList.remove("hidden");
     card.classList.remove("qs-enter"); void card.offsetWidth; card.classList.add("qs-enter");
@@ -331,12 +332,34 @@ function place() {
   let left = visible ? px + gap : w - cw - 16, top = visible ? py - ch / 2 : 16;
   let side = "right";
   if (visible && left + cw > w - 8) { left = px - gap - cw; side = "left"; }
+  if (dragged) { left = dragged.left; top = dragged.top; side = "none"; }  // moved by the user: stays where it was put
   left = Math.max(8, Math.min(left, w - cw - 8));
   top = Math.max(8, Math.min(top, h - ch - 8));
+  lastPos = { left, top };
   card.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
-  card.dataset.side = visible ? side : "none";
+  card.dataset.side = visible && !dragged ? side : "none";
   // Arrow points at the picked point while it is on screen.
   card.style.setProperty("--qs-arrow", `${Math.max(16, Math.min(ch - 16, py - top))}px`);
+}
+
+// Drag the card by its header to move it out of the way; double-click the header to put it back beside the point.
+let dragged = null, lastPos = { left: 0, top: 0 };
+function installDrag() {
+  const head = card.querySelector("header");
+  head.title = "Drag to move · double-click to put it back beside the point";
+  head.addEventListener("pointerdown", event => {
+    if (event.button !== 0 || event.target.closest("button, select, input, a")) return;
+    event.preventDefault();
+    const start = { x: event.clientX, y: event.clientY, left: lastPos.left, top: lastPos.top };
+    card.classList.add("qs-dragging");
+    head.setPointerCapture(event.pointerId);
+    const move = e => { dragged = { left: start.left + e.clientX - start.x, top: start.top + e.clientY - start.y }; place(); };
+    const up = () => { card.classList.remove("qs-dragging"); head.removeEventListener("pointermove", move); head.removeEventListener("pointerup", up); head.removeEventListener("pointercancel", up); };
+    head.addEventListener("pointermove", move);
+    head.addEventListener("pointerup", up);
+    head.addEventListener("pointercancel", up);
+  });
+  head.addEventListener("dblclick", event => { if (!event.target.closest("button")) { dragged = null; place(); } });
 }
 
 function loop() {
@@ -348,5 +371,6 @@ function loop() {
 export function init() {
   if (!$("production_render_area")) return;
   build();
+  installDrag();
   requestAnimationFrame(loop);
 }

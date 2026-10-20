@@ -1,10 +1,10 @@
 // Production point catalogue, point form, coordinates and saved-point markers.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, esc, state } from "./core.js?v=20261020-session-work3";
-import { clearProductionMeasurements } from "./production-data.js?v=20261020-session-work3";
-import { editProductionAnnotation, removeSavedPoint } from "./production-pick.js?v=20261020-session-work3";
-import { renderProductionPoleWorkflow } from "./production-poles.js?v=20261020-session-work3";
-import { can, currentProject } from "./workspace.js?v=20261020-session-work3";
+import { $, api, esc, state } from "./core.js?v=20261020-drag-card";
+import { clearProductionMeasurements } from "./production-data.js?v=20261020-drag-card";
+import { editProductionAnnotation, removeSavedPoint } from "./production-pick.js?v=20261020-drag-card";
+import { renderProductionPoleWorkflow } from "./production-poles.js?v=20261020-drag-card";
+import { can, currentProject } from "./workspace.js?v=20261020-drag-card";
 
 export function productionAnnotationGroups(){return state.productionCatalogue?.annotation_groups||[]}
 export function fillProductionCatalogue(){const groups=productionAnnotationGroups(),select=$("annotationFamily"),current=select.value;select.innerHTML=groups.map(group=>`<option value="${esc(group.id)}">${esc(group.label)}${group.relationship?` · ${esc(group.relationship)}`:""}</option>`).join("");if(groups.some(group=>group.id===current))select.value=current;fillProductionFeatures()}
