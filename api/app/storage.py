@@ -177,3 +177,36 @@ def read_range(key:str,start:int,length:int)->bytes:
             fh.seek(start); return fh.read(length)
     obj=_s3().get_object(Bucket=bucket_name(),Key=key,Range=f'bytes={start}-{start+length-1}')
     return obj['Body'].read()
+
+def storage_diagnostics(sample_key:str|None=None)->dict:
+    """What works with the bucket credentials this service has, without revealing them: the bucket itself (signed
+    header request) and, for one stored object, a presigned link fetched exactly as a browser would (Range request).
+    Pinpoints e.g. SignatureDoesNotMatch on presigned links when the secret differs from the one the bucket expects."""
+    import urllib.request, urllib.error, re as _re
+    if MODE!='s3': return {'mode':MODE,'note':'Local storage: files are served by the API; there are no bucket credentials to check.'}
+    key_id=os.getenv('BUCKET_ACCESS_KEY_ID') or os.getenv('AWS_ACCESS_KEY_ID') or os.getenv('ACCESS_KEY_ID') or ''
+    secret=os.getenv('BUCKET_SECRET_ACCESS_KEY') or os.getenv('AWS_SECRET_ACCESS_KEY') or os.getenv('SECRET_ACCESS_KEY') or ''
+    out={'mode':'s3','bucket':bucket_name(),'endpoint':os.getenv('BUCKET_ENDPOINT') or os.getenv('S3_ENDPOINT_URL') or os.getenv('AWS_ENDPOINT_URL') or os.getenv('ENDPOINT'),
+         'region':os.getenv('BUCKET_REGION') or os.getenv('AWS_DEFAULT_REGION') or os.getenv('REGION') or 'auto',
+         'access_key_id_starts':key_id[:6]+'…' if key_id else None,'secret_length':len(secret),
+         # Pasted secrets often carry a stray space, newline or quotes; S3 then answers SignatureDoesNotMatch.
+         'secret_has_whitespace_or_quotes':bool(_re.search(r'[\s"\']',secret)),'checks':{}}
+    try:
+        _s3().head_bucket(Bucket=bucket_name()); out['checks']['bucket']='ok'
+    except ClientError as exc:
+        out['checks']['bucket']=f"failed: {exc.response.get('Error',{}).get('Code','error')}"
+    except Exception as exc:
+        out['checks']['bucket']=f'failed: {exc.__class__.__name__}'
+    if sample_key:
+        out['sample_key']=sample_key
+        try:
+            url=block_url(sample_key)
+            request=urllib.request.Request(url,headers={'Range':'bytes=0-15'})
+            with urllib.request.urlopen(request,timeout=20) as response:
+                out['checks']['presigned_get']=f'ok (HTTP {response.status})'
+        except urllib.error.HTTPError as exc:
+            body=exc.read(600).decode('utf-8','replace'); code=_re.search(r'<Code>([^<]+)</Code>',body)
+            out['checks']['presigned_get']=f"failed: HTTP {exc.code} {code.group(1) if code else ''}".strip()
+        except Exception as exc:
+            out['checks']['presigned_get']=f'failed: {exc.__class__.__name__}'
+    return out

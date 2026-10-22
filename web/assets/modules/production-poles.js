@@ -1,15 +1,15 @@
 // Production pole list, status, header, checklist and pole navigation.
-import { $, api, esc, state, toast } from "./core.js?v=20261020-drag-card";
-import { renderMeasurePanel } from "./production-measure.js?v=20261020-drag-card";
-import { fillProductionPoles, isPoleBase, isPoleTop, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261020-drag-card";
-import { clearProductionClip } from "./production-data.js?v=20261020-drag-card";
-import { chooseProductionPole, closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261020-drag-card";
-import { editProductionAnnotation, productionBlockForCoordinates, removeSavedPoint, startProductionPick } from "./production-pick.js?v=20261020-drag-card";
-import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261020-drag-card";
-import { productionPickPresets } from "./production-shell.js?v=20261020-drag-card";
-import { cancelProductionBox, productionUnitLabel, setProductionView } from "./production-view.js?v=20261020-drag-card";
-import { poleAssignee, poleTeamChips, renderPoleTeamInfo, setPoleAssignments } from "./team.js?v=20261020-drag-card";
-import { can } from "./workspace.js?v=20261020-drag-card";
+import { $, api, esc, state, toast } from "./core.js?v=20261022-saved-point-layer";
+import { renderMeasurePanel } from "./production-measure.js?v=20261022-saved-point-layer";
+import { fillProductionPoles, isPoleBase, isPoleTop, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261022-saved-point-layer";
+import { clearProductionClip } from "./production-data.js?v=20261022-saved-point-layer";
+import { chooseProductionPole, closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261022-saved-point-layer";
+import { editProductionAnnotation, productionBlockForCoordinates, removeSavedPoint, startProductionPick } from "./production-pick.js?v=20261022-saved-point-layer";
+import { cancelProductionProfileLine, exitProductionProfile } from "./production-profile.js?v=20261022-saved-point-layer";
+import { productionPickPresets } from "./production-shell.js?v=20261022-saved-point-layer";
+import { cancelProductionBox, productionUnitLabel, setProductionView } from "./production-view.js?v=20261022-saved-point-layer";
+import { poleAssignee, poleTeamChips, renderPoleTeamInfo, setPoleAssignments } from "./team.js?v=20261022-saved-point-layer";
+import { can } from "./workspace.js?v=20261022-saved-point-layer";
 
 export function productionPoleStatus(pole){const rows=state.productionAnnotations.filter(row=>String(row.pole_internal_id??row.attributes?.pole_internal_id)===String(pole.internal_id)),base=rows.find(isPoleBase),top=rows.find(isPoleTop);return {rows,base,top,state:base&&top?"done":rows.length?"progress":"todo"}}
 export function productionGeoForPole(pole){return state.productionGeoFeatures.find(f=>f.geometry_type==="Point"&&f.pole_internal_id===pole.internal_id)}

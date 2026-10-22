@@ -913,3 +913,15 @@ def test_point_card_can_be_dragged_by_its_header():
     assert "function installDrag()" in quick and 'head.addEventListener("pointerdown"' in quick and 'event.target.closest("button, select, input, a")' in quick
     assert "if (dragged) { left = dragged.left; top = dragged.top;" in quick and 'head.addEventListener("dblclick"' in quick
     assert "dragged = null;  // a new point: the card starts beside it again" in quick and ".qs-card header{cursor:grab" in css
+
+
+def test_large_datasets_do_not_freeze_the_viewer():
+    annotations = (ROOT / "web" / "assets" / "modules" / "production-annotations.js").read_text(encoding="utf-8")
+    workspace = (ROOT / "web" / "assets" / "modules" / "workspace.js").read_text(encoding="utf-8")
+    # Saved points are one point layer, not one Potree measurement per point (1,719 of those froze the tab: out of memory).
+    assert "function drawSavedPointLayer(rows)" in annotations and "new THREE.Points(geometry,material)" in annotations
+    marker = annotations[annotations.index("export function renderProductionAnnotationMarkers"):]
+    marker = marker[:marker.index("\n")]
+    assert "for(const row of rows)" not in marker and marker.count("addProductionMeasurement(") == 1   # only the unsaved draft
+    # Potree's decoder workers are capped (43 tiles started ~43 workers at once).
+    assert "export function limitPotreeWorkers(" in workspace and workspace.count("limitPotreeWorkers();") == 2

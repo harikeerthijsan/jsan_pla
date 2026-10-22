@@ -1,6 +1,6 @@
 // QC four-view layout: maximize, minimize, focus workspace and resize.
-import { $, state, toast } from "./core.js?v=20261020-drag-card";
-import { renderAnalysisViews } from "./qc-analysis.js?v=20261020-drag-card";
+import { $, state, toast } from "./core.js?v=20261022-saved-point-layer";
+import { renderAnalysisViews } from "./qc-analysis.js?v=20261022-saved-point-layer";
 
 export function refreshViewLayout(){
   const grid=document.querySelector('.quad-grid');

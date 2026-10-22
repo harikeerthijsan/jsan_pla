@@ -2,12 +2,12 @@
 // view and the values (3D, horizontal, vertical) are listed in the side panel. Measurements are saved with the dataset
 // (and who measured), so they are part of a session's work: admins export and clear them with "Session work".
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, esc, state, toast } from "./core.js?v=20261020-drag-card";
-import { annotationUnits } from "./production-annotations.js?v=20261020-drag-card";
-import { pickOrPlace } from "./production-placement.js?v=20261020-drag-card";
-import { cancelProductionPick } from "./production-pick.js?v=20261020-drag-card";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261020-drag-card";
-import { cancelProductionBox } from "./production-view.js?v=20261020-drag-card";
+import { $, api, esc, state, toast } from "./core.js?v=20261022-saved-point-layer";
+import { annotationUnits } from "./production-annotations.js?v=20261022-saved-point-layer";
+import { pickOrPlace } from "./production-placement.js?v=20261022-saved-point-layer";
+import { cancelProductionPick } from "./production-pick.js?v=20261022-saved-point-layer";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261022-saved-point-layer";
+import { cancelProductionBox } from "./production-view.js?v=20261022-saved-point-layer";
 
 const COLOR = 0x3fe0ff, DRAFT_COLOR = 0xffd24a;
 const tapes = [];

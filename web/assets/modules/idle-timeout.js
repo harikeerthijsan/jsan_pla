@@ -1,7 +1,7 @@
 // Automatic sign-out after 5 minutes without activity. A warning with a countdown appears for the last minute
 // ("Stay signed in" keeps the session). Activity is shared between tabs, so working in one tab keeps the others
 // signed in, and a request still in progress (for example a large LiDAR upload) counts as activity.
-import { $, logout, state } from "./core.js?v=20261020-drag-card";
+import { $, logout, state } from "./core.js?v=20261022-saved-point-layer";
 
 export const IDLE_MINUTES = 5;
 const IDLE_MS = IDLE_MINUTES * 60 * 1000;

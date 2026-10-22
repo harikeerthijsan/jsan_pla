@@ -1,8 +1,8 @@
 // Team progress dashboard.
-import { openSuperPage } from "./super-admin.js?v=20261020-drag-card";
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261020-drag-card";
-import { openTeamPage } from "./team.js?v=20261020-drag-card";
-import { applyWorkspace, can } from "./workspace.js?v=20261020-drag-card";
+import { openSuperPage } from "./super-admin.js?v=20261022-saved-point-layer";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261022-saved-point-layer";
+import { openTeamPage } from "./team.js?v=20261022-saved-point-layer";
+import { applyWorkspace, can } from "./workspace.js?v=20261022-saved-point-layer";
 
 export const TEAM_REDUCED=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 export const TEAM_AVATAR_HUES=[206,152,262,28,340,188,96,226];

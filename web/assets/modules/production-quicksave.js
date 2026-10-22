@@ -3,10 +3,10 @@
 // selects, same submit, same conflict handling); it only mirrors and forwards. It follows the point while the view
 // moves and stays clamped inside the viewer when the point leaves the screen.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, esc, state, toast } from "./core.js?v=20261020-drag-card";
-import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261020-drag-card";
-import { openProductionMapPicker } from "./production-map.js?v=20261020-drag-card";
-import { annotationUnits, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261020-drag-card";
+import { $, api, esc, state, toast } from "./core.js?v=20261022-saved-point-layer";
+import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261022-saved-point-layer";
+import { openProductionMapPicker } from "./production-map.js?v=20261022-saved-point-layer";
+import { annotationUnits, productionAnnotationGroups, productionGroupLabels } from "./production-annotations.js?v=20261022-saved-point-layer";
 
 const MIRRORED = [["qsFamily", "annotationFamily"], ["qsFeature", "annotationFeature"], ["qsParent", "annotationParent"]];
 let card = null, ring = null, shownKey = "", frame = 0;

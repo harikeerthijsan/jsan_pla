@@ -24,7 +24,7 @@ FROM ubuntu:24.04
 
 RUN apt-get update \
     && apt-get upgrade --yes \
-    && apt-get install --yes --no-install-recommends ca-certificates \
+    && apt-get install --yes --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=geospatial /opt/conda/envs/pla /opt/conda/envs/pla

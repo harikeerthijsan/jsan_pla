@@ -246,6 +246,16 @@ def health_live(): return {'status':'live','service':'pla-qc-api','version':APP_
 @app.get('/api/system/info')
 def system_info():
     return {'version':APP_VERSION,'app_env':APP_ENV,'railway_environment':os.getenv('RAILWAY_ENVIRONMENT_NAME') or APP_ENV,'git_branch':os.getenv('RAILWAY_GIT_BRANCH') or os.getenv('GIT_BRANCH') or 'local','git_commit':(os.getenv('RAILWAY_GIT_COMMIT_SHA') or os.getenv('GIT_COMMIT') or '')[:8] or None,'service':'pla-qc'}
+@app.get('/api/admin/storage-check')
+def storage_check(u:User=Depends(require_permission('super.view')),db:Session=Depends(get_db)):
+    """Super admins: test this service's bucket credentials (bucket access + one real presigned LiDAR link). No secrets returned."""
+    from .storage import storage_diagnostics
+    block=db.query(LidarBlock).filter(LidarBlock.object_key.isnot(None)).order_by(LidarBlock.id.desc()).first()
+    result=storage_diagnostics(block.object_key if block else None)
+    db.add(AuditLog(actor=u.email,action='STORAGE_CHECK',entity_type='system',entity_id='storage',detail_json=json.dumps(result.get('checks',{}))))
+    db.commit()
+    return result
+
 @app.get('/health/ready')
 def health_ready():
     # Railway only switches traffic once this returns 2xx. Never echo exception text: it can contain hosts/credentials.
