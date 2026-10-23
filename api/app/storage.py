@@ -70,6 +70,7 @@ def upload_bytes(data:bytes,key:str,content_type:str|None=None):
     if MODE=='local': return save_local_bytes(data,key)
     args={'Bucket':bucket_name(),'Key':key,'Body':data}
     if content_type: args['ContentType']=content_type
+    if LIDAR_CACHE_CONTROL: args['CacheControl']=LIDAR_CACHE_CONTROL
     _s3().put_object(**args)
     return key
 
@@ -80,8 +81,10 @@ def download_to(key:str,dst:str):
 
 def upload_from(src:str,key:str,content_type:str|None=None):
     if MODE=='local': return put_local(src,key)
-    extra={'ContentType':content_type} if content_type else None
-    _s3().upload_file(src,bucket_name(),key,ExtraArgs=extra or {})
+    extra={'ContentType':content_type} if content_type else {}
+    # Also stored on the object: some S3 stores (Garage) ignore the signed link's response-cache-control override.
+    if LIDAR_CACHE_CONTROL: extra['CacheControl']=LIDAR_CACHE_CONTROL
+    _s3().upload_file(src,bucket_name(),key,ExtraArgs=extra)
     return key
 
 def object_exists(key:str)->bool:

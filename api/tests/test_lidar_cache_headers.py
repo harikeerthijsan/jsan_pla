@@ -43,3 +43,29 @@ def test_locally_served_lidar_is_not_stored_either():
         part = client.get(f"/api/storage/{key}", headers={"Range": "bytes=0-99"})
     assert whole.status_code == 200 and whole.headers["cache-control"] == "no-store"
     assert part.status_code == 206 and len(part.content) == 100 and part.headers["cache-control"] == "no-store"
+
+
+class RecordingS3:
+    def __init__(self):
+        self.calls = []
+
+    def put_object(self, **kwargs):
+        self.calls.append(("put_object", kwargs))
+
+    def upload_file(self, src, bucket, key, ExtraArgs=None):
+        self.calls.append(("upload_file", ExtraArgs))
+
+
+def test_stored_objects_carry_no_store_for_stores_that_ignore_the_link_override(monkeypatch, tmp_path):
+    fake = RecordingS3()
+    monkeypatch.setattr(storage, "MODE", "s3")
+    monkeypatch.setattr(storage, "_s3", lambda: fake)
+    monkeypatch.setattr(storage, "bucket_name", lambda: "bucket")
+    src = tmp_path / "tile.copc.laz"; src.write_bytes(b"LASF")
+    storage.upload_from(str(src), "p/versions/v1/lidar/tile.copc.laz", "application/octet-stream")
+    storage.upload_bytes(b"{}", "p/versions/v1/profile.json", "application/json")
+    assert fake.calls[0] == ("upload_file", {"ContentType": "application/octet-stream", "CacheControl": "no-store"})
+    assert fake.calls[1][1]["CacheControl"] == "no-store" and fake.calls[1][1]["ContentType"] == "application/json"
+    monkeypatch.setattr(storage, "LIDAR_CACHE_CONTROL", "")
+    storage.upload_from(str(src), "p/tile.copc.laz")
+    assert fake.calls[-1] == ("upload_file", {})
