@@ -42,15 +42,17 @@ def configure_bucket_cors():
     origins=bucket_cors_origins()
     if not origins:
         raise RuntimeError('No bucket CORS origin is configured')
+    # One rule per origin: Garage answers a multi-origin rule with all of them in one Access-Control-Allow-Origin
+    # header, which browsers reject. A rule per origin echoes just the requesting site, on every S3 store.
     _s3().put_bucket_cors(
         Bucket=bucket_name(),
         CORSConfiguration={'CORSRules':[{
             'AllowedHeaders':['*'],
             'AllowedMethods':['GET','HEAD','PUT','POST'],
-            'AllowedOrigins':origins,
+            'AllowedOrigins':[origin],
             'ExposeHeaders':['ETag','Accept-Ranges','Content-Length','Content-Range'],
             'MaxAgeSeconds':3600,
-        }]},
+        } for origin in origins]},
     )
 
 def local_path(key:str)->pathlib.Path:

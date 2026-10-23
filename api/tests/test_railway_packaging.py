@@ -59,14 +59,16 @@ def test_bucket_cors_supports_multipart_and_copc_reads(monkeypatch):
     storage.configure_bucket_cors()
 
     args = client.put_bucket_cors.call_args.kwargs
-    rule = args['CORSConfiguration']['CORSRules'][0]
+    rules = args['CORSConfiguration']['CORSRules']
     assert args['Bucket'] == 'test-bucket'
-    assert rule['AllowedOrigins'] == [
-        'https://one.example',
-        'https://two.example',
+    # One rule per origin, so stores like Garage echo only the requesting origin (a joined list is rejected by browsers).
+    assert [rule['AllowedOrigins'] for rule in rules] == [
+        ['https://one.example'],
+        ['https://two.example'],
     ]
-    assert {'GET', 'HEAD', 'PUT', 'POST'} <= set(rule['AllowedMethods'])
-    assert {'ETag', 'Content-Range'} <= set(rule['ExposeHeaders'])
+    for rule in rules:
+        assert {'GET', 'HEAD', 'PUT', 'POST'} <= set(rule['AllowedMethods'])
+        assert {'ETag', 'Content-Range'} <= set(rule['ExposeHeaders'])
 
 
 def test_bucket_cors_derives_explicit_railway_origin(monkeypatch):
