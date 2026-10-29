@@ -919,9 +919,22 @@ def test_large_datasets_do_not_freeze_the_viewer():
     annotations = (ROOT / "web" / "assets" / "modules" / "production-annotations.js").read_text(encoding="utf-8")
     workspace = (ROOT / "web" / "assets" / "modules" / "workspace.js").read_text(encoding="utf-8")
     # Saved points are one point layer, not one Potree measurement per point (1,719 of those froze the tab: out of memory).
-    assert "function drawSavedPointLayer(rows)" in annotations and "new THREE.Points(geometry,material)" in annotations
+    assert "function drawSavedPointLayer(rows)" in annotations and "new THREE.Points(geometry,new THREE.PointsMaterial(" in annotations
     marker = annotations[annotations.index("export function renderProductionAnnotationMarkers"):]
     marker = marker[:marker.index("\n")]
     assert "for(const row of rows)" not in marker and marker.count("addProductionMeasurement(") == 1   # only the unsaved draft
     # Potree's decoder workers are capped (43 tiles started ~43 workers at once).
     assert "export function limitPotreeWorkers(" in workspace and workspace.count("limitPotreeWorkers();") == 2
+
+
+def test_saved_points_are_drawn_over_the_lidar():
+    annotations = (ROOT / "web" / "assets" / "modules" / "production-annotations.js").read_text(encoding="utf-8")
+    # With EDL on, Potree draws viewer.scene.scene BEFORE compositing the LiDAR, so a layer there is hidden by the cloud
+    # (saved points vanished as soon as they were saved). The layer is drawn in the overlay pass, like measurements.
+    assert "v.scene.scene.add(savedPointLayer)" not in annotations
+    assert "savedPointScene.add(savedPointLayer)" in annotations
+    assert 'addEventListener("render.pass.perspective_overlay"' in annotations
+    # Each point stands out from the LiDAR colours: an untinted white/black ring behind a magenta dot.
+    assert 'savedPointTexture("halo")' in annotations and 'color:SAVED_POINT_COLOR,map:savedPointTexture("dot")' in annotations
+    # One colour that never appears in the LiDAR colourings: magenta.
+    assert "export const SAVED_POINT_COLOR=0xff00ff;" in annotations

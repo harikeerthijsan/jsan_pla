@@ -1,7 +1,7 @@
 // Configuration, shared state, DOM/API helpers and sign-in/sign-out.
-import { startLidarLoginBackground as startLoginBackground } from "../lidar-login-scene.js?v=20261022-saved-point-layer";
-import { openProfilePage, roleLabel } from "./profile.js?v=20261022-saved-point-layer";
-import { bootstrap } from "./workspace.js?v=20261022-saved-point-layer";
+import { startLidarLoginBackground as startLoginBackground } from "../lidar-login-scene.js?v=20261029-saved-point-magenta";
+import { openProfilePage, roleLabel } from "./profile.js?v=20261029-saved-point-magenta";
+import { bootstrap } from "./workspace.js?v=20261029-saved-point-magenta";
 
 // After a real sign-in, ask the browser for its location (the person may refuse); only the latest is stored.
 export function captureSignInLocation(){const report=body=>api("/api/auth/sign-in-location",{method:"POST",body:JSON.stringify(body)}).then(result=>{state.user={...(state.user||{}),...result};localStorage.setItem("pla_user",JSON.stringify(state.user))}).catch(()=>{});if(!("geolocation" in navigator)){report({status:"unavailable"});return}navigator.geolocation.getCurrentPosition(p=>report({status:"shared",latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy}),error=>report({status:error.code===1?"denied":"unavailable"}),{enableHighAccuracy:true,timeout:15000,maximumAge:60000})}

@@ -1,13 +1,13 @@
 // Production full screen, profile/pick buttons, import and Replace Excel dialogs.
-import { checkSourceCrs } from "./production-crs.js?v=20261022-saved-point-layer";
-import { $, api, esc, state, toast } from "./core.js?v=20261022-saved-point-layer";
-import { loadProduction, productionProgress } from "./production-data.js?v=20261022-saved-point-layer";
-import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261022-saved-point-layer";
-import { startProductionPick } from "./production-pick.js?v=20261022-saved-point-layer";
-import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261022-saved-point-layer";
-import { setDialogProgress } from "./qc-run.js?v=20261022-saved-point-layer";
-import { sendFile } from "./uploads.js?v=20261022-saved-point-layer";
-import { bootstrap, currentProject } from "./workspace.js?v=20261022-saved-point-layer";
+import { checkSourceCrs } from "./production-crs.js?v=20261029-saved-point-magenta";
+import { $, api, esc, state, toast } from "./core.js?v=20261029-saved-point-magenta";
+import { loadProduction, productionProgress } from "./production-data.js?v=20261029-saved-point-magenta";
+import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261029-saved-point-magenta";
+import { startProductionPick } from "./production-pick.js?v=20261029-saved-point-magenta";
+import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261029-saved-point-magenta";
+import { setDialogProgress } from "./qc-run.js?v=20261029-saved-point-magenta";
+import { sendFile } from "./uploads.js?v=20261029-saved-point-magenta";
+import { bootstrap, currentProject } from "./workspace.js?v=20261029-saved-point-magenta";
 
 // In full screen the pole panel is a drawer over the LiDAR: closed at first, opened by choosing a pole.
 export function setProductionDrawer(open){const layout=document.querySelector(".production-layout");if(!layout.classList.contains("is-fullscreen"))return;layout.classList.toggle("drawer-open",open);const button=$("productionPanelToggleBtn");button.textContent=open?"Close panel":"Open panel";button.classList.toggle("active",open);button.setAttribute("aria-expanded",String(open))}

@@ -1,10 +1,10 @@
 // Production point catalogue, point form, coordinates and saved-point markers.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, esc, state } from "./core.js?v=20261022-saved-point-layer";
-import { clearProductionMeasurements } from "./production-data.js?v=20261022-saved-point-layer";
-import { editProductionAnnotation, removeSavedPoint } from "./production-pick.js?v=20261022-saved-point-layer";
-import { renderProductionPoleWorkflow } from "./production-poles.js?v=20261022-saved-point-layer";
-import { can, currentProject } from "./workspace.js?v=20261022-saved-point-layer";
+import { $, api, esc, state } from "./core.js?v=20261029-saved-point-magenta";
+import { clearProductionMeasurements } from "./production-data.js?v=20261029-saved-point-magenta";
+import { editProductionAnnotation, removeSavedPoint } from "./production-pick.js?v=20261029-saved-point-magenta";
+import { renderProductionPoleWorkflow } from "./production-poles.js?v=20261029-saved-point-magenta";
+import { can, currentProject } from "./workspace.js?v=20261029-saved-point-magenta";
 
 export function productionAnnotationGroups(){return state.productionCatalogue?.annotation_groups||[]}
 export function fillProductionCatalogue(){const groups=productionAnnotationGroups(),select=$("annotationFamily"),current=select.value;select.innerHTML=groups.map(group=>`<option value="${esc(group.id)}">${esc(group.label)}${group.relationship?` · ${esc(group.relationship)}`:""}</option>`).join("");if(groups.some(group=>group.id===current))select.value=current;fillProductionFeatures()}
@@ -28,14 +28,25 @@ export function selectedPoleAnnotations(){const poleId=$("annotationPoleId").val
 // Saved points are drawn as ONE point layer (a round dot per point, in its group colour, always on top) instead of one
 // Potree measurement object per point: those build sphere/circle geometry each, and a dataset with ~1,700 saved points
 // froze the tab and ran it out of memory. One draw call costs the same for 17 or 17,000 points.
-let savedPointLayer=null,savedPointSprite=null;
-function savedPointTexture(){if(savedPointSprite)return savedPointSprite;const c=document.createElement("canvas");c.width=c.height=64;const x=c.getContext("2d");x.beginPath();x.arc(32,32,26,0,Math.PI*2);x.fillStyle="#fff";x.fill();x.lineWidth=8;x.strokeStyle="rgba(15,30,40,.85)";x.stroke();savedPointSprite=new THREE.CanvasTexture(c);return savedPointSprite}
-function drawSavedPointLayer(rows){const v=state.productionViewer;if(savedPointLayer){savedPointLayer.parent?.remove(savedPointLayer);savedPointLayer.geometry.dispose();savedPointLayer.material.dispose();savedPointLayer=null}if(!v||!rows.length)return;
-  const origin=rows[0].coordinates,positions=new Float32Array(rows.length*3),colors=new Float32Array(rows.length*3),color=new THREE.Color();
-  rows.forEach((row,i)=>{const c=row.coordinates;positions[i*3]=c.x-origin.x;positions[i*3+1]=c.y-origin.y;positions[i*3+2]=c.z-origin.z;color.setHex(productionAnnotationColors[row.family]||0xffffff);colors[i*3]=color.r;colors[i*3+1]=color.g;colors[i*3+2]=color.b});
-  const geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.BufferAttribute(positions,3));geometry.setAttribute("color",new THREE.BufferAttribute(colors,3));
-  const material=new THREE.PointsMaterial({size:13,sizeAttenuation:false,vertexColors:true,map:savedPointTexture(),transparent:true,alphaTest:.35,depthTest:false,depthWrite:false});
-  savedPointLayer=new THREE.Points(geometry,material);savedPointLayer.name="Saved production points";savedPointLayer.position.set(origin.x,origin.y,origin.z);savedPointLayer.renderOrder=905;savedPointLayer.frustumCulled=false;v.scene.scene.add(savedPointLayer)}
+// The layer lives in its own scene drawn in Potree's overlay pass (where measurements are drawn), not in viewer.scene.scene:
+// with EDL on, scene.scene is drawn BEFORE the LiDAR is composited, so the LiDAR covered every saved point.
+// Each point is a magenta dot inside a white ring with a black outline. Magenta is in none of the LiDAR colourings
+// (elevation, RGB, intensity), so saved points never blend in; the group colours stay in the point lists.
+export const SAVED_POINT_COLOR=0xff00ff;
+let savedPointLayer=null;const savedPointScene=new THREE.Scene(),overlayViewers=new WeakSet(),savedPointSprites={};
+function savedPointOverlay(v){if(overlayViewers.has(v))return;overlayViewers.add(v);v.addEventListener("render.pass.perspective_overlay",()=>{if(savedPointLayer)v.renderer.render(savedPointScene,v.scene.getActiveCamera())})}
+function savedPointTexture(kind){if(savedPointSprites[kind])return savedPointSprites[kind];const c=document.createElement("canvas");c.width=c.height=64;const x=c.getContext("2d"),ring=(r,width,style)=>{x.beginPath();x.arc(32,32,r,0,Math.PI*2);x.lineWidth=width;x.strokeStyle=style;x.stroke()};
+  if(kind==="halo"){ring(27,8,"rgba(0,0,0,.9)");ring(27,4.5,"#fff")}   // white ring, black edges, hollow centre
+  else{x.beginPath();x.arc(32,32,27,0,Math.PI*2);x.fillStyle="#fff";x.fill();ring(27,6,"rgba(0,0,0,.85)")}   // dot (tinted magenta), dark edge
+  return savedPointSprites[kind]=new THREE.CanvasTexture(c)}
+function drawSavedPointLayer(rows){const v=state.productionViewer;if(savedPointLayer){savedPointLayer.parent?.remove(savedPointLayer);for(const layer of savedPointLayer.children){layer.material.dispose()}savedPointLayer.children[0]?.geometry.dispose();savedPointLayer=null}if(!v||!rows.length)return;
+  const origin=rows[0].coordinates,positions=new Float32Array(rows.length*3);
+  rows.forEach((row,i)=>{const c=row.coordinates;positions[i*3]=c.x-origin.x;positions[i*3+1]=c.y-origin.y;positions[i*3+2]=c.z-origin.z});
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute("position",new THREE.BufferAttribute(positions,3));
+  const points=(order,options)=>{const layer=new THREE.Points(geometry,new THREE.PointsMaterial({sizeAttenuation:false,transparent:true,alphaTest:.2,depthTest:false,depthWrite:false,...options}));layer.renderOrder=order;layer.frustumCulled=false;return layer};
+  savedPointLayer=new THREE.Group();savedPointLayer.name="Saved production points";savedPointLayer.position.set(origin.x,origin.y,origin.z);
+  savedPointLayer.add(points(905,{size:26,map:savedPointTexture("halo")}),points(906,{size:13,color:SAVED_POINT_COLOR,map:savedPointTexture("dot")}));
+  savedPointScene.add(savedPointLayer);savedPointOverlay(v)}
 export function renderProductionAnnotationMarkers(){clearProductionMeasurements();if(!state.productionViewer)return;$("productionBoxBtn").disabled=$("productionProfileBtn").disabled=!state.productionPointclouds.length;const activeId=$("annotationId").value,rows=$("annotationPoleId").value?selectedPoleAnnotations():state.productionAnnotations;drawSavedPointLayer(rows.filter(row=>!(row.id===activeId&&state.productionDraft)));if(state.productionDraft)addProductionMeasurement([state.productionDraft],{name:$("annotationFeature").value||"Unsaved point",color:productionAnnotationColors[$("annotationFamily").value]||0xffffff})}
 export function renderProductionAnnotations(){const root=$("productionAnnotationList"),poleId=$("annotationPoleId").value,rows=selectedPoleAnnotations();$("productionAnnotationsDownload").disabled=!state.productionAnnotations.length;root.innerHTML="";renderProductionPoleWorkflow();if(!poleId){root.innerHTML='<div class="empty-workflow">Select a Pole Number to view its saved points.</div>';renderProductionAnnotationMarkers();return}if(!rows.length){root.innerHTML='<div class="empty-workflow">No points saved for this pole.</div>';renderProductionAnnotationMarkers();return}for(const row of rows){const pole=state.productionPoles.find(item=>item.internal_id===row.pole_internal_id),item=document.createElement("div");item.className=`annotation-row${$("annotationId").value===row.id?" active":""}`;item.innerHTML=`<span class="annotation-row-text"><b><i class="annotation-dot"></i>${esc(row.feature_type)}</b><small>${esc(pole?.pole_number||`Pole ID ${row.pole_internal_id||"—"}`)} · ${esc(row.family)}${row.attributes?.parent_feature_id&&row.attributes.parent_feature_id!=="pole"?` · on ${esc(row.attributes.parent_feature_id)}`:""} · Z ${Number(row.coordinates.z).toFixed(3)}</small></span>${can("production.annotate")?`<span class="annotation-row-actions"><button type="button" class="row-action" title="Edit ${esc(row.feature_type)}">Edit</button><button type="button" class="row-action danger-item" data-row-delete title="Remove ${esc(row.feature_type)}">Delete</button></span>`:""}`;item.onclick=()=>editProductionAnnotation(row);item.querySelector("[data-row-delete]")?.addEventListener("click",event=>{event.stopPropagation();removeSavedPoint(row.id)});root.appendChild(item)}renderProductionAnnotationMarkers()}
 export const productionGroupLabels={crossarms:"Crossarms",attachments_comm:"Comm attachments",attachments_util:"Utility attachments",anchors:"Anchors",guys:"Guys",sidewalk_braces:"Sidewalk braces",equipment:"Equipment",span_guys:"Span guys",other_poles:"Other poles"};
