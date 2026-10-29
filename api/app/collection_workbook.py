@@ -48,6 +48,22 @@ POLE_BASE_FIELDS = ("first_pole", "last_pole", "environment")
 # Child points (attachments, equipment) that hang from the pole get only their elevation written; those that hang from a
 # parent point (e.g. a crossarm) get their own latitude/longitude and elevation.
 CHILD_FAMILIES = {"attachments_comm", "attachments_util", "equipment"}
+# A comm / utility wire on a crossarm: the crossarm keeps only its elevation (its tip lat/lon cells are cleared), and the
+# wire point carries the latitude/longitude.
+WIRE_FAMILIES = {"attachments_comm": "comm", "attachments_util": "util"}
+ARM_FEATURE = re.compile(r"^arm_\d+$")
+
+
+def hanging_arm(family: str, attrs: dict) -> str | None:
+    """The crossarm (arm_N) a child point hangs from, or None for the pole. The arm can be chosen as the point's Parent
+    or in its comm_arm_no / util_arm_no dropdown; either one counts."""
+    if family not in CHILD_FAMILIES:
+        return None
+    for value in (attrs.get("parent_feature_id"), attrs.get(f"{WIRE_FAMILIES.get(family)}_arm_no")):
+        value = str(value or "").strip().lower()
+        if ARM_FEATURE.match(value):
+            return value
+    return None
 # Older releases saved the incoming line as its own pole points; still written if any exist.
 INCOMING_POINTS = {"prev_inc": "first_pole", "next_inc": "last_pole"}
 OTHER_ON_POLE_BASE = {"other_type": "type", "other_id": "id", "other_attach_N": "attach_N"}
@@ -300,6 +316,15 @@ class _Sheet:
         self.ws.cell(row, col, value)
         return True
 
+    def clear(self, row: int, column: str, summary: dict) -> bool:
+        """Empty a cell (write() never does: openpyxl ignores a None value, so missing values leave cells as they are)."""
+        col = self.col.get(column)
+        if not col:
+            summary["unmapped"].add(f"{self.ws.title}: {column}")
+            return False
+        self.ws.cell(row, col).value = None
+        return True
+
 
 def _generated_workbook(poles: list[dict]):
     wb = Workbook()
@@ -357,6 +382,8 @@ def build_collection_workbook(base: bytes | None, poles: list[dict], points: lis
     latest: dict[tuple, dict] = {}
     for point in sorted(points, key=lambda p: str(p.get("updated_at") or "")):
         latest[(point.get("pole_internal_id"), point["family"], point["feature_type"])] = point
+    arms_with_wires = {(pole_id, arm) for (pole_id, family, _), point in latest.items()
+                       if family in WIRE_FAMILIES and (arm := hanging_arm(family, point.get("attributes") or {}))}
 
     for (pole_id, family, feature), point in latest.items():
         if pole_id is None:
@@ -422,8 +449,13 @@ def build_collection_workbook(base: bytes | None, poles: list[dict], points: lis
         n = int(m.group(1))
         s.ensure_set(prefix, n, summary)
         row = s.rows.get(_key(pole_id))
-        if family in CHILD_FAMILIES and str(attrs.get("parent_feature_id") or "pole").lower() == "pole":
+        if family in CHILD_FAMILIES and not hanging_arm(family, attrs):
             lat = lon = ...  # hangs from the pole: only its elevation is written; the lat/lon cells are left as they are
+        elif family == "crossarms" and (pole_id, str(feature).lower()) in arms_with_wires:
+            # A comm / utility wire hangs from this arm: tip lat/lon are cleared, only its elevation stays.
+            for suffix in ("tip_lat", "tip_lon"):
+                s.clear(row, f"{prefix}_{n}_{suffix}", summary)
+            lat = lon = ...
         for suffix in s.suffixes(prefix):
             value = {"lat": lat, "tip_lat": lat, "lon": lon, "tip_lon": lon, "elev_ft": elevation(z)}.get(suffix, ...)
             if value is not ...:

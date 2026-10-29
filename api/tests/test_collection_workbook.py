@@ -220,6 +220,40 @@ def test_children_on_a_parent_keep_their_own_lat_lon_and_on_the_pole_only_elevat
     assert value(eq, 1, "eq_1_elev_ft") == 28.0 and value(eq, 1, "eq_1_lat") is None
 
 
+def test_wire_on_a_crossarm_chosen_in_arm_no_gets_its_own_lat_lon():
+    # The crossarm picked in comm_arm_no / util_arm_no counts as the parent, even when Parent was left as "pole".
+    data, _ = build_collection_workbook(None, POLES, [
+        point("arm_1", "crossarms", {"parent_feature_id": "pole"}, z=35.0),
+        point("comm_1", "attachments_comm", {"parent_feature_id": "pole", "comm_arm_no": "arm_1"}, z=24.0),
+        point("util_1", "attachments_util", {"parent_feature_id": "pole", "util_arm_no": "arm_1"}, z=30.0),
+        point("comm_2", "attachments_comm", {"parent_feature_id": "pole", "comm_arm_no": "pole"}, z=22.0),
+    ])
+    att = load_workbook(BytesIO(data))["attachments"]
+    assert value(att, 1, "comm_1_lat") == 33.12345679 and value(att, 1, "comm_1_lon") == -118.98765432 and value(att, 1, "comm_1_elev_ft") == 24.0
+    assert value(att, 1, "util_1_lat") == 33.12345679 and value(att, 1, "util_1_lon") == -118.98765432 and value(att, 1, "util_1_elev_ft") == 30.0
+    assert value(att, 1, "comm_2_lat") is None and value(att, 1, "comm_2_elev_ft") == 22.0   # on the pole: elevation only
+
+
+def test_crossarm_with_a_wire_keeps_only_its_elevation():
+    base = load_workbook(BytesIO(build_collection_workbook(None, POLES, [])[0]))
+    arms = base["crossarms"]; names = headers(arms)
+    for column, number in (("arm_1_tip_lat", 34.1), ("arm_1_tip_lon", -118.1)):   # e.g. written by an earlier download
+        arms.cell(row(arms, 1), names.index(column) + 1, number)
+    raw = BytesIO(); base.save(raw)
+    points = [
+        {**point("arm_1", "crossarms", {}, z=35.0), "latitude": 33.5, "longitude": -118.5},
+        {**point("arm_2", "crossarms", {}, z=36.0), "latitude": 33.6, "longitude": -118.6},
+        {**point("arm_3", "crossarms", {}, z=37.0), "latitude": 33.7, "longitude": -118.7},
+        point("comm_1", "attachments_comm", {"parent_feature_id": "arm_1"}, z=24.0),                     # Parent = arm_1
+        point("util_1", "attachments_util", {"parent_feature_id": "pole", "util_arm_no": "arm_2"}, z=30.0),  # util_arm_no = arm_2
+    ]
+    arms = load_workbook(BytesIO(build_collection_workbook(raw.getvalue(), POLES, points)[0]))["crossarms"]
+    for n, elev in ((1, 35.0), (2, 36.0)):
+        assert value(arms, 1, f"arm_{n}_tip_lat") is None and value(arms, 1, f"arm_{n}_tip_lon") is None and value(arms, 1, f"arm_{n}_elev_ft") == elev
+    # No wire on arm_3: its tip lat/lon stay.
+    assert value(arms, 1, "arm_3_tip_lat") == 33.7 and value(arms, 1, "arm_3_tip_lon") == -118.7 and value(arms, 1, "arm_3_elev_ft") == 37.0
+
+
 def test_child_on_the_pole_keeps_existing_lat_lon_cells():
     base = load_workbook(BytesIO(build_collection_workbook(None, POLES, [])[0]))
     att = base["attachments"]; names = headers(att)
