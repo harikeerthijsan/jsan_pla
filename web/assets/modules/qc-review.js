@@ -1,10 +1,10 @@
 // QC pole list, pole selection, findings, reviewer decisions and evidence focus.
-import { $, api, esc, state, toast } from "./core.js?v=20261029-replace-excel-format";
-import { loadWorkflow } from "./delivery.js?v=20261029-replace-excel-format";
-import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261029-replace-excel-format";
-import { loadProject } from "./qc-run.js?v=20261029-replace-excel-format";
-import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261029-replace-excel-format";
-import { can, currentProject } from "./workspace.js?v=20261029-replace-excel-format";
+import { $, api, esc, state, toast } from "./core.js?v=20261030-pla1-from-points";
+import { loadWorkflow } from "./delivery.js?v=20261030-pla1-from-points";
+import { clearCanvases, prepareSection, renderAnalysisViews } from "./qc-analysis.js?v=20261030-pla1-from-points";
+import { loadProject } from "./qc-run.js?v=20261030-pla1-from-points";
+import { focusAllEvidence, focusPrimary, renderScene } from "./qc-scene.js?v=20261030-pla1-from-points";
+import { can, currentProject } from "./workspace.js?v=20261030-pla1-from-points";
 
 function renderRuleCoverage(){const c=state.summary?.rule_coverage,btn=$("kpiCoverageBtn");if(!btn)return;btn.classList.toggle("partial",Boolean(c&&c.ran<c.total));$("kpiCoverage").textContent=c?`${c.ran} / ${c.total} ran`:"—";btn.title=c?`${c.total-c.ran} rule(s) could not run on this workbook. Click for details.`:"Run QC to see which rules apply to this workbook"}
 function openRuleCoverage(){const c=state.summary?.rule_coverage;if(!c){toast("Run QC on this dataset to see which rules apply to its workbook.","info",4200);return}

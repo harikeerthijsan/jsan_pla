@@ -1,13 +1,13 @@
 // Production full screen, profile/pick buttons, import and Replace Excel dialogs.
-import { checkSourceCrs } from "./production-crs.js?v=20261029-replace-excel-format";
-import { $, api, esc, state, toast } from "./core.js?v=20261029-replace-excel-format";
-import { loadProduction, productionProgress } from "./production-data.js?v=20261029-replace-excel-format";
-import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261029-replace-excel-format";
-import { startProductionPick } from "./production-pick.js?v=20261029-replace-excel-format";
-import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261029-replace-excel-format";
-import { setDialogProgress } from "./qc-run.js?v=20261029-replace-excel-format";
-import { sendFile } from "./uploads.js?v=20261029-replace-excel-format";
-import { bootstrap, currentProject } from "./workspace.js?v=20261029-replace-excel-format";
+import { checkSourceCrs } from "./production-crs.js?v=20261030-pla1-from-points";
+import { $, api, esc, state, toast } from "./core.js?v=20261030-pla1-from-points";
+import { loadProduction, productionProgress } from "./production-data.js?v=20261030-pla1-from-points";
+import { closeProductionGeoCard, renderProductionGeoOverlay } from "./production-geo.js?v=20261030-pla1-from-points";
+import { startProductionPick } from "./production-pick.js?v=20261030-pla1-from-points";
+import { applyProductionProfile, cancelProductionProfileLine, exitProductionProfile, rotateProductionProfile, startProductionProfileLine, stepProductionProfile } from "./production-profile.js?v=20261030-pla1-from-points";
+import { setDialogProgress } from "./qc-run.js?v=20261030-pla1-from-points";
+import { sendFile } from "./uploads.js?v=20261030-pla1-from-points";
+import { bootstrap, currentProject } from "./workspace.js?v=20261030-pla1-from-points";
 
 // In full screen the pole panel is a drawer over the LiDAR: closed at first, opened by choosing a pole.
 export function setProductionDrawer(open){const layout=document.querySelector(".production-layout");if(!layout.classList.contains("is-fullscreen"))return;layout.classList.toggle("drawer-open",open);const button=$("productionPanelToggleBtn");button.textContent=open?"Close panel":"Open panel";button.classList.toggle("active",open);button.setAttribute("aria-expanded",String(open))}
@@ -28,7 +28,7 @@ async function showWorkbookFormatHint(){const hint=$("productionWorkbookFormatHi
 
 // Replace Excel: which format the new Excel is (the dataset's own by default). Choosing the other format switches the
 // dataset to it once the server confirms the Excel really is that format; the work then saves in the new format.
-const replaceFormatEffect={"PLA-1":"Download Excel will give the new Excel with the Workbook Data edits","PLA-2":"Download Excel will build the COLLECTION workbook from the saved points"};
+const replaceFormatEffect={"PLA-1":"Download Excel will give the new Excel with the Workbook Data edits and the pole columns filled from saved points","PLA-2":"Download Excel will build the COLLECTION workbook from the saved points"};
 function renderReplaceFormatNote(){const note=$("replaceExcelFormatNote"),from=currentProject().workbook_format,to=$("replaceExcelFormat").value,change=Boolean(from&&to&&from!==to);note.textContent=change?`The dataset switches from ${from} to ${to}. ${replaceFormatEffect[to]}.`:"";note.className=`format-hint${change?" is-warn":""}`}
 async function showReplaceFormatHint(){const hint=$("replaceExcelFormatHint"),file=$("replaceExcelFile").files[0];renderReplaceFormatNote();hint.textContent="";hint.className="format-hint";if(!file)return;hint.textContent="Checking the workbook…";const detected=await detectWorkbookFormat(file);if(file!==$("replaceExcelFile").files[0])return;if(!detected){hint.textContent="";return}if(!currentProject().workbook_format&&$("replaceExcelFormat").value!==detected){$("replaceExcelFormat").value=detected;renderReplaceFormatNote()}const chosen=$("replaceExcelFormat").value,clash=chosen!==detected;hint.textContent=clash?`This Excel is a ${FORMAT_LABELS[detected]}, not ${chosen}.`:`This Excel is a ${FORMAT_LABELS[detected]}.`;hint.classList.toggle("is-error",clash);hint.classList.toggle("is-ok",!clash)}
 

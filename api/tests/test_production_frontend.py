@@ -953,3 +953,10 @@ def test_replace_excel_asks_for_the_format_and_can_switch_it():
     # The choice goes to the server, and the dataset takes the format the server confirms.
     assert 'body:JSON.stringify({workbook_format:workbookFormat})' in shell
     assert "if(dataset&&applied.workbook_format)dataset.workbook_format=applied.workbook_format" in shell
+
+
+def test_pla1_download_reports_poles_filled_from_saved_points():
+    data = (ROOT / "web" / "assets" / "modules" / "production-data.js").read_text(encoding="utf-8")
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    assert 'response.headers.get("X-Pla1-Summary")' in data and "filled from saved points (location, elevations, first/last pole)" in data
+    assert "fill each pole by hand" not in html and "pole columns from saved points, the rest by hand" in html

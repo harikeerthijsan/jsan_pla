@@ -1,14 +1,14 @@
 // Point picking, editing, saving, deleting and edit-conflict handling.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261029-replace-excel-format";
-import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261029-replace-excel-format";
-import { downloadCollectionWorkbook, downloadProductionAnnotations, initFormatControl } from "./production-data.js?v=20261029-replace-excel-format";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261029-replace-excel-format";
-import { cancelProductionBox } from "./production-view.js?v=20261029-replace-excel-format";
-import { cancelProductionMeasure } from "./production-measure.js?v=20261029-replace-excel-format";
-import { productionPoleTarget } from "./production-poles.js?v=20261029-replace-excel-format";
-import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261029-replace-excel-format";
-import { can } from "./workspace.js?v=20261029-replace-excel-format";
+import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261030-pla1-from-points";
+import { fillProductionFeatures, fillProductionPoles, openAnnotationStreetView, productionAnnotationGroups, productionGroupLabels, renderProductionAnnotations, resetAnnotationForm, selectedPoleAnnotations, setAnnotationDraft, updatePoleCoordinateComparison } from "./production-annotations.js?v=20261030-pla1-from-points";
+import { downloadCollectionWorkbook, downloadProductionAnnotations, initFormatControl } from "./production-data.js?v=20261030-pla1-from-points";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261030-pla1-from-points";
+import { cancelProductionBox } from "./production-view.js?v=20261030-pla1-from-points";
+import { cancelProductionMeasure } from "./production-measure.js?v=20261030-pla1-from-points";
+import { productionPoleTarget } from "./production-poles.js?v=20261030-pla1-from-points";
+import { PLACEMENT_LABELS, annotationPickOptions, pickOrPlace } from "./production-placement.js?v=20261030-pla1-from-points";
+import { can } from "./workspace.js?v=20261030-pla1-from-points";
 
 // Saved-point quick actions: click a point in the 3D view (or the list / checklist buttons) to edit or remove it.
 export function removeSavedPoint(id){const row=state.productionAnnotations.find(item=>item.id===id);if(!row||!can("production.annotate"))return;closePointMenu();editProductionAnnotation(row);$("annotationDeleteBtn").click()}

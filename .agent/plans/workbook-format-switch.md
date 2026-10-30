@@ -58,12 +58,15 @@ Revert the commit. Datasets that switched keep their new `workbook_format`, whic
 ## Decision log
 
 - Switch only on Replace Excel, never silently on detection: the user picks the format and the server verifies it.
-- PLA-2 → PLA-1: PLA-1 output stays "the Excel plus Workbook Data edits"; saved points are not written into the
-  ZoneName sheet (PLA-1 never did). Writing them is a separate decision for the user.
+- PLA-1 output (2026-10-30, user decision): the latest Excel with Workbook Data edits, plus the pole columns
+  (Latitude, Longitude, Top/Bottom of Pole Elevation, First/Last Pole, Incomplete Bottom/Latitude/Longitude) filled
+  from the latest Pole_Base / Pole_Top points, matched by Pole Number. Saved points win over hand-typed values in those
+  columns. A Pole Number on several rows is skipped and reported. PLA-1 has one Incomplete set: the previous-pole spot
+  when first_pole is INCOMPLETE, else the next-pole spot.
 
 ## Progress
 
 - [x] API + tests (2026-10-29: `test_replace_excel_switches_the_workbook_format_when_chosen`)
 - [x] Replace Excel dialog + frontend test (2026-10-29: `test_replace_excel_asks_for_the_format_and_can_switch_it`)
 - [ ] Browser check of the dialog at 1920×1080 (not possible from the dev session: Chrome could not reach the local app)
-- [ ] Decide whether PLA-1 output should also write saved points into the ZoneName sheet
+- [x] PLA-1 download fills the ZoneName pole columns from saved points (2026-10-30, user decision: `api/app/pla1_workbook.py`, `tests/test_pla1_workbook.py`)

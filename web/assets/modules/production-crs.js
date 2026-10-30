@@ -1,8 +1,8 @@
 // Source CRS: read from the chosen GeoJSON ("crs" member) and LiDAR headers (first bytes only, no upload) in the import
 // dialog, pre-fill Source CRS unless the user typed one, and block the import when the files and Source CRS disagree.
 // Admins can also correct the CRS of an existing dataset from the header (the server checks it against the LiDAR).
-import { $, api, confirmAction, toast } from "./core.js?v=20261029-replace-excel-format";
-import { can, currentProject } from "./workspace.js?v=20261029-replace-excel-format";
+import { $, api, confirmAction, toast } from "./core.js?v=20261030-pla1-from-points";
+import { can, currentProject } from "./workspace.js?v=20261030-pla1-from-points";
 
 // ---- Reading the CRS of a file ------------------------------------------------------------------------------------
 function epsgFromName(name) {

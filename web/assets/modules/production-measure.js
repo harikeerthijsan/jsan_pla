@@ -2,12 +2,12 @@
 // view and the values (3D, horizontal, vertical) are listed in the side panel. Measurements are saved with the dataset
 // (and who measured), so they are part of a session's work: admins export and clear them with "Session work".
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, esc, state, toast } from "./core.js?v=20261029-replace-excel-format";
-import { annotationUnits } from "./production-annotations.js?v=20261029-replace-excel-format";
-import { pickOrPlace } from "./production-placement.js?v=20261029-replace-excel-format";
-import { cancelProductionPick } from "./production-pick.js?v=20261029-replace-excel-format";
-import { cancelProductionProfileLine } from "./production-profile.js?v=20261029-replace-excel-format";
-import { cancelProductionBox } from "./production-view.js?v=20261029-replace-excel-format";
+import { $, api, esc, state, toast } from "./core.js?v=20261030-pla1-from-points";
+import { annotationUnits } from "./production-annotations.js?v=20261030-pla1-from-points";
+import { pickOrPlace } from "./production-placement.js?v=20261030-pla1-from-points";
+import { cancelProductionPick } from "./production-pick.js?v=20261030-pla1-from-points";
+import { cancelProductionProfileLine } from "./production-profile.js?v=20261030-pla1-from-points";
+import { cancelProductionBox } from "./production-view.js?v=20261030-pla1-from-points";
 
 const COLOR = 0x3fe0ff, DRAFT_COLOR = 0xffd24a;
 const tapes = [];

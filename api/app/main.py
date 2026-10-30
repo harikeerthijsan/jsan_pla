@@ -36,6 +36,7 @@ from .sections import vector_analysis, build_frame, section_result_key
 from .production import annotations_feature_collection, parent_attributes, resolve_parent, catalogue as production_catalogue, validate_annotation_values, validate_coordinates, measurement_values, annotation_dict, project_to_wgs84, wgs84_to_project, SEQUENCED_ANNOTATION_GROUPS, next_annotation_feature_type
 from .workbook_editor import apply_workbook_updates, inspect_workbook, match_geojson_pole_number, set_pole_internal_id
 from .collection_workbook import build_collection_workbook, detect_workbook_format, restore_validation_extensions
+from .pla1_workbook import POLE_FAMILIES as PLA1_POLE_FAMILIES, fill_pla1_workbook
 from .workbook_format import latest_workbook_file, resolve_workbook_format
 from . import throttle
 
@@ -94,7 +95,7 @@ app.include_router(email_login_router)
 app.include_router(employee_directory_router)
 app.include_router(registration_router)
 origins=[x.strip() for x in os.getenv('CORS_ORIGINS','http://localhost:5500,http://localhost:3000,http://127.0.0.1:5500').split(',') if x.strip()]
-app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag','Content-Disposition','X-Collection-Summary','X-Workbook-Edited','X-Work-Archive-Id'])
+app.add_middleware(CORSMiddleware,allow_origins=origins,allow_origin_regex=os.getenv('CORS_ORIGIN_REGEX') or None,allow_credentials=True,allow_methods=['*'],allow_headers=['*'],expose_headers=['ETag','Content-Disposition','X-Collection-Summary','X-Workbook-Edited','X-Pla1-Summary','X-Work-Archive-Id'])
 
 
 @app.middleware('http')
@@ -896,20 +897,36 @@ def elevation_to_feet(units:str|None)->tuple[float,str]:
 
 @app.get('/api/projects/{project_id}/production-workbook/latest')
 def download_latest_workbook(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
-    """The Excel as it stands now: every saved Workbook Data edit (PLA-1), else the uploaded workbook. The upload is untouched."""
+    """The Excel as it stands now: every saved Workbook Data edit, else the uploaded workbook. For PLA-1 the pole columns
+    are also filled from the saved LiDAR points (location, top/bottom elevation, first/last pole, incomplete spot).
+    The upload is untouched."""
     project=db.query(Project).filter_by(id=project_id).first()
     if not project: raise HTTPException(404,'Project not found')
     current,source=latest_workbook_file(db,project_id)
     if not current: raise HTTPException(404,'No workbook is uploaded for the active dataset version')
     try: contents=read_bytes(current.object_key)
     except FileNotFoundError as exc: raise HTTPException(404,'Workbook object is not available in storage') from exc
-    edited=current.role=='WORKBOOK_EDITED'
+    edited=current.role=='WORKBOOK_EDITED'; filled=None
+    if resolve_workbook_format(db,project)=='PLA-1':
+        pole_numbers={p.internal_id:p.pole_number for p in db.query(Pole).filter_by(project_id=project_id).all()}
+        rows=visible_annotations(db,u,project_id).filter(ProductionAnnotation.family.in_(PLA1_POLE_FAMILIES)).all()
+        points=[{'pole_internal_id':r.pole_internal_id,'family':r.family,'feature_type':r.feature_type,'latitude':r.latitude,'longitude':r.longitude,
+                 'z':r.z,'attributes':json.loads(r.attributes_json or '{}'),'updated_at':iso_utc(r.updated_at)} for r in rows]
+        if points:
+            if not WORKBOOK_BUILDS.acquire(timeout=WORKBOOK_BUILD_WAIT_SECONDS):
+                raise HTTPException(503,'The Excel is being prepared for other users right now. Try again in a moment.',headers={'Retry-After':'10'})
+            try: contents,filled=fill_pla1_workbook(contents,pole_numbers,points,elevation_to_ft=elevation_to_feet(project.units)[0])
+            except Exception as exc: raise HTTPException(422,f'The workbook could not be updated: {exc}') from exc
+            finally: WORKBOOK_BUILDS.release()
     stem=re.sub(r'[^A-Za-z0-9._-]+','_',pathlib.Path((source or current).filename).stem) or 'workbook'
     db.add(AuditLog(actor=u.email,action='DOWNLOAD_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,
-                    detail_json=json.dumps({'file_id':current.id,'edited':edited,'workbook_format':project.workbook_format})))
+                    detail_json=json.dumps({'file_id':current.id,'edited':edited,'workbook_format':project.workbook_format,
+                                            **({'poles_filled':filled['poles_filled'],'skipped':filled['skipped'][:50],'missing_columns':filled['missing_columns']} if filled else {})})))
     db.commit()
-    return Response(content=contents,media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                    headers={'Content-Disposition':f'attachment; filename="{stem}-{"updated" if edited else "original"}.xlsx"','X-Workbook-Edited':'1' if edited else '0'})
+    updated=edited or bool(filled and filled['poles_filled'])
+    headers={'Content-Disposition':f'attachment; filename="{stem}-{"updated" if updated else "original"}.xlsx"','X-Workbook-Edited':'1' if edited else '0'}
+    if filled: headers['X-Pla1-Summary']=json.dumps({'poles_filled':filled['poles_filled'],'skipped':len(filled['skipped']),'missing_columns':filled['missing_columns']})
+    return Response(content=contents,media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',headers=headers)
 
 @app.get('/api/projects/{project_id}/production-workbook/collection')
 def download_collection_workbook(project_id:str,u:User=Depends(require_permission('project.read')),db:Session=Depends(get_db)):
@@ -917,7 +934,7 @@ def download_collection_workbook(project_id:str,u:User=Depends(require_permissio
     project=db.query(Project).filter_by(id=project_id).first()
     if not project: raise HTTPException(404,'Project not found')
     if resolve_workbook_format(db,project)=='PLA-1':
-        raise HTTPException(409,'This dataset uses a PLA-1 workbook: points are not written automatically. Fill each pole in the Workbook Data tab, save, then download the updated Excel.')
+        raise HTTPException(409,'This dataset uses a PLA-1 workbook: download it with production-workbook/latest (pole columns filled from saved points, plus Workbook Data edits).')
     version=db.query(DatasetVersion).filter_by(project_id=project_id).order_by(DatasetVersion.version_no.desc()).first()
     base=None; base_name=project.name
     if version:

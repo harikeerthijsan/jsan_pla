@@ -1,10 +1,10 @@
 // QC banner for Production datasets and the Run-QC dialog/job watcher; QC project loading.
-import { $, api, esc, state, toast } from "./core.js?v=20261029-replace-excel-format";
-import { loadWorkflow } from "./delivery.js?v=20261029-replace-excel-format";
-import { loadProduction } from "./production-data.js?v=20261029-replace-excel-format";
-import { renderPoles, renderSummary } from "./qc-review.js?v=20261029-replace-excel-format";
-import { progress, sendFile } from "./uploads.js?v=20261029-replace-excel-format";
-import { bootstrap, can, currentProject } from "./workspace.js?v=20261029-replace-excel-format";
+import { $, api, esc, state, toast } from "./core.js?v=20261030-pla1-from-points";
+import { loadWorkflow } from "./delivery.js?v=20261030-pla1-from-points";
+import { loadProduction } from "./production-data.js?v=20261030-pla1-from-points";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261030-pla1-from-points";
+import { progress, sendFile } from "./uploads.js?v=20261030-pla1-from-points";
+import { bootstrap, can, currentProject } from "./workspace.js?v=20261030-pla1-from-points";
 
 export function renderQcProductionBanner(){const el=$("qcProductionBanner"),s=state.summary||{},canRun=can("upload.create")&&can("processing.run"),files=`${s.lidar_blocks} LiDAR file${s.lidar_blocks===1?"":"s"}`;let html="",action=null;
   if(s.qc_job_id){html='<div><b>QC is running on the shared Production LiDAR</b><small id="qcProductionProgress">Starting…</small></div>'}

@@ -1,8 +1,8 @@
 // Team progress dashboard.
-import { openSuperPage } from "./super-admin.js?v=20261029-replace-excel-format";
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261029-replace-excel-format";
-import { openTeamPage } from "./team.js?v=20261029-replace-excel-format";
-import { applyWorkspace, can } from "./workspace.js?v=20261029-replace-excel-format";
+import { openSuperPage } from "./super-admin.js?v=20261030-pla1-from-points";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261030-pla1-from-points";
+import { openTeamPage } from "./team.js?v=20261030-pla1-from-points";
+import { applyWorkspace, can } from "./workspace.js?v=20261030-pla1-from-points";
 
 export const TEAM_REDUCED=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 export const TEAM_AVATAR_HUES=[206,152,262,28,340,188,96,226];
