@@ -1,8 +1,8 @@
 // Super admin · Directory: the HR employee list, with search/filters, and turning employees into PoleGrid accounts.
 // Granting access creates the account on the server (temporary password shown once). Role, active and works-from
 // changes on existing accounts use PUT /api/users/{id}, so the usual account safeguards apply.
-import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261029-saved-point-magenta";
-import { roleLabel } from "./profile.js?v=20261029-saved-point-magenta";
+import { $, api, confirmAction, esc, state, toast } from "./core.js?v=20261029-replace-excel-format";
+import { roleLabel } from "./profile.js?v=20261029-replace-excel-format";
 
 const PAGE = 100;
 const ACCESS = { none: "No access yet", active: "Active", pending: "Must change password", inactive: "Deactivated" };

@@ -1,7 +1,7 @@
 // Self-registration on the sign-in card: an employee in the JSAN directory, without an account yet, enters their work
 // email, then chooses a username and password. The account is created with the User role and linked to the directory
 // entry (so the super admin directory shows the access at once); admins and super admins are still created by a super admin.
-import { $, api } from "./core.js?v=20261029-saved-point-magenta";
+import { $, api } from "./core.js?v=20261029-replace-excel-format";
 
 const SIGN_IN_PARTS = ["loginPasswordPane", "loginCodePane", "loginTabs"];
 let hiddenBefore = {};

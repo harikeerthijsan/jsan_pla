@@ -20,7 +20,7 @@ from app import processor, storage
 from app.auth import hash_password
 from app.db import SessionLocal, initialize_schema
 from app.main import app
-from app.models import DatasetFile, Finding, LidarBlock, Pole, ProcessingJob, ProductionAnnotation, ProductionGeoFeature, Project, User
+from app.models import AuditLog, DatasetFile, Finding, LidarBlock, Pole, ProcessingJob, ProductionAnnotation, ProductionGeoFeature, Project, User
 from app.workflow import DatasetVersion, QCRun, VersionFile, version_files
 
 XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -199,6 +199,70 @@ def test_unreadable_replacement_excel_is_rejected_and_the_current_excel_is_kept(
         assert statuses[file_id] == 'REJECTED'
         assert db.query(ProcessingJob).filter_by(project_id=project_id, status='QUEUED').count() == 0
         assert db.query(Project).filter_by(id=project_id).first().status == 'LIDAR_READY'
+    finally:
+        db.close()
+
+
+
+def zone_name_workbook(rows) -> bytes:
+    """A PLA-1 Excel: one ZoneName sheet."""
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = 'ZoneName'
+    sheet.append(['internal_id', 'Pole Number', 'Latitude', 'Longitude', 'Grade of Construction', '1 Attachment Owner'])
+    for internal_id, number in rows:
+        sheet.append([internal_id, number, 34.37 + internal_id * 0.0005, -118.91, 'A', 'Verizon'])
+    stream = BytesIO()
+    workbook.save(stream)
+    return stream.getvalue()
+
+
+def test_replace_excel_switches_the_workbook_format_when_chosen(production_project):
+    project_id = production_project['project_id']
+    apply = lambda client, admin, file_id, **body: client.post(f'/api/projects/{project_id}/production-workbook/{file_id}/apply', headers=admin, json=body or None)
+    prepare_path = f'/api/projects/{project_id}/production-workbook/prepare'
+    pla1 = zone_name_workbook([(1, 'P-100'), (2, 'P-200'), (3, 'P-300')])
+    with TestClient(app) as client:
+        admin = admin_headers(client)
+        # Without a choice the Excel must still match the dataset's format (PLA-2 here, detected from its COLLECTION Excel).
+        refused = apply(client, admin, upload(client, admin, prepare_path, 'zone.xlsx', pla1))
+        assert refused.status_code == 422 and 'PLA-1 (single ZoneName sheet), but the dataset is set to PLA-2' in refused.json()['detail']
+        # The choice must match the Excel.
+        refused = apply(client, admin, upload(client, admin, prepare_path, 'zone.xlsx', pla1), workbook_format='PLA-2')
+        assert refused.status_code == 422 and 'but you chose PLA-2 (COLLECTION workbook)' in refused.json()['detail']
+        assert apply(client, admin, upload(client, admin, prepare_path, 'zone.xlsx', pla1), workbook_format='PLA-3').status_code == 422
+        # PLA-2 -> PLA-1: the dataset switches, and the change is logged.
+        applied = apply(client, admin, upload(client, admin, prepare_path, 'zone.xlsx', pla1), workbook_format='PLA-1')
+        assert applied.status_code == 200, applied.text
+        assert applied.json()['workbook_format'] == 'PLA-1' and applied.json()['format_changed'] is True
+    processor.process_job(applied.json()['job_id'])
+    with TestClient(app) as client:
+        admin = admin_headers(client)
+        project = next(p for p in client.get('/api/projects', headers=admin).json() if p['id'] == project_id)
+        assert project['workbook_format'] == 'PLA-1'
+        # PLA-1 behaviour: the latest Excel is the download, the COLLECTION export is not offered.
+        assert client.get(f'/api/projects/{project_id}/production-workbook/collection', headers=admin).status_code == 409
+        latest = client.get(f'/api/projects/{project_id}/production-workbook/latest', headers=admin)
+        assert latest.status_code == 200 and 'zone' in latest.headers['content-disposition']
+        # PLA-1 -> PLA-2: back to the COLLECTION export, built from the points saved before the switches.
+        applied = apply(client, admin, upload(client, admin, prepare_path, 'COLLECTION-v2.xlsx', collection_workbook([(1, 'P-100'), (3, 'P-300')])), workbook_format='PLA-2')
+        assert applied.status_code == 200, applied.text
+        assert applied.json()['workbook_format'] == 'PLA-2' and applied.json()['format_changed'] is True
+    processor.process_job(applied.json()['job_id'])
+    with TestClient(app) as client:
+        admin = admin_headers(client)
+        collection = client.get(f'/api/projects/{project_id}/production-workbook/collection', headers=admin)
+        assert collection.status_code == 200, collection.text
+        assert json.loads(collection.headers['X-Collection-Summary'])['points'] == 1   # pole 3's arm_1, saved before both switches
+        # Choosing the dataset's own format is an ordinary replacement.
+        same = apply(client, admin, upload(client, admin, prepare_path, 'COLLECTION-v3.xlsx', collection_workbook([(1, 'P-100'), (3, 'P-300')])), workbook_format='PLA-2')
+        assert same.status_code == 200 and same.json()['format_changed'] is False
+    db = SessionLocal()
+    try:
+        assert db.query(Pole).filter_by(project_id=project_id, internal_id=3).count() == 1
+        changes = [json.loads(a.detail_json) for a in db.query(AuditLog).filter_by(entity_id=project_id, action='CHANGE_WORKBOOK_FORMAT').order_by(AuditLog.created_at).all()]
+        assert [(c['from'], c['to']) for c in changes] == [('PLA-2', 'PLA-1'), ('PLA-1', 'PLA-2')]
+        assert db.query(Project).filter_by(id=project_id).first().workbook_format == 'PLA-2'
     finally:
         db.close()
 

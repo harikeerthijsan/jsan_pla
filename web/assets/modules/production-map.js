@@ -2,9 +2,9 @@
 // elevation remains the value selected in the engineering view. The API performs both CRS transformations using
 // the project's declared CRS, so arbitrary EPSG definitions are never guessed in the browser.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, cfg, state, toast } from "./core.js?v=20261029-saved-point-magenta";
-import { setAnnotationDraft } from "./production-annotations.js?v=20261029-saved-point-magenta";
-import { PLACEMENT_LABELS } from "./production-placement.js?v=20261029-saved-point-magenta";
+import { $, api, cfg, state, toast } from "./core.js?v=20261029-replace-excel-format";
+import { setAnnotationDraft } from "./production-annotations.js?v=20261029-replace-excel-format";
+import { PLACEMENT_LABELS } from "./production-placement.js?v=20261029-replace-excel-format";
 
 let dialog = null, map = null, markerSource = null;
 const MAX_OVERLAY_TILES = 64;

@@ -3,10 +3,10 @@
 // signed archive, then clears exactly that work so the next session starts clean. An archive can be opened later as a
 // read-only overlay: violet markers in the 3D view, a per-person summary and a list. Nothing current is changed by viewing.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, api, confirmAction, errorText, esc, httpErrorText, state, toast } from "./core.js?v=20261029-saved-point-magenta";
-import { loadProduction } from "./production-data.js?v=20261029-saved-point-magenta";
-import { loadProductionMeasurements } from "./production-measure.js?v=20261029-saved-point-magenta";
-import { can, currentProject } from "./workspace.js?v=20261029-saved-point-magenta";
+import { $, api, confirmAction, errorText, esc, httpErrorText, state, toast } from "./core.js?v=20261029-replace-excel-format";
+import { loadProduction } from "./production-data.js?v=20261029-replace-excel-format";
+import { loadProductionMeasurements } from "./production-measure.js?v=20261029-replace-excel-format";
+import { can, currentProject } from "./workspace.js?v=20261029-replace-excel-format";
 
 const ARCHIVE_COLOR = 0x8b5cf6;
 let dialog = null, lastExport = null, overlay = { archive: null, markers: [] };

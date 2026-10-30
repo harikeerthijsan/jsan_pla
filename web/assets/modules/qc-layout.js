@@ -1,6 +1,6 @@
 // QC four-view layout: maximize, minimize, focus workspace and resize.
-import { $, state, toast } from "./core.js?v=20261029-saved-point-magenta";
-import { renderAnalysisViews } from "./qc-analysis.js?v=20261029-saved-point-magenta";
+import { $, state, toast } from "./core.js?v=20261029-replace-excel-format";
+import { renderAnalysisViews } from "./qc-analysis.js?v=20261029-replace-excel-format";
 
 export function refreshViewLayout(){
   const grid=document.querySelector('.quad-grid');

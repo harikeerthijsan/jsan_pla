@@ -1,8 +1,8 @@
 // Pole assignments, live presence and the Assign dialog.
-import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261029-saved-point-magenta";
-import { renderProductionPoleHeader, renderProductionPoleList, visibleProductionPoles } from "./production-poles.js?v=20261029-saved-point-magenta";
-import { range } from "./qc-analysis.js?v=20261029-saved-point-magenta";
-import { loadTeamProgress } from "./team-progress.js?v=20261029-saved-point-magenta";
+import { $, api, esc, state, toast, rememberPage } from "./core.js?v=20261029-replace-excel-format";
+import { renderProductionPoleHeader, renderProductionPoleList, visibleProductionPoles } from "./production-poles.js?v=20261029-replace-excel-format";
+import { range } from "./qc-analysis.js?v=20261029-replace-excel-format";
+import { loadTeamProgress } from "./team-progress.js?v=20261029-replace-excel-format";
 
 export function setPoleAssignments(rows){state.poleAssignments=new Map((rows||[]).map(row=>[String(row.pole_internal_id),row]))}
 export function poleAssignee(pole){return state.poleAssignments.get(String(pole?.internal_id))||null}

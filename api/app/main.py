@@ -571,6 +571,10 @@ def change_project_crs(project_id:str,body:ProjectCrsIn,u:User=Depends(require_p
 class WorkbookFormatIn(BaseModel):
     workbook_format:str=Field(pattern=r'^PLA-[12]$')
 
+class WorkbookReplaceIn(BaseModel):
+    # The format the new Excel is. A different format from the dataset's switches the dataset to it (verified + logged).
+    workbook_format:str|None=Field(default=None,pattern=r'^PLA-[12]$')
+
 @app.put('/api/projects/{project_id}/workbook-format')
 def set_workbook_format(project_id:str,body:WorkbookFormatIn,u:User=Depends(require_permission('project.create')),db:Session=Depends(get_db)):
     """Admins set the format of a dataset (needed for ones imported without an Excel). It must match the dataset's Excel."""
@@ -1371,7 +1375,7 @@ def prepare_workbook_replacement(project_id:str,body:WorkbookReplacementIn,u:Use
     return _upload_instructions(project_id,fid,key,request)
 
 @app.post('/api/projects/{project_id}/production-workbook/{file_id}/apply')
-def apply_workbook_replacement(project_id:str,file_id:str,u:User=Depends(require_permission('upload.create')),db:Session=Depends(get_db)):
+def apply_workbook_replacement(project_id:str,file_id:str,body:WorkbookReplaceIn|None=None,u:User=Depends(require_permission('upload.create')),db:Session=Depends(get_db)):
     if not has_permission(u,'processing.run'): raise HTTPException(403,f'Role {u.role} is not authorized for processing.run')
     p=db.query(Project).filter_by(id=project_id).first()
     if not p: raise HTTPException(404,'Project not found')
@@ -1391,15 +1395,27 @@ def apply_workbook_replacement(project_id:str,file_id:str,u:User=Depends(require
         db.add(AuditLog(actor=u.email,action='REJECT_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps({'file_id':rec.id,'filename':rec.filename,'reason':str(exc)[:500]})))
         db.commit()
         raise HTTPException(400,f'This Excel cannot be imported: {str(exc).splitlines()[0][:300]}. The current Excel was kept.')
-    # The replacement must be the same kind of workbook as the dataset (PLA-1 ZoneName or PLA-2 COLLECTION).
-    resolve_workbook_format(db,p)
-    try: check_workbook_format(p,read_bytes(rec.object_key))
+    # The replacement is the same kind of workbook as the dataset (PLA-1 ZoneName or PLA-2 COLLECTION), unless the user
+    # chose the other format for it: then the Excel must really be that format, and the dataset switches to it.
+    previous_format=resolve_workbook_format(db,p); chosen=body.workbook_format if body else None; switch_to=None
+    try:
+        contents=read_bytes(rec.object_key); detected=detect_workbook_format(contents)
+        if chosen and detected and detected!=chosen:
+            raise HTTPException(422,f"This Excel is a {WORKBOOK_FORMAT_LABELS[detected]}, but you chose {WORKBOOK_FORMAT_LABELS[chosen]}. Choose {detected}, or select the other Excel.")
+        if chosen and chosen!=previous_format:
+            if detected!=chosen: raise HTTPException(422,f"This Excel isn't recognised as a {WORKBOOK_FORMAT_LABELS[chosen]}, so the dataset can't switch to {chosen}.")
+            switch_to=chosen
+        else: check_workbook_format(p,contents)
     except HTTPException as exc:
         rec.status='REJECTED'
         db.add(AuditLog(actor=u.email,action='REJECT_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps({'file_id':rec.id,'filename':rec.filename,'reason':exc.detail[:500]})))
         db.commit()
         raise HTTPException(422,f'{exc.detail} The current Excel was kept.') from exc
     rec.status='UPLOADED'
+    if switch_to:
+        p.workbook_format=switch_to
+        db.add(AuditLog(actor=u.email,action='CHANGE_WORKBOOK_FORMAT',entity_type='project',entity_id=project_id,
+                        detail_json=json.dumps({'from':previous_format,'to':switch_to,'file_id':rec.id,'filename':rec.filename,'reason':'excel_replacement'})))
     version=ensure_current_version(db,project_id,u.email)
     replaced=[]
     for f in version_files(db,version.id):
@@ -1409,9 +1425,10 @@ def apply_workbook_replacement(project_id:str,file_id:str,u:User=Depends(require
     jid=uuid.uuid4().hex
     db.add(ProcessingJob(id=jid,project_id=project_id,job_type='LIDAR_INGEST',payload_json=json.dumps({'version_id':version.id,'replaced_workbook':True}),status='QUEUED',progress=0,stage='Queued Excel replacement'))
     p.status='PROCESSING'
-    db.add(AuditLog(actor=u.email,action='REPLACE_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps({'file_id':rec.id,'filename':rec.filename,'replaced':replaced,'job_id':jid,'version_id':version.id})))
+    db.add(AuditLog(actor=u.email,action='REPLACE_PRODUCTION_WORKBOOK',entity_type='project',entity_id=project_id,detail_json=json.dumps({'file_id':rec.id,'filename':rec.filename,'replaced':replaced,'job_id':jid,'version_id':version.id,
+                    'workbook_format':{'from':previous_format,'to':p.workbook_format}})))
     db.commit()
-    return {'job_id':jid,'status':'QUEUED','replaced':replaced}
+    return {'job_id':jid,'status':'QUEUED','replaced':replaced,'workbook_format':p.workbook_format,'format_changed':bool(switch_to)}
 
 @app.post('/api/projects/{project_id}/qc-dataset')
 def create_qc_dataset(project_id:str,body:QcDatasetIn,u:User=Depends(require_permission('processing.run')),db:Session=Depends(get_db)):

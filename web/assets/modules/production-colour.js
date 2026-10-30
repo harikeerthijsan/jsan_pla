@@ -3,7 +3,7 @@
 // noise) don't wash the colours out, and every tile shares one range so the same height or return strength
 // looks the same everywhere in the combined model.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { $, state, toast } from "./core.js?v=20261029-saved-point-magenta";
+import { $, state, toast } from "./core.js?v=20261029-replace-excel-format";
 
 const MODES = { intensity: "intensity", rgb: "rgba", elevation: "elevation" };
 const KEY = "pla_production_colour";

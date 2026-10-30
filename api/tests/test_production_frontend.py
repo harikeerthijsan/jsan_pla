@@ -938,3 +938,18 @@ def test_saved_points_are_drawn_over_the_lidar():
     assert 'savedPointTexture("halo")' in annotations and 'color:SAVED_POINT_COLOR,map:savedPointTexture("dot")' in annotations
     # One colour that never appears in the LiDAR colourings: magenta.
     assert "export const SAVED_POINT_COLOR=0xff00ff;" in annotations
+
+
+def test_replace_excel_asks_for_the_format_and_can_switch_it():
+    html = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    shell = (ROOT / "web" / "assets" / "modules" / "production-shell.js").read_text(encoding="utf-8")
+    dialog = html[html.index('<dialog id="replaceExcelDialog"'):]
+    dialog = dialog[:dialog.index("</dialog>")]
+    assert '<select id="replaceExcelFormat" required>' in dialog and 'value="PLA-1"' in dialog and 'value="PLA-2"' in dialog
+    assert 'id="replaceExcelFormatHint"' in dialog and 'id="replaceExcelFormatNote"' in dialog
+    # Opens on the dataset's own format; a clash with the chosen Excel is refused before anything uploads.
+    assert '$("replaceExcelFormat").value=currentProject().workbook_format||"PLA-1"' in shell
+    assert "if(detected&&detected!==workbookFormat)throw new Error(" in shell
+    # The choice goes to the server, and the dataset takes the format the server confirms.
+    assert 'body:JSON.stringify({workbook_format:workbookFormat})' in shell
+    assert "if(dataset&&applied.workbook_format)dataset.workbook_format=applied.workbook_format" in shell

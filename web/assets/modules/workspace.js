@@ -1,15 +1,15 @@
 // Viewer creation, permissions, workspace switching, dataset selection and bootstrap.
 import * as THREE from "../../potree/libs/three.js/build/three.module.js";
-import { applyProductionPointSettings } from "./production-points.js?v=20261029-saved-point-magenta";
-import { $, api, state, rememberPage, updatePageTitle } from "./core.js?v=20261029-saved-point-magenta";
-import { loadWorkflow } from "./delivery.js?v=20261029-saved-point-magenta";
-import { loadNotifications } from "./notifications.js?v=20261029-saved-point-magenta";
-import { loadProduction } from "./production-data.js?v=20261029-saved-point-magenta";
-import { installProductionNavigation } from "./production-view.js?v=20261029-saved-point-magenta";
-import { clearCanvases } from "./qc-analysis.js?v=20261029-saved-point-magenta";
-import { renderPoles, renderSummary } from "./qc-review.js?v=20261029-saved-point-magenta";
-import { loadProject } from "./qc-run.js?v=20261029-saved-point-magenta";
-import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261029-saved-point-magenta";
+import { applyProductionPointSettings } from "./production-points.js?v=20261029-replace-excel-format";
+import { $, api, state, rememberPage, updatePageTitle } from "./core.js?v=20261029-replace-excel-format";
+import { loadWorkflow } from "./delivery.js?v=20261029-replace-excel-format";
+import { loadNotifications } from "./notifications.js?v=20261029-replace-excel-format";
+import { loadProduction } from "./production-data.js?v=20261029-replace-excel-format";
+import { installProductionNavigation } from "./production-view.js?v=20261029-replace-excel-format";
+import { clearCanvases } from "./qc-analysis.js?v=20261029-replace-excel-format";
+import { renderPoles, renderSummary } from "./qc-review.js?v=20261029-replace-excel-format";
+import { loadProject } from "./qc-run.js?v=20261029-replace-excel-format";
+import { clearClouds, clearThreeGroup } from "./qc-scene.js?v=20261029-replace-excel-format";
 
 // A viewer on a hidden page (QC while in Production, and the other way round) has a 0×0 canvas. Potree would still
 // update and draw it every frame, which wastes CPU/GPU and floods the console with GL_INVALID_FRAMEBUFFER_OPERATION

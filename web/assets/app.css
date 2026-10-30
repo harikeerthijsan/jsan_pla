@@ -976,6 +976,8 @@ a.brand-home:focus-visible{outline:2px solid #2aa7d8;outline-offset:4px}
 /* Import dialog: what the chosen Excel is (PLA-1 ZoneName / PLA-2 COLLECTION). */
 .format-hint{display:block;min-height:16px;margin-top:4px;font-size:11.5px;font-weight:600;color:var(--muted,#5b7183)}
 .format-hint.is-ok{color:#1d7a5a}.format-hint.is-error{color:#b42f3d}
+/* Replace Excel: choosing the other format switches the dataset to it. */
+.format-hint.is-warn{color:#9a5b00}
 /* Header: admins set the workbook format of a dataset imported without an Excel. */
 .format-control{display:inline-flex;align-items:center;gap:6px;margin-left:10px;font-size:11px;font-weight:700;color:#9a5b00}
 .format-control select{padding:2px 6px;font-size:11px;border-radius:6px;border:1px solid #e0b46a;background:#fff8ec;color:#5c3a00}

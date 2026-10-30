@@ -1,11 +1,11 @@
 // Super admin page: every account with its access and work, and a timeline of everyone's actions.
 // Only shown to accounts with the super.view permission; the server enforces it on every route.
-import { $, api, confirmAction, esc, state, toast, rememberPage } from "./core.js?v=20261029-saved-point-magenta";
-import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261029-saved-point-magenta";
-import { teamAgo, teamAvatar } from "./team-progress.js?v=20261029-saved-point-magenta";
-import { openTeamPage } from "./team.js?v=20261029-saved-point-magenta";
-import { loadDirectory } from "./employee-directory.js?v=20261029-saved-point-magenta";
-import { applyWorkspace } from "./workspace.js?v=20261029-saved-point-magenta";
+import { $, api, confirmAction, esc, state, toast, rememberPage } from "./core.js?v=20261029-replace-excel-format";
+import { promptSignInEmail, roleLabel, signInCell, signInEmailLine } from "./profile.js?v=20261029-replace-excel-format";
+import { teamAgo, teamAvatar } from "./team-progress.js?v=20261029-replace-excel-format";
+import { openTeamPage } from "./team.js?v=20261029-replace-excel-format";
+import { loadDirectory } from "./employee-directory.js?v=20261029-replace-excel-format";
+import { applyWorkspace } from "./workspace.js?v=20261029-replace-excel-format";
 
 const ROLES=["USER","ADMIN","SUPER_ADMIN"];
 const GROUPS={production:"Production",qc:"QC",data:"Data",delivery:"Delivery",accounts:"Accounts",other:"Other"};
